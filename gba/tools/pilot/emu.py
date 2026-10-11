@@ -37,7 +37,9 @@ class Emu:
         return bytes.fromhex(self.cmd('m %x %d' % (addr, n), True))
 
     def write(self, addr, data):
-        self.cmd('M %x %s' % (addr, data.hex()))
+        # In pieces: the harness takes at most 511 hex digits a line, and a longer write (a party, a box) was cut short.
+        for i in range(0, len(data), 200):
+            self.cmd("M %x %s" % (addr + i, data[i:i + 200].hex()))
 
     def shot(self, path):
         ppm = path[:-4] + '.ppm'

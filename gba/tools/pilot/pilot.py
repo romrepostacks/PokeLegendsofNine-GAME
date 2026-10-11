@@ -33,7 +33,7 @@ class Pilot:
         self.shop_ok = None
         self.talked = set()
         self.retries = 0
-        self.rotate_party = style in ('smart', 'catcher', 'twoteam')
+        self.rotate_party = style in ('smart', 'catcher', 'twoteam') and not os.environ.get('PILOT_NOROTATE')
         self.style_all = style in ('all', 'catcher')
         self.fight_all = style in ('all', 'catcher', 'smart', 'masher', 'twoteam', 'solo')
         self.log_f = open(os.path.join(out, 'log.txt'), 'a')
