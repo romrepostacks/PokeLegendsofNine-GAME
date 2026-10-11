@@ -382,10 +382,6 @@ int type_index(const char* name)
 
 int move_effectiveness_x4(const mon& user, const move& mv, const mon& target)
 {
-    if(&mv == &move_data(0))
-    {
-        return 4;   // 9.0.1: STRUGGLE has no type (as since Gen 2), so a team out of PP can still hit a GHOST
-    }
     int eff_x4 = effectiveness_x4(mv.type, target);
     const ability& ta = target.abil();
     const ability& ua = user.abil();

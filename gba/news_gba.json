@@ -1,7 +1,17 @@
 {
   "_howto": "The game's WHAT'S NEW: the title screen's message of the day (motd) and the changelog, newest first. Player-facing only.",
-  "motd": "Version 9.0.2: fixes from the second big playtest. Beaten trainers wait a day before asking for a rematch.",
+  "motd": "Version 9.0.3: bosses carry fewer FULL RESTOREs, and STRUGGLE is back to its old self.",
   "changelog": [
+    {
+      "version": "GBA 9.0.3",
+      "date": "2026-10-11",
+      "title": "Boss tuning",
+      "changes": [
+        "Rivals, story bosses, the Elite Four and Champions carry one fewer FULL RESTORE from the Sundered Isles on (Origin's still carry two). They are still the toughest fights in each region",
+        "Gym Leaders carry one FULL RESTORE in every region",
+        "STRUGGLE is a NORMAL move again, so it can't touch a GHOST. Watch your PP"
+      ]
+    },
     {
       "version": "GBA 9.0.2",
       "date": "2026-10-11",

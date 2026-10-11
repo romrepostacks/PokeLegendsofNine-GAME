@@ -64,7 +64,7 @@ namespace
             lv = junior ? cap_level - 4 : elite ? top - 4 + t.elite : t.role == trainer_role::CHAMPION ? top
                 : t.role == trainer_role::LEADER ? region_level(region, b + 1) : route ? cap_level - 2 : region_level(region, b) + 4;
             s.smart = true;
-            s.boss_heals = ! route || elite ? (region >= 9 ? 3 : region >= 3 ? 2 : 1) : 0;
+            s.boss_heals = ! route || elite ? (region >= 9 ? 2 : 1) : 0;   // 9.0.3: one fewer from region 3 (Kyle)
             s.sharp = region >= 3;
             s.keen = region >= 4;
             s.tier = uint8_t(region);
@@ -378,7 +378,7 @@ battle_report battle_scene(const encounter& e)
                 s->foes[i] = mon::make(sp, level, g.badges() >= 4 ? held_item::LEFTOVERS : held_item::NONE);
             }
             s->smart = s->smart || leader;
-            s->boss_heals = leader ? (region >= 3 ? 2 : 1) : 0;
+            s->boss_heals = leader ? 1 : 0;   // 9.0.3: one from region 3 too (Kyle)
         }
     }
     else
