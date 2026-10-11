@@ -46,7 +46,7 @@ static void test_setup()
     struct party_req
     {
         uint16_t count, level, skip, money;
-        uint16_t species[10];
+        uint16_t species[12];
     } req;
     bn::sram::read_offset(req, 0x7F00);
     reset_state();
@@ -56,7 +56,7 @@ static void test_setup()
               story::LEGEND_CAUGHT;
     g.run.skip_story = req.skip;
     g.run.adventure = true;
-    for(int i = 0; i < req.count && i < 10; ++i)
+    for(int i = 0; i < req.count && i < 12; ++i)
     {
         g.party[i] = mon::make(species_id(req.species[i]), req.level);
     }

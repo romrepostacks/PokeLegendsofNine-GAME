@@ -13,7 +13,7 @@ namespace pr
 namespace
 {
     constexpr char save_tag[8] = { 'P', 'R', 'O', 'Y', 'A', 'L', 'E', '1' };
-    constexpr int save_version = 11;
+    constexpr int save_version = 12;      // 12 (9.0.1): a party of 12; 11 converts in place
 
     struct save_block
     {
@@ -30,7 +30,24 @@ namespace
     static_assert(world_data::trainers_count <= trainer_slots, "beaten holds trainer_slots trainers");
     static_assert(world_data::items_count <= item_ball_slots, "picked holds item_ball_slots item balls");
     static_assert(world_data::maps_count <= area_slots, "visited holds a bit per map index");
-    static_assert(sizeof(game_state) == 30260, "save version 11's layout never moves: new fields come out of spare");
+    static_assert(sizeof(mon) == 58, "the party's two new slots (save version 12) are 2 x 58 bytes of the old spare");
+    static_assert(sizeof(game_state) == 30260, "save version 12's layout never moves: new fields come out of spare");
+
+    // Save version 11 had a party of 10: everything after it sits 2 slots earlier, and its spare was 2 slots longer
+    // (still zero at the end, so nothing is lost moving it up).
+    constexpr int v11_party_end = int(offsetof(game_state, party)) + 10 * int(sizeof(mon));
+    constexpr int party_growth = 2 * int(sizeof(mon));
+
+    void convert_v11(game_state& g)
+    {
+        auto* bytes = reinterpret_cast<uint8_t*>(&g);
+        for(int i = int(sizeof(game_state)) - 1; i >= v11_party_end + party_growth; --i)
+        {
+            bytes[i] = bytes[i - party_growth];     // back to front: the two ranges overlap
+        }
+        g.party[10] = mon();
+        g.party[11] = mon();
+    }
 
     template<typename Block>
     uint32_t checksum_of(const Block& block)
@@ -101,7 +118,7 @@ namespace
             options opt;
             char name[name_length + 1];
             bn::array<uint8_t, items> items_, pc_items;
-            bn::array<mon, max_party> party;
+            bn::array<mon, 10> party;
             bn::array<mon, box_slots> box;
             char box_names[box_count][box_name_length + 1];
             uint8_t box_wall[box_count];
@@ -308,7 +325,7 @@ namespace
                 g.items[i] = o.items_[i];
                 g.pc_items[i] = o.pc_items[i];
             }
-            for(int i = 0; i < max_party; ++i)
+            for(int i = 0; i < 10; ++i)
             {
                 convert(o.party[i], g.party[i]);
             }
@@ -404,7 +421,7 @@ namespace
     };
     BN_DATA_EWRAM_BSS block_storage block_buffer;
 
-    // Reads the save into `out`: a version 11 one as it is, an older one converted (it stays in its old format in
+    // Reads the save into `out`: a version 12 one as it is, 11 with its party grown to 12, an older one converted (it stays in its old format in
     // SRAM until the game is saved).
     bool read_save(game_state* out)
     {
@@ -417,7 +434,7 @@ namespace
                 return false;
             }
         }
-        if(h.version == save_version)
+        if(h.version == save_version || h.version == 11)
         {
             save_block& b = block_buffer.current;
             bn::sram::read(b);
@@ -428,6 +445,10 @@ namespace
             if(out)
             {
                 *out = b.game;
+                if(h.version == 11)
+                {
+                    convert_v11(*out);
+                }
             }
             return true;
         }

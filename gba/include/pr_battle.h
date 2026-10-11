@@ -21,6 +21,7 @@ struct battle_setup
     // NUZLOCKE: whether this wild battle may still be caught from (the area's first encounter; scripted
     // battles never). Dupes are refused one by one (dupes clause), and only one catch per battle.
     bool nuzlocke_catch = true;
+    bool scripted = false;          // the professor's ZIGZAGOON (never caught, never a NUZLOCKE encounter)
     bool smart = false;             // CHALLENGE TOWER from rank 3: foes pick their best move and target
     int8_t boss_heals = 0;          // FULL RESTOREs a battle: Calderra's leaders, rival, Elite Four and Champion
                                     // one, the Sundered Isles' two (3.0.0)

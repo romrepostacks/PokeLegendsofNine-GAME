@@ -1,7 +1,22 @@
 {
   "_howto": "The game's WHAT'S NEW: the title screen's message of the day (motd) and the changelog, newest first. Player-facing only.",
-  "motd": "Version 9.0.0: Origin! The mountain guide at FAIRHAVEN leads you up to the last region.",
+  "motd": "Version 9.0.1: carry 12 POKéMON in two teams of six, and pick the team at the start of each battle.",
   "changelog": [
+    {
+      "version": "GBA 9.0.1",
+      "date": "2026-10-11",
+      "title": "Two teams",
+      "changes": [
+        "From your fourth badge you can carry 12 POKéMON: TEAM 1 on the left of the party screen, TEAM 2 on the right",
+        "Each battle starts by asking which team will fight. Only six fight at once, which fixes a crash when ten fought a full team",
+        "From CALDERRA on, beating a POKéMON above your level gives far more EXP, and the ones behind catch up faster",
+        "Route trainers from GENOVA on bring smaller teams before you earn badges, and VELLORIN's first gyms and ROUTE 1 are a little gentler",
+        "Taking a ferry, captain, pilot or guide to another region now makes that town your heal point, so a loss doesn't send you back",
+        "The nickname question now starts on NO",
+        "GENOVA, AETERNA, the HOLLOW LANDS, TEMPESTA and ORIGIN have their own trainer classes and names, and the HOLLOW LANDS' reverse side has its own people",
+        "The editor's level now goes up to 900, and NUZLOCKE explains why the professor's ZIGZAGOON can't be caught"
+      ]
+    },
     {
       "version": "GBA 9.0.0",
       "date": "2026-10-11",

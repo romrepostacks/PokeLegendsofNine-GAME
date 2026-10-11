@@ -3,7 +3,7 @@
 A real GBA ROM of Poké Legends: Lands of Nine (called Party Royale before 2.0.1), built with [Butano](https://github.com/GValiente/butano) (C++). It runs in
 emulators (Delta, mGBA) and on real hardware from a flash cart. Saves go to cartridge SRAM.
 
-Version **9.0.0**: the whole game, from the professor's welcome to the Hall of Fame, built from the retired
+Version **9.0.1**: the whole game, from the professor's welcome to the Hall of Fame, built from the retired
 web game's data (`js/`, `sprites/`), plus the two story phases planned after it (STORY.md phases 6 and 7):
 NUZLOCKE mode and ADVENTURE MODE with the CHALLENGE TOWER, shiny Pokémon, and PP, stat and weather moves.
 The GBA is now the only supported version of the game.
@@ -50,7 +50,7 @@ The GBA is now the only supported version of the game.
   The MASTER BALL never fails; WREN gives you one at the Sunken Shrine, before the guardian.
 - **Catching as in Emerald:** each species' real catch rate with Gen 3's formula (the guardian uses the web
   game's odds). Then the POKéDEX registration page and the nickname prompt.
-- **Menus:** the POKéDEX (list, INFO, AREA, SIZE), the party screen (6 Pokémon, 10 from your fourth badge),
+- **Menus:** the POKéDEX (list, INFO, AREA, SIZE), the party screen (6 Pokémon, 12 from your fourth badge in two teams of six; you pick the team at the start of each battle),
   summary, bag, the PC's 14 boxes (WITHDRAW, DEPOSIT, MOVE, RELEASE, names and wallpapers), the trainer
   card, the POKéNAV region map, OPTION (text speed, sound, music, EXP SHARE, weather) and saving.
 - **NUZLOCKE mode (phase 6):** chosen at NEW GAME (NORMAL / NUZLOCKE), with a SKIP STORY TEXT option for

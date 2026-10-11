@@ -2095,7 +2095,7 @@ void overworld::nickname_prompts()
             upper(text, m.species_name());
             text.append("?");
             u.show_text(text);
-            bool yes = u.yes_no();
+            bool yes = u.yes_no(false);    // 9.0.1: NO first, so mashing A past a catch skips it
             u.clear_text();
             if(! yes)
             {
@@ -3336,6 +3336,11 @@ void overworld::fast_travel(int area, int at_x, int at_y)
                 }
             }
         }
+    }
+    // 9.0.1: crossing to another region moves the whiteout point there, so a loss doesn't send you back a region.
+    if(map_region(area) != map_region(g.map) && m.area && (m.area->flags & area_flag::CENTER))
+    {
+        g.last_heal = int16_t(area);
     }
     g.x = int16_t(x);
     g.y = int16_t(y);

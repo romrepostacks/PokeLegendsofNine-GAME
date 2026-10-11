@@ -34,7 +34,7 @@ namespace pr
 namespace
 {
     constexpr int max_foes = 6;
-    constexpr int max_own = 10;
+    constexpr int max_own = team_size;     // one team of six (9.0.1: two teams of a party of 12)
 
     // Sprite sizes by count, from the web game's spriteSize() (foes 120..70 px).
     constexpr int foe_scale_x100[] = { 100, 87, 77, 70, 63, 58 };
@@ -299,6 +299,7 @@ namespace
         battle_report finish(battle_outcome outcome);
         void hide_sprites(bool hidden);
         void focus_on(fighter& f);
+        void choose_team();
     };
 
     void battle::layout()
@@ -358,6 +359,48 @@ namespace
             _own_sprite->set_z_order(-80);
         }
         _own_sprite->set_visible(! f.out());
+    }
+
+    void battle::choose_team()
+    {
+        if(_s.own_count <= team_size)
+        {
+            return;
+        }
+        auto able = [&](int from, int to)
+        {
+            for(int i = from; i < to; ++i)
+            {
+                if(! _s.own[i].fainted())
+                {
+                    return true;
+                }
+            }
+            return false;
+        };
+        bool first = able(0, team_size), second = able(team_size, _s.own_count);
+        int team = first ? 0 : 1;
+        if(first && second)
+        {
+            // Each team by its lead: "TEAM 1: GARCHOMP...".
+            ui& u = gui();
+            bn::string<32> labels[2];
+            bn::string_view views[2];
+            for(int t = 0; t < 2; ++t)
+            {
+                labels[t] = t ? "TEAM 2: " : "TEAM 1: ";
+                labels[t].append(_s.own[t * team_size].name());
+                views[t] = labels[t];
+            }
+            u.show_text("Which team will fight?");
+            team = bn::max(0, u.list(views, 2, 0, false));
+            u.clear_text();
+        }
+        if(team)
+        {
+            _s.own += team_size;
+        }
+        _s.own_count = team ? _s.own_count - team_size : team_size;
     }
 
     void battle::focus_on(fighter& f)
@@ -749,6 +792,7 @@ namespace
         views[n] = "CANCEL";
         // (Two lines in the 112 px box: a third would make you press A before the list.)
         const char* tip = nuz_block ? (_nuz_caught ? "NUZLOCKE: one catch a battle." :
+                                       _s.scripted ? "NUZLOCKE: this one can't be caught." :
                                                      "NUZLOCKE: no catch left here.") :
                           wild ? (g.item_count(item_id::POKEBALL) ? "Weaken it first to catch it!" :
                                   "No POKé BALLS left!") :
@@ -1927,6 +1971,7 @@ namespace
         {
             // Dupes clause: one you already have can't be caught (and the ball isn't used).
             bn::string<64> no(_nuz_caught ? "NUZLOCKE: one catch per encounter." :
+                              _s.scripted ? "NUZLOCKE: the professor's ZIGZAGOON can't be caught." :
                               ! _s.nuzlocke_catch ? "NUZLOCKE: this area's encounter is used up." : "Dupes clause: you already have ");
             if(! _nuz_caught && _s.nuzlocke_catch)
             {
@@ -2189,6 +2234,18 @@ namespace
         bool route = t && (t->role == trainer_role::ROUTE || t->role == trainer_role::JUNIOR || t->role == trainer_role::ELITE ||
                            t->role == trainer_role::TOWER);
         int xp = ! t ? 18 * _foe_count : leader ? 60 : 35;
+        // 9.0.1: from Calderra on, EXP grows with the foes' level (x1 per 50 levels), so a level-500 team still
+        // gains a level every dozen battles or so, as a level-50 one does in Vellorin.
+        int top_level = 0;
+        for(int i = 0; i < _foe_count; ++i)
+        {
+            top_level = bn::max(top_level, int(_foes[i].m->level));
+        }
+        bool later_region = map_region(g.map) >= 2;
+        if(later_region)
+        {
+            xp *= bn::max(1, top_level / 50);
+        }
         bn::string<128> text;
         if(t)
         {
@@ -2256,7 +2313,10 @@ namespace
                 continue;
             }
             int before = m.species_index;
-            m.grant_xp(xp, u);
+            // ...and one that's behind the foes catches up: x1 more per 5 levels short, up to x10, so a team you
+            // raised keeps pace with the region's leaders instead of being left behind by new catches.
+            int behind = later_region ? bn::max(0, top_level - int(m.level)) : 0;
+            m.grant_xp(xp * bn::min(10, 1 + behind / 5), u);
             if(m.species_index != before)
             {
                 g.mark_owned(m.species_index);
@@ -2289,12 +2349,8 @@ namespace
                 g.mark_seen(_s.foes[i].species_index);
             }
         }
-        _own_count = _s.own_count;
-        for(int i = 0; i < _own_count; ++i)
+        for(int i = 0; i < _s.own_count; ++i)
         {
-            _own[i].m = &_s.own[i];
-            _own[i].own = true;
-            _own[i].shown_hp = _s.own[i].hp;
             _s.own[i].flags = uint8_t(_s.own[i].flags & ~mon_flag::FOUGHT);    // startBattleUI: nobody has fought yet
         }
         layout();
@@ -2361,6 +2417,16 @@ namespace
                 u.say(shiny);
             }
         }
+        // Which team fights (9.0.1): with more than six, TEAM 1 (the first six) or TEAM 2 (the rest), asked first.
+        choose_team();
+        _own_count = _s.own_count;
+        for(int i = 0; i < _own_count; ++i)
+        {
+            _own[i].m = &_s.own[i];
+            _own[i].own = true;
+            _own[i].shown_hp = _s.own[i].hp;
+        }
+        layout();
         // Your party: every HP box, and the first who can fight on screen.
         for(int i = 0; i < _own_count; ++i)
         {

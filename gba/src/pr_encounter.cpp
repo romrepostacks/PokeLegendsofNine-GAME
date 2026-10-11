@@ -49,7 +49,9 @@ namespace
         }
         else
         {
-            lv = bn::max(3, bn::min(cap_level, avg - 1));
+            // 9.0.1: route trainers before the first badge sit a level lower, as the gym's juniors do.
+            bool early = t.role == trainer_role::ROUTE && ! badges;
+            lv = bn::max(3, bn::min(cap_level, avg - (early ? 2 : 1)));
         }
         int region = map_region(g.map);
         if(region >= 2)
@@ -74,6 +76,12 @@ namespace
             // Route trainers bring the first `party size` of their team (gym juniors at most 1 + badges);
             // the Elite Four, all six.
             int size = elite ? t.team_count : bn::max(1, junior ? bn::min(int(g.party_count), 1 + badges) : int(g.party_count));
+            if(region >= 5 && ! elite && ! junior)
+            {
+                // 9.0.1: from Genova on, route trainers grow from two Pokémon to six over the region's badges
+                // (every one a full six at the region's level was a slog).
+                size = bn::min(size, 2 + (g.region_badges(region) + 1) / 2);
+            }
             n = bn::min(bn::min(size, int(t.team_count)), 6);
             for(int i = 0; i < n; ++i)
             {
@@ -84,7 +92,8 @@ namespace
         {
             // Leaders, rivals and the Champion: their signature team, at most 2 + badges Pokémon (trimmed keeping
             // the ace, the last one), filled out to your party's size from the gym's juniors or the area.
-            int most = bn::min(6, 2 + badges);
+            // (9.0.1: Vellorin's Gym Leaders at most five, so the 5th gym on isn't a six-strong wall.)
+            int most = bn::min(region == 1 && t.role == trainer_role::LEADER ? 5 : 6, 2 + badges);
             if(t.team_count > most)
             {
                 for(int i = 0; i < most - 1; ++i)
@@ -118,7 +127,7 @@ namespace
                 names[n++] = t.fill[i % t.fill_count];
             }
             // Outnumbered (a small or battered party): 2 levels lower per extra Pokémon.
-            int extra = bn::max(0, n - g.able_count());
+            int extra = bn::max(0, n - bn::min(g.able_count(), team_size));
             lv = bn::max(2, lv - 2 * extra);
         }
         // Leftovers for the leaders, rivals, the Champion and the Elite Four once you have two badges. In the
@@ -340,6 +349,7 @@ battle_report battle_scene(const encounter& e)
     {
         s->nuzlocke_catch = false;
     }
+    s->scripted = e.scripted;
     if(e.kind == encounter_kind::TRAINER)
     {
         const map_def& m = world_data::maps[e.map];
@@ -391,7 +401,7 @@ battle_report battle_scene(const encounter& e)
             for(int i = 0; i < s->foe_count; ++i)
             {
                 mon& m = s->foes[i];
-                int able = g.able_count();
+                int able = bn::min(g.able_count(), team_size);     // one team fights
                 int scaled = able > 2 ? (m.max_hp * able + 1) / 2 : m.max_hp;
                 m.max_hp = uint16_t(scaled);
                 m.hp = m.max_hp;

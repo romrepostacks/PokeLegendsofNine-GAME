@@ -11,7 +11,8 @@
 namespace pr
 {
 
-constexpr int max_party = 10;           // MAX_PARTY: screens lay out 10 slots
+constexpr int max_party = 12;           // 9.0.1: two teams of six (10 before)
+constexpr int team_size = 6;            // a battle takes one team: the first six or the rest
 constexpr int small_party = 6;          // partyCap() before the 4th badge
 constexpr int box_size = 30;            // one PC box
 constexpr int box_count = 14;           // Emerald's 14 boxes
@@ -222,12 +223,13 @@ struct game_state
     bitset<flag_slots> flags;           // story flags for Calderra and later regions
     int16_t roam[4] = {};               // Calderra's roaming beasts (legend_flag): the map each is on + 1, 0 if not
     uint16_t roam_hp[4] = {};           // 2.0.1: a roaming beast's HP left from your last battle, 0 if unhurt
-    uint8_t spare[save_spare - 16] = {}; // zero; later versions add fields here without moving anything
+    // Save version 12 (9.0.1): the party grew from 10 to 12, its two new slots taken from the end of spare.
+    uint8_t spare[save_spare - 16 - 2 * 58] = {}; // zero; later versions add fields here without moving anything
 
     [[nodiscard]] int able_count() const;
     [[nodiscard]] int first_able() const;       // first party member that can fight, or -1
     void heal_party();
-    [[nodiscard]] int party_cap() const;        // 6, then 10 from the 4th badge (partyCap)
+    [[nodiscard]] int party_cap() const;        // 6, then 12 (two teams) from the 4th badge (partyCap)
     // Party first (up to party_cap), then the first free box slot. Returns false if both are full;
     // box_slot gets the slot used, or -1 for the party.
     bool add_mon(const mon& m, int& box_slot);

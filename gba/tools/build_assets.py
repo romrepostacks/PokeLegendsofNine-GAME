@@ -1307,6 +1307,18 @@ def build_small_sprites(gfx):
                 d.rectangle((0, 0, n - 1, 0), fill=tuple(min(255, v + 60) for v in col) + (255,))
             frames.append(f)
     save_sprite(gfx, 'hpbar', frames, 8, 8)
+    # 9.0.1: the same in 32 px pieces (fill 0-32, 99 frames): a party of 12 has 12 bars, 8 sprites each was too many.
+    frames = []
+    for col in ((88, 208, 128), (248, 216, 56), (240, 72, 56)):
+        for n in range(33):
+            f = Image.new('RGBA', (32, 8), (0, 0, 0, 0))
+            d = ImageDraw.Draw(f)
+            d.rectangle((0, 0, 31, 3), fill=(0x58, 0x60, 0x68, 255))
+            if n:
+                d.rectangle((0, 0, n - 1, 3), fill=col + (255,))
+                d.rectangle((0, 0, n - 1, 0), fill=tuple(min(255, v + 60) for v in col) + (255,))
+            frames.append(f)
+    save_sprite(gfx, 'hpbar32', frames, 32, 8)
 
 def build_plank(gfx):
     # Emerald's area name plank (.ow-popup): wood stripes, a dark frame with no top, a light inner edge and

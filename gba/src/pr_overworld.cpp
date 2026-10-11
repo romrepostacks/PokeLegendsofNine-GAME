@@ -1687,7 +1687,9 @@ void overworld::wild_battle(bool water)
         }
     }
     int lv_cap = map_level_cap(_map_index);
-    e.level = bn::max(map_region(_map_index) >= 2 ? lv_cap - 6 : 2, bn::min(lv_cap, g.average_level() - 2 + r.get_int(3)));
+    // 9.0.1: a level lower before the first badge, so a new starter (and a NUZLOCKE run) gets a fair start.
+    int under = map_region(_map_index) == 1 && ! g.badges() ? 3 : 2;
+    e.level = bn::max(map_region(_map_index) >= 2 ? lv_cap - 6 : 2, bn::min(lv_cap, g.average_level() - under + r.get_int(3)));
     // A roaming beast on this route: one grass encounter in three is it instead.
     for(int f = 0; f < 3 && ! water; ++f)
     {

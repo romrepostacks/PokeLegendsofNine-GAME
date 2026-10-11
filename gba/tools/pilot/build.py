@@ -27,7 +27,9 @@ def build(work):
     s = s.replace(anchor, open(os.path.join(HERE, 'battle_patch.inc')).read() + anchor, 1)
     s = '#include "bn_sram.h"\n' + s
     open(bat, 'w').write(s)
-    subprocess.run(['make', '-j4'], cwd=gba, check=True, stdout=subprocess.DEVNULL)
+    # A fresh -j4 build sometimes races on generated sprite headers; a second make picks up where it stopped.
+    if subprocess.run(['make', '-j4'], cwd=gba, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode:
+        subprocess.run(['make', '-j4'], cwd=gba, check=True, stdout=subprocess.DEVNULL)
     subprocess.run(['gcc', '-O2', os.path.join(HERE, 'pilot_harness.c'), '-o', os.path.join(work, 'harness'), '-lmgba'], check=True)
     return os.path.join(gba, 'party-royale.gba'), os.path.join(work, 'harness')
 

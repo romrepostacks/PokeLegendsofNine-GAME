@@ -1498,6 +1498,18 @@ function routeOpen(W, H){
   const cx = Math.floor(W/2), cy = Math.floor(H/2);
   return {left:{x:0,y:cy-2,len:4}, right:{x:W-1,y:cy-2,len:4}, up:{x:cx-1,y:0,len:3}, down:{x:cx-1,y:H-1,len:3}};
 }
+// Route trainers' names. Regions 1 to 4 keep the first pools (their trainers keep their names); 9.0.1 gives each later
+// region its own, so the same names don't come round again.
+const TR_GIRLS = ['LASS','SWIMMER','PSYCHIC','HEX MANIAC','CHANNELER','PICNICKER'];
+function trainerNames(region){
+  return ({
+    5:{girl:['ADA','MARIE','ROSALIN','HEDY','GRACE','LISE','VERA','CHIEN','EMMY'], boy:['NIKOLA','ALAN','ERWIN','LINUS','NIELS','OTTO','FRITZ','KARL','ENRICO','MAX']},
+    6:{girl:['CLIO','THEA','IRIS','DAPHNE','MAIA','HELENA','SELENE','NYX','PHOEBE'], boy:['CHRONO','DORIAN','JASPER','FELIX','SILAS','CASPAR','RUFUS','ORSON','LEO','HUGO']},
+    7:{girl:['WREN','RAVEN','SABLE','LILITH','MORGAN','ESME','VIOLA','DUSK','OPAL'], boy:['VESPER','CROW','ASHER','THORNE','GRIM','MORDEN','SILVIO','ROWAN','KAEL','BRAM']},
+    8:{girl:['APRIL','MAY','AUTUMN','SUMMER','HOLLY','FLORA','GALE','SKYE','WILLOW'], boy:['FROST','REED','ASH','BIRCH','FINCH','HAWK','ROBIN','STORM','LARK','JAY']},
+    9:{girl:['AURORA','ZARA','LUNA','ASTRA','NOVA','STELLA','ELARA','LYRA','VEGA'], boy:['ORION','ATLAS','KAI','ZANE','SOL','DRACO','CYRUS','ARLO','REX','TITUS']},
+  })[region] || {girl:['CALLIE','TIANA','DANA','OLIVIA','KAREN','ROSA','NINA','IVY','JUNE'], boy:['JOEY','BEN','RICK','ALLEN','MIKE','TOBY','LUKE','GREG','OWEN','SAM']};
+}
 function buildRoute(loc){
   const rnd = seedRand(loc.name);
   const th = ROUTE_THEMES[loc.theme||'plain'];
@@ -1690,11 +1702,15 @@ function buildRoute(loc){
   }
   // Trainers: a few per route, 3–5 tiles off the path, facing it, so walking the path gets you spotted.
   const TR_CLASSES = loc.aces ? ['ACE TRAINER'] : {plain:['YOUNGSTER','LASS','BUG CATCHER'], forest:['BUG CATCHER','LASS','YOUNGSTER'], lake:['FISHERMAN','LASS','YOUNGSTER'], rocky:['HIKER','YOUNGSTER','LASS'], sea:['SWIMMER','FISHERMAN','SWIMMER'], cave:['HIKER','HIKER','YOUNGSTER'], deep:['SWIMMER','SWIMMER','FISHERMAN']}[loc.theme||'plain'];
-  const TR_KIND = {YOUNGSTER:'youngster', LASS:'lass', 'BUG CATCHER':'bugcatcher', HIKER:'hiker', FISHERMAN:'fisher', 'TEMPEST GRUNT':'grunt', SWIMMER:'lass', 'ACE TRAINER':'boy'};
+  // 9.0.1: regions 5 to 9 add their own classes, so their routes aren't all YOUNGSTERS and LASSES again.
+  const REGION_CLASSES = {5:['SCIENTIST','PSYCHIC'], 6:['RUIN MANIAC','TIME TRAVELER'], 7:['HEX MANIAC','CHANNELER'], 8:['BIRD KEEPER','PICNICKER'], 9:['VETERAN','ACE TRAINER']}[loc.region];
+  if(REGION_CLASSES && !loc.aces && !['sea','deep'].includes(loc.theme)) TR_CLASSES.push(...REGION_CLASSES, ...REGION_CLASSES);
+  const TR_KIND = {YOUNGSTER:'youngster', LASS:'lass', 'BUG CATCHER':'bugcatcher', HIKER:'hiker', FISHERMAN:'fisher', 'TEMPEST GRUNT':'grunt', SWIMMER:'lass', 'ACE TRAINER':'boy',
+    SCIENTIST:'gentleman', PSYCHIC:'girl', 'RUIN MANIAC':'hiker', 'TIME TRAVELER':'boy', 'HEX MANIAC':'oldwoman', CHANNELER:'oldwoman', 'BIRD KEEPER':'boy', PICNICKER:'lass', VETERAN:'gentleman'};
   // 3.0.0: a region's own villains (TEAM QUAKE, TEAM NEPTUNE) in place of TEMPEST's grunts.
   const GT = loc.gruntTeam || {cls:'TEMPEST GRUNT', kind:'grunt', pool:TEMPEST_POOL, intro:GRUNT_INTRO, after:GRUNT_AFTER};
   // Lasses are girls; the other classes here are boys, as in Emerald.
-  const TR_NAMES = {girl:['CALLIE','TIANA','DANA','OLIVIA','KAREN','ROSA','NINA','IVY','JUNE'], boy:['JOEY','BEN','RICK','ALLEN','MIKE','TOBY','LUKE','GREG','OWEN','SAM']};
+  const TR_NAMES = trainerNames(loc.region);
   const TR_INTRO = ["Our eyes met! That means we battle!", "Hey! You look tough. Let's see!", "I just caught these guys. Try them out!", "You're not getting past without a battle!", "My Pokémon and I trained all day for this!"];
   const TR_AFTER = ["I'll train harder, I promise.", "You're really strong! Good luck out there.", "Losing is part of training, right?", "Next time, I'll win for sure!"];
   const pool = areaPool(loc), trails = Object.values(paths);
@@ -1711,7 +1727,7 @@ function buildRoute(loc){
     const grunt = made < (loc.grunts||0), pick = TR_CLASSES[Math.floor(rnd()*TR_CLASSES.length)], cls = grunt ? GT.cls : pick;
     const tp = grunt ? GT.pool : cls==='SWIMMER' || cls==='FISHERMAN' ? waterPool(loc) : pool;
     const size = 2 + Math.floor(rnd()*4), team = Array.from({length:size}, ()=>tp[Math.floor(rnd()*tp.length)]);
-    const named = `${cls} ${(names=>names[Math.floor(rnd()*names.length)])(TR_NAMES[cls==='LASS' || cls==='SWIMMER' ? 'girl' : 'boy'])}`;
+    const named = `${cls} ${(names=>names[Math.floor(rnd()*names.length)])(TR_NAMES[TR_GIRLS.includes(cls) ? 'girl' : 'boy'])}`;
     const ii = Math.floor(rnd()*TR_INTRO.length), ai = Math.floor(rnd()*TR_AFTER.length);
     npcs.push({kind:grunt ? GT.kind : TR_KIND[cls], x, y, facing:OPPOSITE[d], trainer:true, id:`${loc.name}#${made}`, title:grunt ? GT.cls : named,
       team, intro:grunt ? GT.intro[ii % GT.intro.length] : TR_INTRO[ii], after:grunt ? GT.after[ai % GT.after.length] : TR_AFTER[ai], home:{x,y}});
@@ -1836,6 +1852,11 @@ function twinMap(loc){
     const c = {...n, x:fx(n.x), facing:m && (n.facing==='left' || n.facing==='right') ? OPPOSITE[n.facing] : n.facing};
     if(n.home) c.home = {x:fx(n.home.x), y:n.home.y};
     if(n.trainer && n.team) c.team = n.team.map(()=>pool[Math.floor(rnd()*pool.length)]), c.id = n.id.replace(LOCATIONS[loc.twinOf].name, loc.name);
+    // 9.0.1: the other side's trainers are other people (same class, their own name).
+    if(n.trainer && n.team && n.kind!=='grunt' && / [A-Z]+$/.test(n.title)){
+      const cls = n.title.replace(/ [A-Z]+$/, ''), names = trainerNames(loc.region)[TR_GIRLS.includes(cls) ? 'girl' : 'boy'];
+      c.title = `${cls} ${names[Math.floor(rnd()*names.length)]}`;
+    }
     return c;
   });
   const map = {w:W, h:src.h, tiles, buildings:src.buildings.map(flipBox), npcs, exits, signs, spawn:{x:fx(src.spawn.x), y:src.spawn.y}};

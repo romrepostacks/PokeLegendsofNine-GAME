@@ -26,6 +26,7 @@
 #include "bn_sprite_items_cursor.h"
 #include "bn_sprite_items_hand.h"
 #include "bn_sprite_items_hpbar.h"
+#include "bn_sprite_items_hpbar32.h"
 #include "bn_sprite_items_link.h"
 #include "bn_sprite_items_mon_icon_egg.h"
 #include "bn_sprite_items_person_player.h"
@@ -128,19 +129,22 @@ void draw_hp_bar(bn::ivector<bn::sprite_ptr>& bar, int x, int y, int segments, i
     }
     // hpClass(): green over half, yellow over a fifth, red below.
     int colour = hp * 2 > max_hp ? 0 : hp * 5 > max_hp ? 1 : 2;
-    if(bar.size() != segments)
+    // 32 px pieces when the bar divides into them (9.0.1: fewer sprites), else 8 px ones.
+    int piece = segments % 4 ? 8 : 32, pieces = length / piece;
+    const bn::sprite_item& item = piece == 8 ? bn::sprite_items::hpbar : bn::sprite_items::hpbar32;
+    if(bar.size() != pieces)
     {
         bar.clear();
-        for(int i = 0; i < segments; ++i)
+        for(int i = 0; i < pieces; ++i)
         {
-            bar.push_back(bn::sprite_items::hpbar.create_sprite(sx(x + 8 * i + 4), sy(y + 4), 0));
+            bar.push_back(item.create_sprite(sx(x + piece * i + piece / 2), sy(y + 4), 0));
             bar.back().set_bg_priority(0);
         }
     }
-    for(int i = 0; i < segments; ++i)
+    for(int i = 0; i < pieces; ++i)
     {
-        bar[i].set_position(sx(x + 8 * i + 4), sy(y + 4));
-        bar[i].set_tiles(bn::sprite_items::hpbar.tiles_item(), colour * 9 + bn::clamp(fill - 8 * i, 0, 8));
+        bar[i].set_position(sx(x + piece * i + piece / 2), sy(y + 4));
+        bar[i].set_tiles(item.tiles_item(), colour * (piece + 1) + bn::clamp(fill - piece * i, 0, piece));
     }
 }
 
@@ -215,8 +219,8 @@ bool use_item(item_id id, int party_index, bn::string<80>& message)
 }
 
 // ---------------------------------------------------------------------------------------------------
-// Party screen (.pty, Emerald's party_menu): the lead in a big box on the left, the rest in two columns of
-// five on the right, the message box and CANCEL along the bottom. The chosen one's icon hops.
+// Party screen (.pty, Emerald's party_menu): 9.0.1's two teams side by side, TEAM 1 (the first six) on the left
+// and TEAM 2 on the right, the message box and CANCEL along the bottom. The chosen one's icon hops.
 namespace
 {
     constexpr int cancel_index = max_party;
@@ -228,15 +232,11 @@ namespace
 
     slot_rect slot_of(int k)
     {
-        if(k == 0)
-        {
-            return { 1, 3, 11, 8 };
-        }
         if(k == cancel_index)
         {
-            return { 24, 17, 6, 3 };
+            return { 24, 18, 6, 2 };
         }
-        return { 12 + ((k - 1) / 5) * 9, 1 + ((k - 1) % 5) * 3, 9, 3 };
+        return { (k / team_size) * 15, (k % team_size) * 3, 15, 3 };
     }
 
     class party_view
@@ -268,7 +268,7 @@ namespace
                 {
                     // The EGGS you carry fill the free slots (GBA 1.9): the bar fills as one nears hatching.
                     int e = k - g.party_count;
-                    if(k && e < g.extra.egg_count)
+                    if(e < g.extra.egg_count)
                     {
                         int left = g.extra.eggs[e].steps;
                         int x = r.tx * 8, y = r.ty * 8;
@@ -281,14 +281,11 @@ namespace
                         _icon_slot[_icons.size() - 1] = k;
                         u.print(x + 22, y + 2, "EGG", text_color::WHITE, _texts, true);
                         u.print(x + 22, y + 12, bn::to_string<8>(left), text_color::WHITE, _texts, true);
-                        draw_hp_bar(_bars[k], x + 44, y + 14, 3, egg_hatch_steps - left, egg_hatch_steps);
+                        draw_hp_bar(_bars[k], x + 52, y + 14, 8, egg_hatch_steps - left, egg_hatch_steps);
                         continue;
                     }
                     // Empty slots (and the ones the party can't use yet: partyCap) stay dark.
-                    if(k)
-                    {
-                        u.win().box(k >= g.party_cap() ? window_style::LOCKED : window_style::EMPTY, r.tx, r.ty, r.tw, r.th);
-                    }
+                    u.win().box(k >= g.party_cap() ? window_style::LOCKED : window_style::EMPTY, r.tx, r.ty, r.tw, r.th);
                     continue;
                 }
                 const mon& m = g.party[k];
@@ -296,43 +293,30 @@ namespace
                                      m.fainted() ? window_style::SLOT_FNT : window_style::SLOT;
                 u.win().box(style, r.tx, r.ty, r.tw, r.th);
                 int x = r.tx * 8, y = r.ty * 8;
-                bn::sprite_ptr icon = icon_item(m.species_index).create_sprite(sx(x + (k ? 10 : 14)), sy(y + (k ? 8 : 12)));
+                bn::sprite_ptr icon = icon_item(m.species_index).create_sprite(sx(x + 10), sy(y + 8));
                 apply_shiny(icon, m, mon_view::ICON);
                 icon.set_bg_priority(0);
                 icon.set_z_order(1);        // under the name's text
                 _icons.push_back(icon);
-                _icon_y[_icons.size() - 1] = y + (k ? 8 : 12);
+                _icon_y[_icons.size() - 1] = y + 8;
                 _icon_slot[_icons.size() - 1] = k;
                 bn::string<16> lv("Lv");
                 lv.append(bn::to_string<4>(m.level));
-                if(k == 0)
-                {
-                    u.print_fit_slide(x + 30, x + 5, x + r.tw * 8 - 4, y + 5, m.name(), text_color::WHITE, _texts);
-                    u.print(x + 36, y + 22, lv, text_color::WHITE, _texts, true);
-                    draw_hp_bar(_bars[k], x + 8, y + 36, 8, m.hp, m.max_hp);
-                    bn::string<16> hp(bn::to_string<4>(m.hp));
-                    hp.append("/");
-                    hp.append(bn::to_string<4>(m.max_hp));
-                    u.print(x + 80 - u.width(hp, true), y + 46, hp, text_color::WHITE, _texts, true);
-                }
-                else
-                {
-                    u.print_fit_slide(x + 22, x + 3, x + r.tw * 8 - 1, y + 2, m.name(), text_color::WHITE, _texts, true);
-                    u.print_fit(x + 22, y + 12, lv, 21, text_color::WHITE, _texts, true);     // "Lv300" left of the bar
-                    draw_hp_bar(_bars[k], x + 44, y + 14, 3, m.hp, m.max_hp);
-                }
+                u.print_fit_slide(x + 22, x + 3, x + r.tw * 8 - 4, y + 2, m.name(), text_color::WHITE, _texts, true);
+                u.print_fit(x + 22, y + 12, lv, 28, text_color::WHITE, _texts, true);     // "Lv300" left of the bar
+                draw_hp_bar(_bars[k], x + 52, y + 14, 8, m.hp, m.max_hp);
             }
             slot_rect c = slot_of(cancel_index);
             u.win().box(selected == cancel_index ? window_style::SLOT_ON : window_style::SLOT, c.tx, c.ty, c.tw, c.th);
-            u.print(c.tx * 8 + 4, c.ty * 8 + 4, "CANCEL", text_color::WHITE, _texts, true);
+            u.print(c.tx * 8 + 4, c.ty * 8 + 3, "CANCEL", text_color::WHITE, _texts, true);
         }
 
         void message(const bn::string_view& text)
         {
             ui& u = gui();
             _message.clear();
-            u.win().box(window_style::WINDOW, 0, 17, 24, 3);
-            u.print(8, 140, text, text_color::INK, _message);
+            u.win().box(window_style::WINDOW, 0, 18, 24, 2);
+            u.print(8, 148, text, text_color::INK, _message);
         }
 
         // Drops the sprites (names, icons, bars), which would show through a menu or the text box over them.
@@ -371,7 +355,7 @@ namespace
         bn::vector<bn::sprite_ptr, max_party> _icons;
         int _icon_y[max_party] = {};
         int _icon_slot[max_party] = {};
-        bn::vector<bn::sprite_ptr, 64> _texts;
+        bn::vector<bn::sprite_ptr, 80> _texts;    // 12 names and levels
         bn::vector<bn::sprite_ptr, 12> _message;
         bn::vector<bn::sprite_ptr, 8> _bars[max_party];
         int _selected = 0;
@@ -431,14 +415,17 @@ int party_screen(party_mode mode, const char* prompt)
                 order_pos = (order_pos + (bn::keypad::up_pressed() ? n : 1)) % (n + 1);
                 selected = order_pos == n ? cancel_index : order_pos;
             }
-            else if(bn::keypad::left_pressed())
+            else if(bn::keypad::left_pressed() || bn::keypad::right_pressed())
             {
-                // Left/Right move between the lead and the two columns.
-                selected = selected >= 6 && selected < cancel_index ? selected - 5 : selected == cancel_index ? selected : 0;
-            }
-            else if(bn::keypad::right_pressed())
-            {
-                selected = selected == 0 ? (n > 1 ? 1 : 0) : selected >= 1 && selected <= 5 && selected + 5 < n ? selected + 5 : selected;
+                // Left/Right cross between the two teams, row for row.
+                if(selected < team_size && selected + team_size < n)
+                {
+                    selected += team_size;
+                }
+                else if(selected >= team_size && selected < cancel_index)
+                {
+                    selected -= team_size;
+                }
             }
             if(selected != before)
             {
@@ -1226,11 +1213,11 @@ namespace
         pal.set_color(2, c2);
         if(_mode == pc_mode::DEPOSIT)
         {
-            // The party in two columns of five, CANCEL along the bottom.
+            // The party as its two teams, columns of six; CANCEL under the info on the left.
             for(int i = 0; i <= max_party; ++i)
             {
-                int tx = i == max_party ? 15 : 11 + (i / 5) * 10, ty = i == max_party ? 15 : 1 + (i % 5) * 3;
-                int tw = i == max_party ? 8 : 9;
+                int tx = i == max_party ? 1 : 11 + (i / team_size) * 10, ty = i == max_party ? 17 : (i % team_size) * 3;
+                int tw = i == max_party ? 9 : 9;
                 u.win().box(i == _k.p ? window_style::SLOT_ON : window_style::PAGE, tx, ty, tw, 3);
                 if(i == max_party)
                 {
@@ -1274,15 +1261,15 @@ namespace
             }
             if(_mode == pc_mode::MOVE)
             {
-                // MOVE: the party as a grid in the left panel.
+                // MOVE: the party as a grid in the left panel, three across (TEAM 1 the top two rows).
                 for(int i = 0; i < max_party; ++i)
                 {
-                    int x = 4 + (i % 2) * 40, y = 84 + (i / 2) * 15;
+                    int x = 8 + (i % 3) * 24, y = 88 + (i / 3) * 16;
                     window_style st = _k.c < 0 && _k.p == i ? window_style::SLOT_ON : window_style::PAGE;
-                    u.win().box(st, x / 8, y / 8, 5, 2);
+                    u.win().box(st, x / 8, y / 8, 3, 2);
                     if(i < g.party_count)
                     {
-                        bn::sprite_ptr icon = icon_item(g.party[i].species_index).create_sprite(sx(x + 20), sy(y + 7));
+                        bn::sprite_ptr icon = icon_item(g.party[i].species_index).create_sprite(sx(x + 12), sy(y + 7));
                         apply_shiny(icon, g.party[i], mon_view::ICON);
                         icon.set_scale(bn::fixed(0.5));
                         icon.set_bg_priority(0);
@@ -1362,13 +1349,13 @@ namespace
         int x, y;
         if(_mode == pc_mode::DEPOSIT)
         {
-            x = _k.p == max_party ? 128 : 96 + (_k.p / 5) * 80;
-            y = _k.p == max_party ? 116 : 6 + (_k.p % 5) * 24;
+            x = _k.p == max_party ? 16 : 96 + (_k.p / team_size) * 80;
+            y = _k.p == max_party ? 132 : (_k.p % team_size) * 24;
         }
         else if(_k.c < 0)
         {
-            x = 18 + (_k.p % 2) * 40;
-            y = 72 + (_k.p / 2) * 15;
+            x = 18 + (_k.p % 3) * 24;
+            y = 76 + (_k.p / 3) * 16;
         }
         else if(_k.r < 0)
         {
@@ -1770,20 +1757,20 @@ namespace
             {
                 if(bn::keypad::up_pressed()) { _k.p = (_k.p + max_party) % (max_party + 1); moved = true; }
                 if(bn::keypad::down_pressed()) { _k.p = (_k.p + 1) % (max_party + 1); moved = true; }
-                if((bn::keypad::left_pressed() || bn::keypad::right_pressed()) && _k.p < max_party) { _k.p = (_k.p + 5) % max_party; moved = true; }
+                if((bn::keypad::left_pressed() || bn::keypad::right_pressed()) && _k.p < max_party) { _k.p = (_k.p + team_size) % max_party; moved = true; }
             }
             else if(_k.c < 0)
             {
-                // MOVE, the party grid (two columns); right from its right column goes back to the box.
-                if(bn::keypad::up_pressed()) { _k.p = (_k.p + max_party - 2) % max_party; moved = true; }
-                if(bn::keypad::down_pressed()) { _k.p = (_k.p + 2) % max_party; moved = true; }
-                if(bn::keypad::left_pressed()) { _k.p -= _k.p % 2; moved = true; }
+                // MOVE, the party grid (three columns); right from its right column goes back to the box.
+                if(bn::keypad::up_pressed()) { _k.p = (_k.p + max_party - 3) % max_party; moved = true; }
+                if(bn::keypad::down_pressed()) { _k.p = (_k.p + 3) % max_party; moved = true; }
+                if(bn::keypad::left_pressed() && _k.p % 3) { --_k.p; moved = true; }
                 if(bn::keypad::right_pressed())
                 {
-                    if(_k.p % 2)
+                    if(_k.p % 3 == 2)
                     {
                         _k.c = 0;
-                        _k.r = bn::clamp((_k.p / 2) * 2, 0, 4);
+                        _k.r = bn::min(4, _k.p / 3 + 1);
                     }
                     else
                     {
@@ -1806,7 +1793,7 @@ namespace
                     if(_k.c == 0 && _mode == pc_mode::MOVE)
                     {
                         _k.c = -1;
-                        _k.p = bn::clamp(_k.r * 2 + 1, 0, max_party - 1);
+                        _k.p = bn::clamp(bn::max(0, _k.r - 1) * 3 + 2, 0, max_party - 1);
                     }
                     else
                     {
@@ -3173,7 +3160,7 @@ void edit_one(int index)
             if(row == 0)
             {
                 int old_level = m.level;
-                m.level = uint16_t(bn::clamp(int(m.level) + step, 1, 200));
+                m.level = uint16_t(bn::clamp(int(m.level) + step, 1, region_cap(9)));     // up to the last region's 900
                 if(m.level != old_level)
                 {
                     m.xp = 0;

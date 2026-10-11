@@ -57,7 +57,7 @@ def main():
             level = a.level or max(5, 100 * (a.region - 1))
             data[0x7E02:0x7E04] = struct.pack('<h', 1000 + a.region)
             req = struct.pack('<4H', len(team), level, 1 if (a.skip or a.style == 'speed') else 0, 5000) + \
-                  struct.pack('<10H', *(team + [0] * (10 - len(team))))
+                  struct.pack('<12H', *(team + [0] * (12 - len(team))))
             data[0x7F00:0x7F00 + len(req)] = req
         open(sav, 'wb').write(data)
     e = Emu(harness, rom, sav)
