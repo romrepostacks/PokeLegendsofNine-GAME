@@ -91,6 +91,10 @@ class World:
             m = dict(index=mi, name=r[0], w=r[2], h=r[3], spawn=(r[22], r[23]), level_cap=r[24], exit_map=r[25],
                      exit=(r[26], r[27]), leader_id=r[28], gate=r[29], leader_name=r[31], desc=r[35])
             m['room'] = m['exit_map'] >= 0
+            # League gates (pr_overworld.cpp gate_open): a wall row that opens once that Elite Four member is beaten.
+            ri = a.get(p + 'room')
+            n = rows(ri)[3] if ri else 0
+            m['gates'] = [dict(y=d[0], x0=d[1], x1=d[2], elite=d[3]) for d in rows(a.get(p + 'gates', ''))][:n] if n else []
             m['beh'] = rows(a[p + 'behaviour'])
             m['doors'] = [dict(x=d[0], y=d[1], kind=d[2], room=d[3]) for d in rows(a.get(p + 'doors', ''))][:r[9]]
             m['people'] = [dict(x=d[0], y=d[1], kind=d[2], facing=d[3], role=d[4], wander=d[5]) for d in rows(a.get(p + 'people', ''))][:r[11]]

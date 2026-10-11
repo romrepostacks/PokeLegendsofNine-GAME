@@ -32,6 +32,7 @@ class Pilot:
         self.lost = False
         self.shop_ok = None
         self.talked = set()
+        self.retries = 0
         self.rotate_party = style in ('smart', 'catcher', 'twoteam')
         self.style_all = style in ('all', 'catcher')
         self.fight_all = style in ('all', 'catcher', 'smart', 'masher', 'twoteam', 'solo')
@@ -179,7 +180,7 @@ class Pilot:
             if (nx, ny) in actors or self.blocked.get((mi, nx, ny), -1) > now:
                 continue
             b = m['beh'][ny * m['w'] + nx]
-            if b in (W.WALK, W.GRASS):
+            if b in (W.WALK, W.GRASS) or self.gate_open(m, nx, ny):
                 yield d, (nx, ny), b
             elif b in WIND:
                 yield d, (nx, ny), b
@@ -193,6 +194,12 @@ class Pilot:
                 yield d, ('door', nx, ny), b
             elif b == W.MAT and m['room']:
                 yield d, ('mat', nx, ny), b
+
+    def gate_open(self, m, x, y):
+        for g in m['gates']:
+            if g['y'] == y and g['x0'] <= x <= g['x1']:
+                return any(t['elite'] == g['elite'] and self.beaten(t['id']) for t in m['trainers'])
+        return False
 
     def bfs(self, mi, start, goal, surf=False, avoid_grass=False):
         """goal(node) -> bool, node a (x, y) or ('link', k) / ('door', x, y) / ('mat', x, y). Returns the
@@ -461,6 +468,8 @@ class Pilot:
             for t in m['trainers']:
                 if t['scene'] or self.beaten(t['id']):
                     continue
+                if t['role'] == 'TOWER':
+                    continue        # the CHALLENGE TOWER's floors: adventure mode, not the story
                 if t['role'] in self.KEY_ROLES or self.fight_all or (m['flags'] & 8):
                     out.append((d, 0, ('trainer', mi, t['x'], t['y'], t['title'])))
             if not m['room'] and not (visited[mi >> 3] >> (mi & 7)) & 1 and not (m['flags'] & (32 | 64)):
@@ -618,8 +627,8 @@ class Pilot:
         hp, mx, party = self.able()
         if not party:
             return False
-        lead_down = party[0]['hp'] == 0
-        return mx and (hp * 10 < mx * 6 or sum(1 for p in party if p['hp']) * 3 < len(party) * 2)
+        lead_low = party[0]['hp'] * 5 < party[0]['max_hp'] * 2      # a player heals a lead under 40% before the next fight
+        return mx and (hp * 10 < mx * 6 or lead_low or sum(1 for p in party if p['hp']) * 3 < len(party) * 2)
 
     def set_policy(self, grinding=False):
         n = self.e.g('party_count', 1, False)
@@ -712,6 +721,7 @@ class Pilot:
                     if checkpoint:
                         checkpoint(self)
                 self.last_progress = key
+                self.retries = 0
                 if self.rotate_party:
                     self.rotate()
                 self.set_policy()
@@ -725,6 +735,14 @@ class Pilot:
                     self.shop_ok = self.last_progress
             hp_before = self.able()[0]
             gs = self.goals()
+            if not gs and self.failed.get(self.last_progress) and self.retries < 6:
+                # Everything left beat us or was out of reach: level up a bit and try it all again, as a player would.
+                self.retries += 1
+                self.log('retry', n=self.retries)
+                self.failed.pop(self.last_progress)
+                self.bad_links.clear()
+                self.grind(4)
+                continue
             if not gs:
                 self.log('no_goals'); self.shot('no_goals')
                 return 'no_goals'
