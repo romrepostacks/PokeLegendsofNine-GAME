@@ -63,7 +63,7 @@ def main():
             data[0x7F00:0x7F00 + len(req)] = req
         open(sav, 'wb').write(data)
     e = Emu(harness, rom, sav)
-    e.wait(300)
+    e.wait(300 + a.seed * 37)     # a different seed waits a little longer at the title: the game's dice roll differently
     e.table()
     P = pilot.Pilot(e, w, out, style=a.style, seed=a.seed, run_wild=a.style != 'masher')
     t0 = time.time()

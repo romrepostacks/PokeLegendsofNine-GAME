@@ -446,8 +446,17 @@ battle_report battle_scene(const encounter& e)
             roamers_move();
         }
     }
-    if(e.rematch && report.outcome == battle_outcome::WON)
+    // A trainer you beat today won't ask for a rematch until tomorrow (30 minutes of play). 9.0.1: the first win
+    // counts too; before, a route trainer asked again right after you beat them, with a full team above your level.
+    if(e.kind == encounter_kind::TRAINER && report.outcome == battle_outcome::WON)
     {
+        constexpr int frames_per_day = 60 * 1800;
+        int today = int(g.play_frames / frames_per_day);
+        if(g.extra.rematch_day != today)
+        {
+            g.extra.rematch_day = uint16_t(today);
+            g.extra.rematched = bitset<trainer_slots>();
+        }
         g.extra.rematched.set(world_data::maps[e.map].trainers[e.trainer_index].id);
     }
     if(counts)

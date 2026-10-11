@@ -4192,7 +4192,7 @@ bool overworld::offer_rematch(int index)
     upper(text, a.tr->title);
     text.append(": \"I've been training since we last battled. How about a rematch?\"");
     u.show_text(text);
-    bool yes = u.yes_no();
+    bool yes = u.yes_no(false);     // 9.0.1: NO first, so mashing A past them doesn't start one
     u.clear_text();
     if(yes)
     {

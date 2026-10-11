@@ -126,7 +126,8 @@ def load(gba_dir):
     w = World.__new__(World)
     if os.path.exists(cache) and os.path.getmtime(cache) > os.path.getmtime(header):
         w.maps = pickle.load(open(cache, 'rb'))
-        return w
+        if 'gates' in w.maps[0]:        # an older cache lacks the league gates
+            return w
     w = World(header)
     pickle.dump(w.maps, open(cache, 'wb'))
     return w
