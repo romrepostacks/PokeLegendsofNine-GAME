@@ -22,7 +22,6 @@ class Pilot:
     def __init__(self, emu, world, out, style='smart', seed=0, run_wild=True):
         self.e, self.w, self.out = emu, world, out
         self.style = style
-        self.party_cap = 7      # + one catch = 8: 15+ fighters in one battle crash the game
         self.rnd = random.Random(seed)
         self.run_wild = run_wild
         self.blocked = {}            # (map, x, y) -> frame until which it's treated as solid
@@ -33,9 +32,9 @@ class Pilot:
         self.lost = False
         self.shop_ok = None
         self.talked = set()
-        self.rotate_party = style in ('smart', 'catcher')
+        self.rotate_party = style in ('smart', 'catcher', 'twoteam')
         self.style_all = style in ('all', 'catcher')
-        self.fight_all = style in ('all', 'catcher', 'smart', 'masher')
+        self.fight_all = style in ('all', 'catcher', 'smart', 'masher', 'twoteam', 'solo')
         self.log_f = open(os.path.join(out, 'log.txt'), 'a')
         self.shots = 0
         self.last_progress = None
@@ -591,9 +590,9 @@ class Pilot:
         outgrow the old team). Written straight into the save data."""
         t = self.e.t
         sz = t['mon_size']
-        cap = cap or self.party_cap
+        cap = cap or self.party_cap()
         n = self.e.g('party_count', 1, False)
-        party = self.e.read(self.addr + t['party'], sz * 10)
+        party = self.e.read(self.addr + t['party'], sz * 12)
         box = self.e.read(self.addr + t['box'], sz * 420)
         mons = [party[i * sz:(i + 1) * sz] for i in range(n)] + [box[i * sz:(i + 1) * sz] for i in range(420)]
         lvl = lambda r: struct.unpack_from('<H', r, t['m_level'])[0]
@@ -602,12 +601,18 @@ class Pilot:
         keep, rest = live[:cap], live[cap:]
         if [bytes(r) for r in keep] == [bytes(r) for r in mons[:n]]:
             return
-        newp = b''.join(keep) + bytes(sz * (10 - len(keep)))
+        newp = b''.join(keep) + bytes(sz * (12 - len(keep)))
         newb = b''.join(rest) + bytes(sz * (420 - len(rest)))
         self.e.write(self.addr + t['party'], newp)
         self.e.write(self.addr + t['box'], newb)
         self.e.write(self.addr + t['party_count'], bytes([len(keep)]))
         self.log('rotate', party=[(struct.unpack_from('<H', r, 0)[0], lvl(r)) for r in keep])
+
+    def party_cap(self):
+        # 9.0.1: 12 (two teams of six) from the fourth VELLORIN badge, as in the game; 'solo' keeps one.
+        if self.style == 'solo':
+            return 1
+        return 12 if self.badges(1) >= 4 else 6
 
     def need_heal(self):
         hp, mx, party = self.able()
@@ -619,10 +624,11 @@ class Pilot:
     def set_policy(self, grinding=False):
         n = self.e.g('party_count', 1, False)
         base = STYLES[self.style if self.style in STYLES else 'smart']
-        if self.style == 'smart':
+        if self.style in ('smart', 'twoteam'):
             base = 3        # catches what it hasn't got (a team that keeps up with the badge levels), runs from the rest
         run = self.run_wild and not grinding and self.style != 'masher'
         self.e.set_policy(base | (0x80 if run else 0))
+        self.e.write(SRAM + 0x7E05, bytes([1 if self.style == 'twoteam' else 0]))   # the team prompt alternates
 
     def grind(self, levels=3, max_frames=60000):
         """Walks up and down the nearest tall grass until the party's average level is `levels` higher."""
@@ -709,8 +715,8 @@ class Pilot:
                 if self.rotate_party:
                     self.rotate()
                 self.set_policy()
-            if self.e.g("party_count", 1, False) > self.party_cap:
-                self.rotate()       # 15+ fighters in one battle crash the game (sprite items), keep it at 7 (+1 catch)
+            if self.e.g("party_count", 1, False) > self.party_cap():
+                self.rotate()       # over what the game allows (6, or 12 from the fourth badge)
             if self.need_heal():
                 if not self.heal():
                     self.log('heal_failed')

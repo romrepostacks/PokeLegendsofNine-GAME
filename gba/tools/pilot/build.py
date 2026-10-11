@@ -25,6 +25,11 @@ def build(work):
     anchor = '        ui& u = gui();\n        int queue[max_own];'
     assert s.count(anchor) == 1
     s = s.replace(anchor, open(os.path.join(HERE, 'battle_patch.inc')).read() + anchor, 1)
+    # SRAM 0x7E05 = 1: the team prompt alternates TEAM 1 / TEAM 2 by itself (the 'twoteam' style).
+    pick = '            team = bn::max(0, u.list(views, 2, 0, false));\n'
+    assert s.count(pick) == 1
+    s = s.replace(pick, '            uint8_t alt = 0; bn::sram::read_offset(alt, 0x7E05); static int flip = 0;\n'
+                  '            team = alt ? (flip++ & 1) : bn::max(0, u.list(views, 2, 0, false));\n', 1)
     s = '#include "bn_sram.h"\n' + s
     open(bat, 'w').write(s)
     # A fresh -j4 build sometimes races on generated sprite headers; a second make picks up where it stopped.
