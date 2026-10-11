@@ -1,7 +1,17 @@
 {
   "_howto": "The game's WHAT'S NEW: the title screen's message of the day (motd) and the changelog, newest first. Player-facing only.",
-  "motd": "Version 9.0.1: carry 12 POKéMON in two teams of six, and pick the team at the start of each battle.",
+  "motd": "Version 9.0.2: fixes from the second big playtest. Beaten trainers wait a day before asking for a rematch.",
   "changelog": [
+    {
+      "version": "GBA 9.0.2",
+      "date": "2026-10-11",
+      "title": "Playtest fixes",
+      "changes": [
+        "A trainer you just beat no longer asks for a rematch the moment you talk to them again. Rematches wait for the next day, and the question starts on NO",
+        "STRUGGLE has no type now, so a POKéMON out of PP can still hit a GHOST instead of being stuck in a battle it can't win",
+        "New POKéMON start with an attack in their first move slot (TACKLE before GROWL)"
+      ]
+    },
     {
       "version": "GBA 9.0.1",
       "date": "2026-10-11",
