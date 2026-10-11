@@ -1,6 +1,7 @@
 #include "pr_mon.h"
 #include "pr_state.h"
 
+#include "bn_utility.h"
 #include "bn_vector.h"
 
 #include "pr_game_data.h"
@@ -99,6 +100,14 @@ int moves_at(const species& s, int level, uint16_t* out)
     for(int i = first; i < count; ++i)
     {
         out[i - first] = known[i];
+    }
+    // 9.0.1: an attack in the first slot (TACKLE before GROWL), as in the main games, so the move A lands on hits.
+    for(int i = 1; i < count - first && move_data(out[0]).category == move_category::STATUS; ++i)
+    {
+        if(move_data(out[i]).category != move_category::STATUS)
+        {
+            bn::swap(out[0], out[i]);
+        }
     }
     return count - first;
 }

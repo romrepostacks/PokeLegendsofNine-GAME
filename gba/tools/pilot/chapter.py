@@ -38,6 +38,7 @@ def main():
     ap.add_argument('--seed', type=int, default=0)
     ap.add_argument('--team', type=int, default=0, help='party size (default: the style\'s team)')
     ap.add_argument('--level', type=int, default=0)
+    ap.add_argument('--shots', type=int, default=0, help='also a screenshot every N frames (for the first 300000)')
     a = ap.parse_args()
     out = os.path.abspath(a.out)
     os.makedirs(out, exist_ok=True)
@@ -66,6 +67,14 @@ def main():
     e.wait(300 + a.seed * 37)     # a different seed waits a little longer at the title: the game's dice roll differently
     e.table()
     P = pilot.Pilot(e, w, out, style=a.style, seed=a.seed, run_wild=a.style != 'masher')
+    if a.shots:
+        wait, last = e.wait, [0]
+        def shooting_wait(n):
+            wait(n)
+            if e.frames - last[0] >= a.shots and e.frames < 300000:
+                last[0] = e.frames
+                e.shot(os.path.join(out, 'f%07d.png' % e.frames))
+        e.wait = shooting_wait
     t0 = time.time()
     if a.state:
         e.load_state(a.state)
