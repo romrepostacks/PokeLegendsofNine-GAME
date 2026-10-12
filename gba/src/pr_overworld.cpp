@@ -546,6 +546,7 @@ void overworld::load_actors()
     // The guardian of the Sunken Shrine, until it's caught.
     int beast = _map->area ? legend_flag(_map->area->legend) : -1;
     if(_map->area && _map->area->legend_x >= 0 && ! legend_caught(_map->area->legend) && ! (beast >= 0 && beast < 3 && g.roam[beast]) &&
+       ! (_map->area->legend == species_id::ARCEUS && g.flags.test(flag::ARCEUS_BLESSED)) &&
        ! _actors.full())
     {
         actor a;

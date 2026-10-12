@@ -395,6 +395,13 @@ battle_report battle_scene(const encounter& e)
             }
         }
         s->legendary = e.legendary;
+        if(e.trial)
+        {
+            s->trial = true;
+            s->smart = s->sharp = s->keen = true;
+            s->tier = 9;
+            s->boss_heals = 2;
+        }
         if(e.legendary)
         {
             // The guardian is tougher the bigger your party: HP x max(1, able / 2).
@@ -403,6 +410,17 @@ battle_report battle_scene(const encounter& e)
                 mon& m = s->foes[i];
                 int able = bn::min(g.able_count(), team_size);     // one team fights
                 int scaled = able > 2 ? (m.max_hp * able + 1) / 2 : m.max_hp;
+                if(e.trial)
+                {
+                    // 9.2.0: ARCEUS's trial: perfect stats, and a full bar for each Pokémon it faces.
+                    const base_stats& b = m.data().base;
+                    m.atk = uint16_t(stat_max(b.atk, false, m.level));
+                    m.def = uint16_t(stat_max(b.def, false, m.level));
+                    m.spa = uint16_t(stat_max(b.spa, false, m.level));
+                    m.spd = uint16_t(stat_max(b.spd, false, m.level));
+                    m.spe = uint16_t(stat_max(b.spe, false, m.level));
+                    scaled = bn::min(65535, stat_max(b.hp, true, m.level) * bn::max(1, able));
+                }
                 m.max_hp = uint16_t(scaled);
                 m.hp = m.max_hp;
             }

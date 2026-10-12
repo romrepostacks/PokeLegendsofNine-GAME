@@ -756,7 +756,7 @@ namespace
         bn::string<32> labels[items_count + 1];
         bn::string_view views[items_count + 1];
         int n = 0;
-        if(wild && ! nuz_block)
+        if(wild && ! nuz_block && ! _s.trial)
         {
             // The POKé BALL always (greyed when out); GREAT and ULTRA BALLS when you have some.
             for(item_id ball : { item_id::POKEBALL, item_id::GREATBALL, item_id::ULTRABALL, item_id::MASTERBALL })
@@ -794,6 +794,7 @@ namespace
         const char* tip = nuz_block ? (_nuz_caught ? "NUZLOCKE: one catch a battle." :
                                        _s.scripted ? "NUZLOCKE: this one can't be caught." :
                                                      "NUZLOCKE: no catch left here.") :
+                          _s.trial ? "It can't be caught. Win!" :
                           wild ? (g.item_count(item_id::POKEBALL) ? "Weaken it first to catch it!" :
                                   "No POKé BALLS left!") :
                           "No items to use here.";
@@ -971,9 +972,9 @@ namespace
                     }
                     continue;
                 }
-                if(_s.opponent)
+                if(_s.opponent || _s.trial)
                 {
-                    u.say("No! There's no running from a Trainer battle!");
+                    u.say(_s.trial ? "There's no running from ARCEUS!" : "No! There's no running from a Trainer battle!");
                     continue;
                 }
                 audio::play(audio::sfx::SELECT);
@@ -1050,6 +1051,11 @@ namespace
                 text.append(" used a ");
                 text.append(game_data::items[int(act.c.item)].name);
                 text.append("! ");
+                if(! act.own && ! _s.opponent)
+                {
+                    text = act.user->m->name();     // ARCEUS's trial: no trainer, it heals itself
+                    text.append(" glowed with a healing light! ");
+                }
                 if(use_item_on(act.c.item, *act.user->m, message))
                 {
                     text.append(message);

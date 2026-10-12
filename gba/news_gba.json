@@ -1,7 +1,17 @@
 {
   "_howto": "The game's WHAT'S NEW: the title screen's message of the day (motd) and the changelog, newest first. Player-facing only.",
-  "motd": "Version 9.1.0: one ARCEUS, every type. FORM in the party menu changes a POKéMON's form.",
+  "motd": "Version 9.2.0: ARCEUS, LEVEL 1000. Beat it, then choose: catch it, or take its power.",
   "changelog": [
+    {
+      "version": "GBA 9.2.0",
+      "date": "2026-10-12",
+      "title": "The ORIGINAL ONE",
+      "changes": [
+        "ARCEUS in the HALL OF ORIGIN is no longer a catch. It's a level 1000 battle, ARCEUS alone against your whole team, and you can't throw a ball or run",
+        "Lose, and it waits for you to try again",
+        "Win, and choose once: battle ARCEUS again at level 1 and catch it, or let it go and take its power: every POKéMON in your party goes to level 900 with perfect stats"
+      ]
+    },
     {
       "version": "GBA 9.1.0",
       "date": "2026-10-12",

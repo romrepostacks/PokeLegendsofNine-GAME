@@ -324,6 +324,9 @@ namespace flag
     constexpr int ORIGIN_CHAMPION = 26;
     constexpr int ANCIENT_SEED = 27;        // 6.0.0: the seed planted in AETERNA's past
     constexpr int TREE_GIFT = 28;           // ... and the MIND PLATE in the roots of the tree it grew into
+    constexpr int ARCEUS_TRIAL = 29;        // 9.2.0: ARCEUS beaten at level 1000, and the reward you chose:
+    constexpr int ARCEUS_BLESSED = 46;      //   your party at the top level with perfect stats (ARCEUS leaves)
+    constexpr int ARCEUS_LEVEL1 = 47;       //   or ARCEUS to catch, at level 1
     constexpr int MEW_SIGHTING = 30;        // 5.0.0: 30-39, the ten places GENOVA's MEW was spotted
     constexpr int mew_sightings = 10;
     constexpr int OLD_PLATE = 40;           // 9.0.0: 40-45, the plates VELLORIN, CALDERRA and the ISLES gave

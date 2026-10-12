@@ -252,7 +252,7 @@ static void test_setup()
         }
         else
         {
-            // ORIGIN: 4 VELLORIN's plate shrine, 5 ARCEUS with too few plates, 6 ... with all 18, 7 the altar.
+            // ORIGIN: 4 VELLORIN's plate shrine, 5 ARCEUS with too few plates, 6 ... with all 18 (its trial), 7 the altar.
             if(sub == 4) map = play::find_person(1, person_role::PLATE, x, y);
             if(sub >= 6)
             {
@@ -262,7 +262,9 @@ static void test_setup()
                     item_id::PIXIEPLATE, item_id::BLANKPLATE };
                 for(item_id p : plates) g.add_item(p, 1);
             }
-            if(sub == 5 || sub == 6) legend_at("HALL OF ORIGIN");
+            // 9.2.0: 15 ARCEUS's trial won (its reward), with a level 50 PIKACHU to see the power reach it.
+            if(sub == 15) { g.flags.set(flag::ARCEUS_TRIAL); g.party[5] = mon::make(species_id::PIKACHU, 50); }
+            if(sub == 5 || sub == 6 || sub == 15) legend_at("HALL OF ORIGIN");
             if(sub == 7) { g.party[0] = mon::make(species_id::ARCEUS, 900); map = play::find_person(rg, person_role::ALTAR, x, y); }
         }
     }

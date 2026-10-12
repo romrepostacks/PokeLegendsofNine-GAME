@@ -25,6 +25,7 @@ namespace
 {
     bool just_loaded = false;
     bool new_game_started = false;
+    bool arceus_trial = false;      // 9.2.0: the battle just fought was ARCEUS's trial
 
     const char* pocket_name(int pocket)
     {
@@ -588,6 +589,23 @@ void overworld::legend_talk(int index)
         say(text);
         return;
     }
+    if(legend == species_id::ARCEUS && map_region(_map_index) == 9 && ! g.flags.test(flag::ARCEUS_LEVEL1))
+    {
+        // 9.2.0: ARCEUS isn't caught at its full strength. It has to be beaten, at level 1000, and then it
+        // offers a reward (arceus_reward).
+        if(g.flags.test(flag::ARCEUS_TRIAL))
+        {
+            arceus_reward();
+            return;
+        }
+        say("Light pours down from the peak, and every plate you carry starts to glow.");
+        say("ARCEUS, the ORIGINAL ONE, looks down at you. It will not be caught... but it will test you.");
+        say("Gyaaaoooh!");
+        arceus_trial = true;
+        fixed_battle(legend, 1000, true);
+        _battle->trial = true;
+        return;
+    }
     if(_map->room && _map->room->kind == room_kind::CHAMBER)
     {
         bn::string<64> call;
@@ -631,6 +649,7 @@ void overworld::legend_talk(int index)
     g.story |= story::LEGEND_FIGHT;
     // Calderra's: a little above the level cap there (HO-OH at the very top).
     int level = map_region(_map_index) == 1 ? 50 : legend == species_id::HO_OH ? 200 :
+                legend == species_id::ARCEUS && map_region(_map_index) == 9 ? 1 :     // 9.2.0: the reward
                 bn::min(region_cap(map_region(_map_index)), map_level_cap(_map_index) + 5);
     fixed_battle(legend, level, true);
 }
@@ -2307,6 +2326,21 @@ void overworld::after_story()
         story_say("HALE: \"Look for dark, deep water while you SURF, and press A there to DIVE.\"");
         story_say("HALE: \"They say the TIDEWARDENS' shrine lies somewhere beneath the GLIMMER SEA.\"");
     }
+    if(arceus_trial)
+    {
+        arceus_trial = false;
+        if(_last->outcome == battle_outcome::WON)
+        {
+            g.flags.set(flag::ARCEUS_TRIAL);
+            save_game();
+            arceus_reward();
+        }
+        else
+        {
+            say("ARCEUS withdrew into the light...");
+            say("The HALL OF ORIGIN waits. Try again.");
+        }
+    }
     if(g.has(story::LEGEND_FIGHT))
     {
         g.story &= ~story::LEGEND_FIGHT;
@@ -2870,6 +2904,72 @@ void overworld::plate_shrine()
 }
 
 // 9.0.0: the altar of origin: ARCEUS in your party takes the type of the next plate you hold (Normal with none).
+// 9.2.0: ARCEUS beaten at level 1000 offers one reward, once: battle it again at level 1 and catch it, or
+// leave it be and take its power (your party at the top level, with perfect stats).
+void overworld::arceus_reward()
+{
+    game_state& g = state();
+    ui& u = gui();
+    say("ARCEUS bows its great head. You have passed its trial.");
+    say("It offers you a choice: battle it once more, at level 1, and catch it...");
+    say("...or let it go, and take its power: every POKéMON in your party at level 900, with perfect stats.");
+    constexpr bn::string_view options[] = { "CATCH IT", "ITS POWER" };
+    u.show_text("Which will you choose? You can only choose once.");
+    int k = u.list(options, 2);
+    u.clear_text();
+    if(k < 0)
+    {
+        say("ARCEUS waits. It's very patient.");
+        return;
+    }
+    u.show_text(k == 0 ? "Battle ARCEUS at level 1 to catch it?" : "Take ARCEUS's power? It will leave for good.");
+    bool yes = u.yes_no(false);
+    u.clear_text();
+    if(! yes)
+    {
+        say("ARCEUS waits. It's very patient.");
+        return;
+    }
+    if(k == 0)
+    {
+        g.flags.set(flag::ARCEUS_LEVEL1);
+        save_game();
+        say("ARCEUS's light gathers into something small, as it was at the very beginning of everything.");
+        say("Gyaaaoooh!");
+        g.story |= story::LEGEND_FIGHT;
+        fixed_battle(species_id::ARCEUS, 1, true);
+        return;
+    }
+    int top = region_cap(9);
+    for(int i = 0; i < g.party_count; ++i)
+    {
+        mon& m = g.party[i];
+        const base_stats& b = m.data().base;
+        m.level = uint16_t(bn::max(int(m.level), top));
+        m.xp = 0;
+        m.max_hp = uint16_t(stat_max(b.hp, true, m.level));
+        m.atk = uint16_t(stat_max(b.atk, false, m.level));
+        m.def = uint16_t(stat_max(b.def, false, m.level));
+        m.spa = uint16_t(stat_max(b.spa, false, m.level));
+        m.spd = uint16_t(stat_max(b.spd, false, m.level));
+        m.spe = uint16_t(stat_max(b.spe, false, m.level));
+        m.traits |= mon_trait::EDITED;      // they keep their place at the top through evolutions and forms
+        m.hp = m.max_hp;
+        m.st = status::NONE;
+        for(uint8_t& pp : m.pp_used)
+        {
+            pp = 0;
+        }
+    }
+    g.flags.set(flag::ARCEUS_BLESSED);
+    save_game();
+    say("ARCEUS's light pours over your team!");
+    say("Your POKéMON grew to level 900, as strong as they can ever be.");
+    load_actors();
+    refresh(true);
+    say("ARCEUS rose into the light and was gone. It will watch over you from now on.");
+}
+
 void overworld::arceus_altar()
 {
     game_state& g = state();

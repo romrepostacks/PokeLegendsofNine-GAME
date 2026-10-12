@@ -30,6 +30,7 @@ struct encounter
     bool tower_legend = false;      // the CHALLENGE TOWER's summoned legendary (shiny as rolled at the stone)
     bool rematch = false;           // a route trainer battling again (GBA 1.8): stronger, once a day
     int roamer = -1;                // Calderra's roaming beast (legend_flag), or -1
+    bool trial = false;             // 9.2.0: ARCEUS at level 1000, to be beaten (no catching, no running)
 };
 
 enum class battle_outcome

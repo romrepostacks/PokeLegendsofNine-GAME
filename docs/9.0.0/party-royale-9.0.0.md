@@ -43,6 +43,9 @@ and the League. 19 areas. Levels: 800, then 12 per hall, 900 at the League.
 2. The eight halls, in any order within each part.
 3. **Hall of Origin:** Keeper Ilex tests you. **Arceus** answers only when you hold all 18 plates; before that, the
    light just dims. The altar there turns Arceus to the type of the next plate you hold.
+   From 9.2.0 Arceus can't be caught at full strength: it's a level 1000 battle you must win (no balls, no running,
+   perfect stats, a full HP bar for each Pokémon it faces, two Full Restores). Win, and choose once: battle it again
+   at level 1 to catch it, or let it go and take its power (your party at level 900 with perfect stats).
 4. **Origin League:** the Elite Four are villains you beat on the way, given a second chance, each with the legend
    they once chased: Director Halley (Deoxys), Chairman Voss (Mewtwo), Chronarch Vex (Dialga and Palkia), Helios
    (Moltres). The Champion is **Kai**, at 900, for real this time.
