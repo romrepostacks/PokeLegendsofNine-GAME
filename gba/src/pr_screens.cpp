@@ -117,6 +117,19 @@ namespace
         m.item = held_item::NONE;
         return text;
     }
+
+    // 9.1.0: a multiform POKéMON's row in game_data::multiforms (species, next form, base), or null.
+    const uint16_t* multiform(int species)
+    {
+        for(const auto& f : game_data::multiforms)
+        {
+            if(f[0] == species)
+            {
+                return f;
+            }
+        }
+        return nullptr;
+    }
 }
 
 void draw_hp_bar(bn::ivector<bn::sprite_ptr>& bar, int x, int y, int segments, int hp, int max_hp)
@@ -475,11 +488,13 @@ int party_screen(party_mode mode, const char* prompt)
                 text.append(g.party[selected].name());
                 text.append("?");
                 view->message(text);
-                bn::string_view options[] = { "SUMMARY", "SWITCH", "ITEM", "CANCEL" };
+                // 9.1.0: FORM, for a multiform POKéMON, turns it to its next form.
+                const uint16_t* form = multiform(g.party[selected].species_index);
+                bn::string_view options[] = { "SUMMARY", "SWITCH", "ITEM", form ? "FORM" : "CANCEL", "CANCEL" };
                 bn::string_view battle_options[] = { "SUMMARY", "CANCEL" };
                 menu_spec s;
                 s.options = mode == party_mode::FIELD ? options : battle_options;
-                s.count = mode == party_mode::FIELD ? 4 : 2;
+                s.count = mode == party_mode::FIELD ? (form ? 5 : 4) : 2;
                 s.tw = 10;
                 s.th = s.count * 2 + 2;
                 s.tx = 20;
@@ -495,6 +510,17 @@ int party_screen(party_mode mode, const char* prompt)
                 else if(pick == 1 && mode == party_mode::FIELD && n > 1)
                 {
                     swapping = selected;
+                }
+                else if(pick == 3 && mode == party_mode::FIELD && form)
+                {
+                    mon& m = g.party[selected];
+                    bn::string<64> said(m.name());
+                    m.set_species(form[1]);
+                    g.mark_owned(form[1]);
+                    view->blank();
+                    said.append(" changed its form!");
+                    u.say(said);
+                    u.clear_text();
                 }
                 else if(pick == 2 && mode == party_mode::FIELD)
                 {
@@ -2230,18 +2256,26 @@ void dex_screen(int register_species)
                         const int rg = bn::min(map_region(g.map), region_species_first + region_species_count - 1);
                         const int lo = rg == 2 ? species_v1 : region_species[rg - region_species_first];
                         const int hi = rg == 2 ? species_v2 : region_species[rg - region_species_first + 1];
-                        int sn = 0, on = 0;
+                        // 9.1.0: a multiform POKéMON's forms count once, as its base.
+                        int sn = 0, on = 0, total = 0, last = -1;
                         for(int i = lo; i < hi; ++i)
                         {
-                            sn += g.seen.test(i);
-                            on += g.owned.test(i);
+                            const uint16_t* f = multiform(i);
+                            int b = f ? f[2] : i;
+                            if(b != last)
+                            {
+                                sn += g.seen.test(b);
+                                on += g.owned.test(b);
+                                ++total;
+                                last = b;
+                            }
                         }
                         seen.append(bn::to_string<4>(sn));
                         seen.append("/");
-                        seen.append(bn::to_string<4>(hi - lo));
+                        seen.append(bn::to_string<4>(total));
                         own.append(bn::to_string<4>(on));
                         own.append("/");
-                        own.append(bn::to_string<4>(hi - lo));
+                        own.append(bn::to_string<4>(total));
                     }
                     else
                     {

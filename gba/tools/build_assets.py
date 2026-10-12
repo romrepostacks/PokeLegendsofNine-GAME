@@ -2020,8 +2020,18 @@ def build_game_data(data, out_inc):
     L.append('constexpr const int8_t* time_types[] = {time_types_morning, time_types_day, time_types_evening, time_types_night};')
     L.append('constexpr species_id night_visitors[] = {%s};' % ', '.join('species_id::%s' % enum_name(n) for n in data['night_visitors']))
     L.append('constexpr species_id tempest_pool[] = {%s};' % ', '.join('species_id::%s' % enum_name(n) for n in data['tempest_pool']))
-    # The POKéDEX's order (DEX_LIST): national numbers, the regional forms left out.
-    order = sorted([i for i, sp in enumerate(data['species']) if 0 < sp['num'] < 10000], key=lambda i: data['species'][i]['num'])
+    # 9.1.0: multiform POKéMON (not regional forms) are one POKéMON each: FORM in the party menu turns the base
+    # species through its forms in list order, and the POKéDEX lists only the base. Rows: species, next, base.
+    names = [sp['name'] for sp in data['species']]
+    forms = []
+    for base in ('Deoxys', 'Dialga', 'Palkia', 'Giratina', 'Arceus'):
+        cycle = [names.index(base)] + [i for i, n in enumerate(names) if n.startswith(base + '-') and not n.endswith('-Galar')]
+        forms += [(c, cycle[(k + 1) % len(cycle)], cycle[0]) for k, c in enumerate(cycle)]
+    L.append('constexpr uint16_t multiforms[][3] = {%s};' % ', '.join('{%d, %d, %d}' % f for f in forms))
+    L.append('constexpr int multiforms_count = %d;' % len(forms))
+    alt = {f[0] for f in forms if f[0] != f[2]}
+    # The POKéDEX's order (DEX_LIST): national numbers, the regional forms and the multiforms' other forms left out.
+    order = sorted([i for i, sp in enumerate(data['species']) if 0 < sp['num'] < 10000 and i not in alt], key=lambda i: data['species'][i]['num'])
     L.append('constexpr uint16_t dex_order[] = {%s};' % ', '.join(map(str, order)))
     L.append('constexpr int dex_order_count = %d;' % len(order))
     # The PC's wallpapers (WALLPAPERS, WALL_NAMES).

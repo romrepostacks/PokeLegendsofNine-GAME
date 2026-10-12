@@ -1,7 +1,27 @@
 {
   "_howto": "The game's WHAT'S NEW: the title screen's message of the day (motd) and the changelog, newest first. Player-facing only.",
-  "motd": "Version 9.0.3: bosses carry fewer FULL RESTOREs, and STRUGGLE is back to its old self.",
+  "motd": "Version 9.1.0: one ARCEUS, every type. FORM in the party menu changes a POKéMON's form.",
   "changelog": [
+    {
+      "version": "GBA 9.1.0",
+      "date": "2026-10-12",
+      "title": "One POKéMON, many forms",
+      "changes": [
+        "FORM in the party menu: ARCEUS turns through all 18 types, DEOXYS through its four forms, and DIALGA, PALKIA and GIRATINA between their usual and Origin forms",
+        "The POKéDEX lists each of them once. ARCEUS's 17 other types and the other forms no longer count as separate POKéMON to catch",
+        "The altars and meteorite shards still work as before. Regional forms are unchanged"
+      ]
+    },
+    {
+      "version": "GBA 9.0.4",
+      "date": "2026-10-12",
+      "title": "Caves and FLASH",
+      "changes": [
+        "A cave's darkness now closes in around you evenly. It used to sit off to one side and leave the bottom of the screen lit",
+        "The Ghost gym's circle of sight is centred on you too",
+        "FLASH: press A on open ground in a dark cave and your lead POKéMON lights it up until you leave"
+      ]
+    },
     {
       "version": "GBA 9.0.3",
       "date": "2026-10-11",

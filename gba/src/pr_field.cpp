@@ -344,6 +344,33 @@ void overworld::interact()
             return;
         }
     }
+    flash_action();
+}
+
+// FLASH: A on nothing in a dark cave lights it up until you leave.
+void overworld::flash_action()
+{
+    game_state& g = state();
+    int k = g.first_able();
+    if(_flash || k < 0 || _map->is_room() || ! _map->area || area_weather_now(_map->area) != area_weather::CAVE)
+    {
+        return;
+    }
+    ui& u = gui();
+    u.show_text("It's dark in here. Would you like to use FLASH?");
+    bool yes = u.yes_no();
+    u.clear_text();
+    if(! yes)
+    {
+        return;
+    }
+    bn::string<48> text;
+    upper(text, g.party[k].name());
+    text.append(" used FLASH!");
+    say(text);
+    audio::play(audio::sfx::SPOT);
+    _flash = true;
+    update_weather();
 }
 
 void overworld::talk_to(int index)

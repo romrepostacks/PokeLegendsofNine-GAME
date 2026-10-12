@@ -441,6 +441,10 @@ void overworld::load_map(int index, bool keep_bg)
     _grass_x = g.x;
     _grass_y = g.y;
     _from_x = _from_y = -1000;
+    if(_map->is_room() || ! _map->area || area_weather_now(_map->area) != area_weather::CAVE)
+    {
+        _flash = false;     // FLASH lasts until you leave the cave
+    }
     refresh(true);
     update_weather();
     update_tint();
@@ -874,7 +878,7 @@ void overworld::update_weather()
         case area_weather::ASH: kind = off ? WX_NONE : WX_ASH; break;
         case area_weather::DEEP: kind = off ? WX_NONE : WX_DEEP; break;
         case area_weather::FOG: kind = WX_FOG; break;
-        case area_weather::CAVE: kind = WX_CAVE; break;
+        case area_weather::CAVE: kind = _flash ? WX_NONE : WX_CAVE; break;     // FLASH lights it up
         default: break;
         }
     }
@@ -1083,7 +1087,16 @@ void overworld::tick()
         default: break;
         }
         int x = _weather_x + ((k == WX_SNOW || k == WX_ASH || k == WX_DEEP) ? sway / 2 : 0);
-        _weather->set_position(x & 255, _weather_y & 255);
+        if(k == WX_CAVE || k == WX_GHOST)
+        {
+            // Drawn in the layer's top-left 240x160 around the player: pin that to the screen (a bg's position
+            // is its centre, so (0, 0) would show the layer from (8, 48) and leave the bottom of the screen lit).
+            _weather->set_position(8, 48);
+        }
+        else
+        {
+            _weather->set_position(x & 255, _weather_y & 255);
+        }
     }
     refresh();
     frame();
