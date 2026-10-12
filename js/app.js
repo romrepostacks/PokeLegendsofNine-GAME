@@ -1300,7 +1300,7 @@ Object.assign(LOCATIONS[9], {rivalAfter:["...You're really something, you know t
 Object.assign(LOCATIONS[4], {grunts:2, scene:'tempestRun'});
 Object.assign(LOCATIONS[6], {grunts:2});
 Object.assign(LOCATIONS[12], {grunts:2});
-Object.assign(LOCATIONS[13], {scene:'portmere', storyNpc:{kind:'fisher', lines:["The ferry's shut while this storm hangs over the harbour.", "Those TEMPEST types sailed off east, over the strait toward VOLTARA CITY.", "A trainer who can SURF could follow them..."]}});
+Object.assign(LOCATIONS[13], {scene:'portmere', storyNpc:{kind:'fisher', lines:["The ferry's shut while this storm hangs over the harbour.", "Those TEMPEST types sailed off east, over the strait toward VOLTARA CITY.", "A trainer who can SURF could follow them...", "Once the storm's gone, the SAILOR on the dock takes CHAMPIONS over to CALDERRA."]}});
 Object.assign(LOCATIONS[19], {storyNpc:{kind:'gentleman', lines:["TEAM TEMPEST came through town buying up every lantern and rope in the shops.", "Headed north, into the mountains past MOSSGROVE."]}});
 Object.assign(LOCATIONS[21], {storyNpc:{kind:'oldwoman', lines:["The TIDEWARDENS sang to the guardian in a shrine under the sea.", "To find it, one would have to DIVE... but nobody alive knows how anymore."]}});
 Object.assign(LOCATIONS[23], {scene:'hideout', rivalAfter:["...I lost. Again.", "Vesper promised TEAM TEMPEST would make me strong. But they're hurting Pokémon to wake the guardian.", "That's not strength. I'm done with them.", "Go on. I'll find another way to stop Vesper. ...Thanks for knocking some sense into me."]});
