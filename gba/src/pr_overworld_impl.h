@@ -161,6 +161,7 @@ public:
     void legend_talk(int index);
     void water_action(int tx, int ty);
     void start_surf(int tx, int ty);
+    void flash_action();
     void go_fish(int rod);
     void dive_action();
     void surface_action();
@@ -248,6 +249,7 @@ public:
     bn::optional<bn::regular_bg_ptr> _weather;
     int _weather_kind = -1;
     int _weather_x = 0, _weather_y = 0, _weather_timer = 0;
+    bool _flash = false;     // a cave lit by FLASH (until you leave it)
     int _px = 0, _py = 0, _cam_x = 0, _cam_y = 0;
     int _last_cx = 0x7fffffff, _last_cy = 0x7fffffff;
     bn::optional<bn::sprite_ptr> _player;
