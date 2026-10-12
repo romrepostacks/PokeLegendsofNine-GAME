@@ -28,6 +28,14 @@
       ]
     },
     {
+      "version": "GBA 9.1.1",
+      "date": "2026-10-12",
+      "title": "The way to CALDERRA",
+      "changes": [
+        "The fisherman at PORTMERE HARBOUR now mentions the SAILOR on the dock, who takes CHAMPIONS over to CALDERRA. He used to only talk about the storm"
+      ]
+    },
+    {
       "version": "GBA 9.1.0",
       "date": "2026-10-12",
       "title": "One POKéMON, many forms",
