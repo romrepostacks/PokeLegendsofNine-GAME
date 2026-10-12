@@ -1,7 +1,17 @@
 {
   "_howto": "The game's WHAT'S NEW: the title screen's message of the day (motd) and the changelog, newest first. Player-facing only.",
-  "motd": "Version 9.0.4: caves are dark all over again, and FLASH lights them up.",
+  "motd": "Version 9.1.0: one ARCEUS, every type. FORM in the party menu changes a POKéMON's form.",
   "changelog": [
+    {
+      "version": "GBA 9.1.0",
+      "date": "2026-10-12",
+      "title": "One POKéMON, many forms",
+      "changes": [
+        "FORM in the party menu: ARCEUS turns through all 18 types, DEOXYS through its four forms, and DIALGA, PALKIA and GIRATINA between their usual and Origin forms",
+        "The POKéDEX lists each of them once. ARCEUS's 17 other types and the other forms no longer count as separate POKéMON to catch",
+        "The altars and meteorite shards still work as before. Regional forms are unchanged"
+      ]
+    },
     {
       "version": "GBA 9.0.4",
       "date": "2026-10-12",
