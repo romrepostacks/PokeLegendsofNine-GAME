@@ -121,7 +121,7 @@ struct item_info
     const char* name;
     uint8_t pocket;
     const char* desc;
-    uint16_t price;
+    uint32_t price;           // 9.3.0: wide enough for the EVOLVE CANDY's $1,000,000
     uint16_t heal;            // HP restored
     status cure;              // status cured
     bool revive;              // revives a fainted Pokémon to half HP

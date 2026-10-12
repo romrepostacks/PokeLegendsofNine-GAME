@@ -53,6 +53,8 @@ PLATES = [('zapplate', 'ZAP PLATE', 'It crackles faintly, like a wire that is st
           ('earthplate', 'EARTH PLATE', 'It is heavy, and the ground seems to pull at it.'),
           ('dreadplate', 'DREAD PLATE', 'It is dark, and darker still when you look away.')]
 PLATE_IDS += [k for k, _, _ in PLATES]
+# 9.3.0: the LINKING CORD+ (the TRADER: you pick what comes back) and the EVOLVE CANDY (after the plates).
+NEW_ITEM_IDS = ['linkingcordplus', 'evolvecandy']
 # GBA only: better POKé BALLS and the RARE CANDY (hidden items, the MART).
 GBA_ITEMS = {'greatball': {'name': 'GREAT BALL', 'pocket': 1, 'desc': 'A good ball, with a higher catch rate than a POKé BALL.', 'price': 600},
              'ultraball': {'name': 'ULTRA BALL', 'pocket': 1, 'desc': 'A very good ball, with a higher catch rate than a GREAT BALL.', 'price': 1200},
@@ -88,7 +90,10 @@ GBA_ITEMS = {'greatball': {'name': 'GREAT BALL', 'pocket': 1, 'desc': 'A good ba
              'choicescarf': {'name': 'CHOICE SCARF', 'pocket': 0, 'desc': 'Held: raises the holder\'s SPEED by half.', 'price': 6000},
              'focussash': {'name': 'FOCUS SASH', 'pocket': 0, 'desc': 'Held: at full HP, survives one KO with 1 HP. Used up.', 'price': 4000},
              'sitrusberry': {'name': 'SITRUS BERRY', 'pocket': 3, 'desc': 'Held: restores HP once when it falls to half. Used up.', 'price': 1000},
-             'linkingcord': {'name': 'LINKING CORD', 'pocket': 0, 'desc': 'A mysterious cord. POKéMON that evolve by trading evolve when it is used on them.', 'price': 3000}}
+             'linkingcord': {'name': 'LINKING CORD', 'pocket': 0, 'desc': 'A mysterious cord. Trade-evolvers evolve when it is used on them. The TRADER needs one per trade.', 'price': 5000},
+             # 9.3.0
+             'linkingcordplus': {'name': 'LINKING CORD+', 'pocket': 0, 'desc': 'A better cord. Trade with it at the TRADER and you choose the POKéMON you get back.', 'price': 50000},
+             'evolvecandy': {'name': 'EVOLVE CANDY', 'pocket': 0, 'desc': 'A rare candy that makes a POKéMON evolve all the way, at once.', 'price': 1000000}}
 EVO_ITEMS = {'fire-stone': 'firestone', 'water-stone': 'waterstone', 'thunder-stone': 'thunderstone', 'leaf-stone': 'leafstone',
              'moon-stone': 'moonstone', 'sun-stone': 'sunstone', 'shiny-stone': 'shinystone', 'dusk-stone': 'duskstone',
              'dawn-stone': 'dawnstone', 'ice-stone': 'icestone', 'oval-stone': 'ovalstone', 'razor-claw': 'razorclaw',
@@ -1902,6 +1907,7 @@ def add_extras(data):
         data['tms'].append({'move': mi, 'item': key, 'badges': badges, 'slug': t['move']})
     ITEM_IDS.extend(HELD_ITEM_IDS)
     ITEM_IDS.extend(PLATE_IDS)
+    ITEM_IDS.extend(NEW_ITEM_IDS)
     if len(ITEM_IDS) > 255:
         raise SystemExit('%d kinds of items (max 255)' % len(ITEM_IDS))
     data['tm_compat'] = []

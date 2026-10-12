@@ -232,8 +232,8 @@ bool use_item(item_id id, int party_index, bn::string<80>& message)
 }
 
 // ---------------------------------------------------------------------------------------------------
-// Party screen (.pty, Emerald's party_menu): 9.0.1's two teams side by side, TEAM 1 (the first six) on the left
-// and TEAM 2 on the right, the message box and CANCEL along the bottom. The chosen one's icon hops.
+// Party screen (.pty, Emerald's party_menu): 9.3.0's six again, the lead in a big box on the left, the other five
+// down the right, the message box and CANCEL along the bottom. The chosen one's icon hops.
 namespace
 {
     constexpr int cancel_index = max_party;
@@ -245,11 +245,15 @@ namespace
 
     slot_rect slot_of(int k)
     {
+        if(k == 0)
+        {
+            return { 1, 3, 11, 8 };
+        }
         if(k == cancel_index)
         {
-            return { 24, 18, 6, 2 };
+            return { 24, 17, 6, 3 };
         }
-        return { (k / team_size) * 15, (k % team_size) * 3, 15, 3 };
+        return { 12, 1 + (k - 1) * 3, 18, 3 };
     }
 
     class party_view
@@ -294,7 +298,7 @@ namespace
                         _icon_slot[_icons.size() - 1] = k;
                         u.print(x + 22, y + 2, "EGG", text_color::WHITE, _texts, true);
                         u.print(x + 22, y + 12, bn::to_string<8>(left), text_color::WHITE, _texts, true);
-                        draw_hp_bar(_bars[k], x + 52, y + 14, 8, egg_hatch_steps - left, egg_hatch_steps);
+                        draw_hp_bar(_bars[k], x + 72, y + 14, 8, egg_hatch_steps - left, egg_hatch_steps);
                         continue;
                     }
                     // Empty slots (and the ones the party can't use yet: partyCap) stay dark.
@@ -306,18 +310,31 @@ namespace
                                      m.fainted() ? window_style::SLOT_FNT : window_style::SLOT;
                 u.win().box(style, r.tx, r.ty, r.tw, r.th);
                 int x = r.tx * 8, y = r.ty * 8;
-                bn::sprite_ptr icon = icon_item(m.species_index).create_sprite(sx(x + 10), sy(y + 8));
+                bn::sprite_ptr icon = icon_item(m.species_index).create_sprite(sx(x + (k ? 10 : 14)), sy(y + (k ? 8 : 12)));
                 apply_shiny(icon, m, mon_view::ICON);
                 icon.set_bg_priority(0);
                 icon.set_z_order(1);        // under the name's text
                 _icons.push_back(icon);
-                _icon_y[_icons.size() - 1] = y + 8;
+                _icon_y[_icons.size() - 1] = y + (k ? 8 : 12);
                 _icon_slot[_icons.size() - 1] = k;
                 bn::string<16> lv("Lv");
                 lv.append(bn::to_string<4>(m.level));
-                u.print_fit_slide(x + 22, x + 3, x + r.tw * 8 - 4, y + 2, m.name(), text_color::WHITE, _texts, true);
-                u.print_fit(x + 22, y + 12, lv, 28, text_color::WHITE, _texts, true);     // "Lv300" left of the bar
-                draw_hp_bar(_bars[k], x + 52, y + 14, 8, m.hp, m.max_hp);
+                if(k == 0)
+                {
+                    u.print_fit_slide(x + 30, x + 5, x + r.tw * 8 - 4, y + 5, m.name(), text_color::WHITE, _texts);
+                    u.print(x + 36, y + 22, lv, text_color::WHITE, _texts, true);
+                    draw_hp_bar(_bars[k], x + 8, y + 36, 8, m.hp, m.max_hp);
+                    bn::string<16> hp(bn::to_string<4>(m.hp));
+                    hp.append("/");
+                    hp.append(bn::to_string<4>(m.max_hp));
+                    u.print(x + 80 - u.width(hp, true), y + 46, hp, text_color::WHITE, _texts, true);
+                }
+                else
+                {
+                    u.print_fit_slide(x + 22, x + 3, x + 72, y + 2, m.name(), text_color::WHITE, _texts, true);
+                    u.print_fit(x + 22, y + 12, lv, 28, text_color::WHITE, _texts, true);     // "Lv300" left of the bar
+                    draw_hp_bar(_bars[k], x + 72, y + 14, 8, m.hp, m.max_hp);
+                }
             }
             slot_rect c = slot_of(cancel_index);
             u.win().box(selected == cancel_index ? window_style::SLOT_ON : window_style::SLOT, c.tx, c.ty, c.tw, c.th);
@@ -328,8 +345,8 @@ namespace
         {
             ui& u = gui();
             _message.clear();
-            u.win().box(window_style::WINDOW, 0, 18, 24, 2);
-            u.print(8, 148, text, text_color::INK, _message);
+            u.win().box(window_style::WINDOW, 0, 17, 24, 3);
+            u.print(8, 140, text, text_color::INK, _message);
         }
 
         // Drops the sprites (names, icons, bars), which would show through a menu or the text box over them.
@@ -430,14 +447,14 @@ int party_screen(party_mode mode, const char* prompt)
             }
             else if(bn::keypad::left_pressed() || bn::keypad::right_pressed())
             {
-                // Left/Right cross between the two teams, row for row.
-                if(selected < team_size && selected + team_size < n)
+                // Left/Right move between the lead and the column on the right.
+                if(bn::keypad::left_pressed() && selected != cancel_index)
                 {
-                    selected += team_size;
+                    selected = 0;
                 }
-                else if(selected >= team_size && selected < cancel_index)
+                else if(bn::keypad::right_pressed() && selected == 0 && n > 1)
                 {
-                    selected -= team_size;
+                    selected = 1;
                 }
             }
             if(selected != before)
@@ -513,14 +530,35 @@ int party_screen(party_mode mode, const char* prompt)
                 }
                 else if(pick == 3 && mode == party_mode::FIELD && form)
                 {
+                    // 9.3.0: pick the form from a list (its base's whole family), not the next one.
                     mon& m = g.party[selected];
-                    bn::string<64> said(m.name());
-                    m.set_species(form[1]);
-                    g.mark_owned(form[1]);
                     view->blank();
-                    said.append(" changed its form!");
-                    u.say(said);
+                    uint16_t forms[game_data::multiforms_count];
+                    bn::string_view views[game_data::multiforms_count + 1];
+                    int fn = 0, now = 0;
+                    for(const auto& f : game_data::multiforms)
+                    {
+                        if(f[2] == form[2])
+                        {
+                            now = f[0] == m.species_index ? fn : now;
+                            forms[fn] = f[0];
+                            views[fn] = game_data::species_list[f[0]].name;
+                            ++fn;
+                        }
+                    }
+                    views[fn] = "CANCEL";
+                    u.show_text("Change to which form?");
+                    int k = u.list(views, fn + 1, now);
                     u.clear_text();
+                    if(k >= 0 && k < fn && forms[k] != m.species_index)
+                    {
+                        bn::string<64> said(m.name());
+                        m.set_species(forms[k]);
+                        g.mark_owned(forms[k]);
+                        said.append(" changed its form!");
+                        u.say(said);
+                        u.clear_text();
+                    }
                 }
                 else if(pick == 2 && mode == party_mode::FIELD)
                 {
@@ -810,12 +848,89 @@ namespace
         return text;
     }
 
+    // 9.3.0: the EVOLVE CANDY takes a Pokémon to its last stage by any way it evolves (level, stone, trade),
+    // asking at each split (EEVEE).
+    bn::string<96> use_evolve_candy(mon& m)
+    {
+        game_state& g = state();
+        ui& u = gui();
+        if(m.fainted())
+        {
+            return bn::string<96>("It won't have any effect.");
+        }
+        int to = m.species_index;
+        for(int hop = 0; hop < 4; ++hop)   // no line has more than three stages
+        {
+            int ways[12];
+            int n = 0;
+            int step = game_data::species_list[to].evolves_to;
+            if(step >= 0)
+            {
+                ways[n++] = step;
+            }
+            for(int k = 0; k < game_data::evo_items_count && n < 12; ++k)
+            {
+                const evo_item& e = game_data::evo_items[k];
+                bool dup = false;
+                for(int j = 0; j < n; ++j)
+                {
+                    dup |= ways[j] == e.to;
+                }
+                if(e.from == to && ! dup)
+                {
+                    ways[n++] = e.to;
+                }
+            }
+            if(! n)
+            {
+                break;
+            }
+            int k = 0;
+            if(n > 1)
+            {
+                bn::string_view views[13];
+                for(int j = 0; j < n; ++j)
+                {
+                    views[j] = game_data::species_list[ways[j]].name;
+                }
+                views[n] = "CANCEL";
+                u.show_text("Evolve into which?");
+                k = u.list(views, n + 1);
+                u.clear_text();
+                if(k < 0 || k >= n)
+                {
+                    return bn::string<96>();
+                }
+            }
+            to = ways[k];
+        }
+        if(to == m.species_index)
+        {
+            return bn::string<96>("It won't have any effect.");
+        }
+        g.items[int(item_id::EVOLVECANDY)] = uint8_t(g.items[int(item_id::EVOLVECANDY)] - 1);
+        audio::play(audio::sfx::OBTAIN);
+        bn::string<96> text("What? ");
+        text.append(m.name());
+        text.append(" is evolving!");
+        u.say(text);
+        m.evolve_into(to, u);
+        g.mark_seen(to);
+        g.mark_owned(to);
+        u.clear_text();
+        return bn::string<96>();
+    }
+
     // GBA 1.8: a stone (or the LINKING CORD) on a party member: it evolves if that's its item. A Pokémon
     // with two ways (CLAMPERL) asks which.
     bn::string<96> use_evolver(item_id id, mon& m)
     {
         game_state& g = state();
         ui& u = gui();
+        if(id == item_id::EVOLVECANDY)
+        {
+            return use_evolve_candy(m);
+        }
         int targets[4];
         int n = 0;
         for(int k = 0; k < game_data::evo_items_count && n < 4; ++k)
@@ -1026,6 +1141,7 @@ int bag_screen(bag_mode mode)
                 {
                     evolver |= game_data::evo_items[k].item == id;
                 }
+                evolver |= id == item_id::EVOLVECANDY;
                 if(id == item_id::ESCAPEROPE)
                 {
                     result = int(id);   // the overworld knows whether it works here

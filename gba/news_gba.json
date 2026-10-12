@@ -1,7 +1,22 @@
 {
   "_howto": "The game's WHAT'S NEW: the title screen's message of the day (motd) and the changelog, newest first. Player-facing only.",
-  "motd": "Version 9.2.0: ARCEUS, LEVEL 1000. Beat it, then choose: catch it, or take its power.",
+  "motd": "Version 9.3.0: a party of six again, every GYM its own maze, the EVOLVE CANDY and the LINKING CORD+.",
   "changelog": [
+    {
+      "version": "GBA 9.3.0",
+      "date": "2026-10-12",
+      "title": "Fixes from the road",
+      "changes": [
+        "Your party is six POKéMON again, so the menus stop overlapping. A save with more than six sends the rest to your PC",
+        "Every GYM now has its own layout, different from every other GYM",
+        "The TRADER uses up one LINKING CORD per trade. LINKING CORDs cost $5000 at the POKé MART",
+        "New: the LINKING CORD+ ($50000). Give it to the TRADER and name the POKéMON you want back (not a legendary)",
+        "New: the EVOLVE CANDY. It takes a POKéMON straight to its final form. Each region's LEAGUE gives you one, or buy one for $1000000",
+        "The MOVE TUTOR teaches new moves in every region, $5000 each, to any POKéMON",
+        "FORM in the party menu lets you pick the form you want from a list",
+        "The cheat menu's money option now adds $1000000"
+      ]
+    },
     {
       "version": "GBA 9.2.0",
       "date": "2026-10-12",

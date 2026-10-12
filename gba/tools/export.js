@@ -491,7 +491,7 @@ for(const li of AREAS){
   const doors = map.buildings.map((b, bi)=>{
     if(b.kind==='tower') return towerRooms(li, bi, b);
     const room = G.getInterior(loc, bi);
-    const art = room.interior==='gym' ? 'gym_' + room.theme : room.interior;
+    const art = room.interior==='gym' ? `gym_${room.theme}_${li}` : room.interior;    // 9.3.0: each gym its own layout
     if(!roomArts.has(art)) roomArts.set(art, {area:li, building:bi});
     for(const n of room.npcs) peopleKinds.add(n.kind);
     const roomTrainers = room.npcs.filter(n=>n.trainer).map(n=>trainerOut(n, loc));

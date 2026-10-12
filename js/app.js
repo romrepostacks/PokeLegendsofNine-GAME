@@ -1938,6 +1938,51 @@ const GYM_STYLE = {Rell:{kind:'leaderFire', type:'Fire'}, Sable:{kind:'leaderWat
   Pyra:{kind:'leaderPyra', type:'Fire', theme:'fire'}, Dune:{kind:'leaderDune', type:'Ground', theme:'ground'}};
 // A gym's theme (its floor, walls and juniors): fire, water, ... from its leader.
 function gymTheme(name){ const g = GYM_STYLE[name]; return g ? g.theme || g.kind.replace('leader', '').toLowerCase() : ''; }
+// 9.3.0: every gym its own maze, made from its name: four walls of boulders (pools in a Water gym) with zigzagging
+// gaps and a few short bars between them. Rows 5 and 9 stay open for the juniors' lines of sight, and there's always a
+// way from the door to the leader.
+function gymLayout(name){
+  let seed = 7;
+  for(const ch of name) seed = (seed * 31 + ch.charCodeAt(0)) >>> 0;
+  const rnd = n=>{ seed = (Math.imul(seed, 1103515245) + 12345) >>> 0; return (seed >>> 8) % n; };
+  const open = (rows, x, y)=>rows[y] && rows[y][x] && rows[y][x]!=='#' && rows[y][x]!=='x';
+  const reaches = rows=>{
+    const seen = new Set(['7,12']), todo = [[7,12]];
+    while(todo.length){
+      const [x,y] = todo.pop();
+      if(x===7 && y===3) return true;
+      for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+        const k = `${x+dx},${y+dy}`;
+        if(y+dy>=3 && y+dy<=12 && open(rows, x+dx, y+dy) && !seen.has(k)){ seen.add(k); todo.push([x+dx, y+dy]); }
+      }
+    }
+    return false;
+  };
+  for(let tries=0; tries<200; tries++){
+    const rows = ROOMS.gym.map(r=>r.split(''));
+    for(let y=3; y<=11; y++) for(let x=1; x<=13; x++) rows[y][x] = '_';
+    let last = -9;
+    for(const y of [4,6,8,10]){
+      for(let x=1; x<=13; x++) rows[y][x] = 'x';
+      const gaps = 1 + rnd(2);
+      for(let g=0; g<gaps; g++){
+        let gx = 1 + rnd(13);
+        while(g===0 && Math.abs(gx-last) < 4) gx = 1 + rnd(13);
+        if(g===0) last = gx;
+        for(let k=0, w=1+rnd(2); k<w && gx+k<=13; k++) rows[y][gx+k] = '_';
+      }
+    }
+    for(const y of [3,7,11]){
+      for(let n=rnd(3); n>0; n--){
+        const x = 1 + rnd(12), len = 1 + rnd(3);
+        for(let k=0; k<len && x+k<=13; k++) rows[y][x+k] = 'x';
+      }
+    }
+    rows[3][7] = rows[11][7] = '_';
+    if(reaches(rows)) return rows.map(r=>r.join(''));
+  }
+  return ROOMS.gym;
+}
 function getInterior(loc, bi){
   if(getMap(loc).buildings[bi].kind==='tower') return towerInterior(loc, bi);
   loc.__rooms ||= {};
@@ -1945,7 +1990,7 @@ function getInterior(loc, bi){
   const b = getMap(loc).buildings[bi];
   // Gym walls: pools in the Water gym, rock or boulders elsewhere (styled by theme).
   const theme = b.kind==='gym' ? (gymTheme(loc.leaderName) || 'fire') : null;
-  const tiles = ROOMS[b.kind].map(r=>r.split('').map(ch=>ch==='x' && theme==='water' ? '~' : ch));
+  const tiles = (b.kind==='gym' ? gymLayout(loc.name) : ROOMS[b.kind]).map(r=>r.split('').map(ch=>ch==='x' && theme==='water' ? '~' : ch));
   const h = tiles.length, w = tiles[0].length, matX = tiles[h-1].indexOf('M');
   const npcs = [];
   if(b.kind==='center') npcs.push({kind:'nurse', x:7, y:2, facing:'down', role:'nurse'});

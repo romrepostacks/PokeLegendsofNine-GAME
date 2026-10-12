@@ -214,6 +214,7 @@ public:
     void plate_shrine();
     void arceus_altar();
     void arceus_reward();
+    void candy_gifts();
     void save_menu();
     void say(const bn::string_view& text);
     // A story line (scenes, calls, the professor, rivals' goodbyes): SKIP STORY TEXT leaves it out.

@@ -22,7 +22,7 @@ static uint32_t digest(const pr::game_state& g)
     h(uint32_t(g.opt.speed)); h(g.opt.sound); h(uint32_t(g.opt.music)); h(g.opt.exp_share); h(uint32_t(g.opt.weather));
     for(int i = 0; i < pr::name_length; ++i) h(uint8_t(g.name[i]));
     for(int i = 0; i < ITEMS; ++i) { h(g.items[i]); h(g.pc_items[i]); }
-    for(int i = 0; i < pr::max_party; ++i) if(i < 10 || ! g.party[i].empty()) hm(g.party[i]);   // 12 from save version 12, empty when converted
+    for(int i = 0; i < int(g.party.size()); ++i) if(i < 10 || ! g.party[i].empty()) hm(g.party[i]);   // 12 from save version 12, empty when converted
     for(int i = 0; i < pr::box_slots; ++i) hm(g.box[i]);
     for(int b = 0; b < pr::box_count; ++b) { for(int i = 0; i < pr::box_name_length; ++i) h(uint8_t(g.box_names[b][i])); h(g.box_wall[b]); }
     for(int i = 0; i < 256; ++i) { h(g.beaten.test(i)); h(g.picked.test(i)); h(g.extra.rematched.test(i)); }

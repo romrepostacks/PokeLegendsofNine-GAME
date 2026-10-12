@@ -1071,14 +1071,15 @@ void overworld::mart()
     // (from the 3rd badge).
     item_id tm_stock[game_data::tms_count];
     int tm_count = 0;
-    item_id evo_stock[14];
+    item_id evo_stock[16];
     int evo_count = 0;
     if(badges >= 3)
     {
         for(item_id id : { item_id::FIRESTONE, item_id::WATERSTONE, item_id::THUNDERSTONE, item_id::LEAFSTONE,
                            item_id::MOONSTONE, item_id::SUNSTONE, item_id::SHINYSTONE, item_id::DUSKSTONE,
                            item_id::DAWNSTONE, item_id::ICESTONE, item_id::OVALSTONE, item_id::RAZORCLAW,
-                           item_id::RAZORFANG, item_id::LINKINGCORD })
+                           item_id::RAZORFANG, item_id::LINKINGCORD, item_id::LINKINGCORDPLUS,
+                           item_id::EVOLVECANDY })
         {
             evo_stock[evo_count++] = id;
         }
@@ -1117,7 +1118,7 @@ void overworld::mart()
                 shown[n] = list[i];
                 labels[n] = it.name;
                 labels[n].append("  $");
-                labels[n].append(bn::to_string<6>(it.price));
+                labels[n].append(bn::to_string<8>(it.price));
                 views[n] = labels[n];
                 ++n;
             }
@@ -1331,7 +1332,7 @@ void overworld::mart()
                     continue;
                 }
                 g.items[ids[k]] = uint8_t(have - q);
-                g.money += uint32_t(q * each);
+                g.money = bn::min(money_cap, g.money + uint32_t(q * each));
                 save_game();
                 show_money();
                 text = "Turned over the ";
@@ -2254,6 +2255,7 @@ void overworld::after_story()
         {
             story_enter();
         }
+        candy_gifts();
         return;
     }
     if(! _last)
@@ -2316,6 +2318,7 @@ void overworld::after_story()
             }
         }
     }
+    candy_gifts();
     if(g.has(story::DIVE_GIFT))
     {
         g.story &= ~story::DIVE_GIFT;
@@ -2906,6 +2909,42 @@ void overworld::plate_shrine()
 // 9.0.0: the altar of origin: ARCEUS in your party takes the type of the next plate you hold (Normal with none).
 // 9.2.0: ARCEUS beaten at level 1000 offers one reward, once: battle it again at level 1 and catch it, or
 // leave it be and take its power (your party at the top level, with perfect stats).
+// 9.3.0: an EVOLVE CANDY for each region's League beaten (old saves get theirs on load).
+void overworld::candy_gifts()
+{
+    game_state& g = state();
+    int n = 0, last = 0;
+    for(int rg = 1; rg <= 9; ++rg)
+    {
+        int f = flag::EVOLVE_CANDY + rg - 1;
+        bool champ = rg == 1 ? g.has(story::CHAMPION) : g.flags.test(champion_flag(rg));
+        if(champ && ! g.flags.test(f))
+        {
+            g.flags.set(f);
+            ++n;
+            last = rg;
+        }
+    }
+    if(! n)
+    {
+        return;
+    }
+    bn::string<96> text("A gift from the ");
+    if(n == 1)
+    {
+        text.append(region_name(last));
+        text.append(" LEAGUE for its CHAMPION!");
+    }
+    else
+    {
+        text.append(bn::to_string<4>(n));
+        text.append(" LEAGUES you've beaten!");
+    }
+    say(text);
+    obtain(item_id::EVOLVECANDY, n);
+    save_game();
+}
+
 void overworld::arceus_reward()
 {
     game_state& g = state();
@@ -3531,7 +3570,47 @@ bool overworld::safari_gate()
     return true;
 }
 
+namespace
+{
+    bool is_legend(int species)
+    {
+        for(int k = 0; k < game_data::legendaries_count; ++k)
+        {
+            if(game_data::legendaries[k] == species)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // 9.3.0: the LINKING CORD+'s pick: a typed name, matched exactly (any case), else the first name that starts with it.
+    int typed_species(const char* typed)
+    {
+        int starts = -1;
+        for(int s = 0; s < species_count; ++s)
+        {
+            const char* name = game_data::species_list[s].name;
+            int k = 0;
+            while(typed[k] && name[k] && (typed[k] | 0x20) == (name[k] | 0x20))
+            {
+                ++k;
+            }
+            if(! typed[k] && ! is_legend(s))
+            {
+                if(! name[k])
+                {
+                    return s;
+                }
+                starts = starts < 0 ? s : starts;
+            }
+        }
+        return starts;
+    }
+}
+
 // TRADEWIND VILLAGE's TRADER: one of yours for a random Pokémon of about the same level (not a legendary).
+// 9.3.0: each trade uses up a LINKING CORD; a LINKING CORD+ lets you name the one you get back.
 void overworld::trader()
 {
     game_state& g = state();
@@ -3545,6 +3624,13 @@ void overworld::trader()
     }
     while(true)
     {
+        uint8_t& cord = g.items[int(item_id::LINKINGCORD)];
+        uint8_t& plus = g.items[int(item_id::LINKINGCORDPLUS)];
+        if(! cord && ! plus)
+        {
+            say("TRADER: \"I need a LINKING CORD for each trade. The POKé MART sells them!\"");
+            return;
+        }
         u.show_text("Trade a POKéMON?");
         bool yes = u.yes_no();
         u.clear_text();
@@ -3552,6 +3638,31 @@ void overworld::trader()
         {
             say("TRADER: \"Come back anytime!\"");
             return;
+        }
+        bool choose = false;
+        if(plus)
+        {
+            u.show_text("Use a LINKING CORD+ to pick the POKéMON you get?");
+            choose = u.yes_no(! cord) || ! cord;
+            u.clear_text();
+        }
+        int species = -1;
+        if(choose)
+        {
+            suspend();
+            char typed[16];
+            bool ok = gui().keyboard("Which POKéMON?", typed, 12);
+            resume();
+            species = ok ? typed_species(typed) : -1;
+            if(species < 0)
+            {
+                say(ok ? "TRADER: \"Never heard of that one, sorry.\"" : "TRADER: \"Changed your mind?\"");
+                continue;
+            }
+            bn::string<64> ask("TRADER: \"A ");
+            ask.append(game_data::species_list[species].name);
+            ask.append("? Coming right up!\"");
+            say(ask);
         }
         suspend();
         int pick = party_screen(party_mode::CHOOSE, "Trade which POKéMON?");
@@ -3567,21 +3678,14 @@ void overworld::trader()
             continue;
         }
         bn::random& r = rng();
-        int species = 0;
-        for(int tries = 0; tries < 50; ++tries)
+        for(int tries = 0; species < 0 && tries < 50; ++tries)
         {
-            species = r.get_int(species_count);
-            bool legend = false;
-            for(int k = 0; k < game_data::legendaries_count; ++k)
-            {
-                legend |= game_data::legendaries[k] == species;
-            }
-            if(! legend)
-            {
-                break;
-            }
+            int s = r.get_int(species_count);
+            species = is_legend(s) ? -1 : s;
         }
-        int level = bn::clamp(old.level - 2 + r.get_int(5), 1, 100);
+        species = bn::max(species, 0);
+        (choose ? plus : cord) -= 1;
+        int level = bn::clamp(old.level - 2 + r.get_int(5), 1, bn::max(100, int(old.level)));
         mon got = mon::make(species_id(species), level, old.item);
         if(roll_shiny())
         {
@@ -3618,7 +3722,7 @@ void overworld::cheat_menu()
         wild_label.append(wild ? "ON" : "OFF");
         bn::string<32> catch_label("PERFECT CAPTURE: ");
         catch_label.append(perfect ? "ON" : "OFF");
-        bn::string_view options[] = { wild_label, "HEAL PARTY POKéMON", "ADD 20 POKé BALLS", "ADD MASTER BALL", "ADD $1000",
+        bn::string_view options[] = { wild_label, "HEAL PARTY POKéMON", "ADD 20 POKé BALLS", "ADD MASTER BALL", "ADD $1,000,000",
                                       catch_label, "EXIT" };
         constexpr int n = 7;
         int widest = 0;
@@ -3662,9 +3766,9 @@ void overworld::cheat_menu()
             say("A MASTER BALL was put in the BAG.");
             break;
         case 4:
-            g.money = bn::min(uint32_t(999999), uint32_t(g.money + 1000));
+            g.money = bn::min(money_cap, g.money + 1000000);
             audio::play(audio::sfx::SELECT);
-            say("$1000 was added to your money.");
+            say("$1,000,000 was added to your money.");
             break;
         case 5:
             g.story ^= story::CHEAT_PERFECT_CATCH;
@@ -3819,8 +3923,8 @@ bool overworld::escape_rope()
 }
 
 // The MOVE TUTOR (every POKéMON CENTER): a move from the Pokémon's level-up list, up to its level.
-// Calderra's MOVE TUTOR (2.0.0): four of the Gen 8 and 9 moves each day, for money, to a POKéMON of the
-// move's type (NORMAL moves to anyone).
+// Calderra's MOVE TUTOR (2.0.0): four of the Gen 8 and 9 moves each day, for money. 9.3.0: $5000 each, to any
+// POKéMON, in every region.
 void overworld::tutor_new_move()
 {
     game_state& g = state();
@@ -3834,7 +3938,7 @@ void overworld::tutor_new_move()
     {
         moves[k] = game_data::moves_v1 + (today * 4 + k) % fresh;
         const move& mv = move_data(moves[k]);
-        prices[k] = mv.category == move_category::STATUS || mv.power <= 70 ? 3000 : mv.power <= 95 ? 5000 : 8000;
+        prices[k] = 5000;
         labels[k] = mv.name;
         labels[k].append(" $");
         labels[k].append(bn::to_string<6>(prices[k]));
@@ -3874,12 +3978,6 @@ void overworld::tutor_new_move()
         say(text);
         return;
     }
-    if(mv.type != 0 && ! m.has_type(mv.type))
-    {
-        text.append(" can't learn a move of that type.");
-        say(text);
-        return;
-    }
     g.money -= uint32_t(prices[k]);
     drop_struggle(m);
     if(m.move_count < 4)
@@ -3904,11 +4002,8 @@ void overworld::move_tutor()
     game_state& g = state();
     ui& u = gui();
     say("MOVE TUTOR: \"I can help a POKéMON remember a move it learned before, or one it should have learned by now.\"");
-    bool calderra = map_region(_map_index) >= 2;
-    if(calderra)
-    {
-        say("MOVE TUTOR: \"Out here I also teach new moves, a different four each day. For a fee, of course!\"");
-    }
+    bool calderra = true;   // 9.3.0: new moves in every region
+    say("MOVE TUTOR: \"I also teach new moves, a different four each day, to any POKéMON. $5000 a move!\"");
     while(true)
     {
         if(calderra)

@@ -358,6 +358,14 @@ static void test_setup()
         map = play::find_trainer(rg, trainer_role::ROUTE, 0, x, y);
         break;
     }
+    // 9.3.0: 16 the TRADER with a LINKING CORD and a CORD+, two EVOLVE CANDY, an EEVEE and a DEOXYS (FORM);
+    // 17 the MOVE TUTOR in VELLORIN.
+    if(sub == 16 || sub == 17)
+    {
+        g.add_item(item_id::LINKINGCORD, 1); g.add_item(item_id::LINKINGCORDPLUS, 1); g.add_item(item_id::EVOLVECANDY, 2);
+        g.party[4] = mon::make(species_id::EEVEE, 30); g.party[5] = mon::make(species_id::DEOXYS, 900);
+        map = play::find_person(1, sub == 16 ? person_role::TRADER : person_role::TUTOR, x, y);
+    }
     switch(scen)
     {
     case 1:     // Port Calder's CAPTAIN before Calderra's League

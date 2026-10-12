@@ -423,6 +423,31 @@ namespace
 
     // Reads the save into `out`: a version 12 one as it is, 11 with its party grown to 12, an older one converted (it stays in its old format in
     // SRAM until the game is saved).
+    // 9.3.0: the party is six again. A save's 7th to 12th go to the first free PC slots (any the full PC can't
+    // take wait in their party slot, out of play, for the next load).
+    void trim_party(game_state& g)
+    {
+        int b = 0;
+        for(int i = max_party; i < party_slots; ++i)
+        {
+            if(i >= g.party_count && g.party[i].empty())
+            {
+                continue;
+            }
+            while(b < box_slots && ! g.box[b].empty())
+            {
+                ++b;
+            }
+            if(b < box_slots && ! g.party[i].empty())
+            {
+                g.box[b] = g.party[i];
+                g.box[b].heal();
+                g.party[i] = mon();
+            }
+        }
+        g.party_count = uint8_t(bn::min(int(g.party_count), max_party));
+    }
+
     bool read_save(game_state* out)
     {
         save_header h;
@@ -449,6 +474,7 @@ namespace
                 {
                     convert_v11(*out);
                 }
+                trim_party(*out);
             }
             return true;
         }
@@ -460,6 +486,7 @@ namespace
         {
             fresh(*out);
             v10::convert(block_buffer.old.game_, *out);
+            trim_party(*out);
         }
         return true;
     }

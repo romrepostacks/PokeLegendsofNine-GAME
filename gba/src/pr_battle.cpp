@@ -2296,7 +2296,7 @@ namespace
                 top = bn::max(top, int(_foes[i].m->level));
             }
             int prize = top * (leader ? 100 : route ? 20 : 60);
-            g.money += uint32_t(prize);
+            g.money = bn::min(money_cap, g.money + uint32_t(prize));
             text = g.name;
             text.append(" got $");
             text.append(bn::to_string<8>(prize));

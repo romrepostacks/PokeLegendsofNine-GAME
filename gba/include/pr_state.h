@@ -11,9 +11,11 @@
 namespace pr
 {
 
-constexpr int max_party = 12;           // 9.0.1: two teams of six (10 before)
+constexpr int party_slots = 12;         // the save's party slots (9.0.1's two teams of six)
+constexpr int max_party = 6;            // 9.3.0: back to six; a save's extras go to the PC (trim_party)
 constexpr int team_size = 6;            // a battle takes one team: the first six or the rest
 constexpr int small_party = 6;          // partyCap() before the 4th badge
+constexpr uint32_t money_cap = 99999999;   // 9.3.0: eight digits fit the money window
 constexpr int box_size = 30;            // one PC box
 constexpr int box_count = 14;           // Emerald's 14 boxes
 constexpr int box_slots = box_size * box_count;
@@ -205,7 +207,7 @@ struct game_state
     char name[name_length + 1] = {};
     bn::array<uint8_t, bag_kinds> items = {};
     bn::array<uint8_t, bag_kinds> pc_items = {};
-    bn::array<mon, max_party> party;
+    bn::array<mon, party_slots> party;
     bn::array<mon, box_slots> box;      // box b holds b * 30 ... b * 30 + 29; empty slots have level 0
     char box_names[box_count][box_name_length + 1] = {};
     uint8_t box_wall[box_count] = {};   // 0: the box's default
@@ -332,6 +334,7 @@ namespace flag
     constexpr int OLD_PLATE = 40;           // 9.0.0: 40-45, the plates VELLORIN, CALDERRA and the ISLES gave
     constexpr int SEASON_GIFT = 48;         // 8.0.0: 48-51, the DELIBIRD post office's gift for each season
     constexpr int SEASON = 52;              // 8.0.0: 52-53, TEMPESTA's season (0 spring, 1 summer, 2 autumn, 3 winter)
+    constexpr int EVOLVE_CANDY = 54;        // 9.3.0: 54-62, the EVOLVE CANDY each region's League gave
 }
 
 // 8.0.0: TEMPESTA's season (0 spring ... 3 winter), whether its bird is free (spring always is), and an area's
