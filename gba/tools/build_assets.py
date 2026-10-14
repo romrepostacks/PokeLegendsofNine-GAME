@@ -1222,7 +1222,10 @@ def hidden_items(areas, region):
                {(sg['x'], sg['y'] + 1) for sg in a['signs']} | {(it['x'], it['y']) for it in a['items']} | {(sx, sy)}
         def walls(x, y):
             return sum(not open_(x + dx, y + dy) for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)))
-        cands = [(x, y) for (x, y) in seen if beh[y][x] == 0 and 3 <= x < w - 3 and 3 <= y < h - 3 and (x, y) not in busy]
+        # 9.3.1: not on a tile a tree's (or a tablet's) top hangs over, where the item looked stuck in the tree.
+        tall = lambda x, y: a['tiles'][y + 1][x] in 'T^'
+        cands = [(x, y) for (x, y) in seen if beh[y][x] == 0 and 3 <= x < w - 3 and 3 <= y < h - 3 and (x, y) not in busy
+                 and not tall(x, y)]
         if not cands:
             continue
         rnd = random.Random(1000 + ai)

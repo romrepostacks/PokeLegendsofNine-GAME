@@ -848,7 +848,7 @@ namespace
     }
 }
 
-void overworld::update_weather()
+void overworld::update_weather(bool smooth)
 {
     game_state& g = state();
     int kind = WX_NONE;
@@ -886,25 +886,77 @@ void overworld::update_weather()
     int key = kind < 0 ? -1 : kind * 4 + amount;
     if(key == _weather_kind && (kind < 0 || _weather))
     {
+        if(_weather && _wx_pending != -2)
+        {
+            _wx_pending = -2;           // walked back before the old weather had gone: bring it back
+            _wx_target = weather_alpha_256(kind);
+        }
         return;
     }
+    if(smooth && _weather && ! _suspended)
+    {
+        _wx_pending = key;              // fade the old weather out first (step_weather_fade)
+        _wx_target = 0;
+        return;
+    }
+    _wx_pending = -2;
+    set_weather(key, smooth);
+}
+
+// Puts up a weather layer (key: kind * 4 + amount, -1 for none), faded in from nothing or at full strength.
+void overworld::set_weather(int key, bool fade)
+{
     _weather_kind = key;
     _weather.reset();
-    if(kind < 0 || _suspended)
+    if(key < 0 || _suspended)
     {
+        _wx_alpha = _wx_target = 0;
         bn::blending::set_transparency_alpha(1);
         return;
     }
-    _weather = weather_item(kind, amount).create_bg(0, 0);
+    int kind = key / 4;
+    _weather = weather_item(kind, key % 4).create_bg(0, 0);
     _weather->set_priority(0);
     _weather->set_z_order(10);           // under the windows
     _weather->set_blending_enabled(true);
-    bn::blending::set_transparency_alpha(bn::fixed(weather_alpha_256(kind)) / 256);
+    _wx_target = weather_alpha_256(kind);
+    _wx_alpha = fade ? 0 : _wx_target;
+    bn::blending::set_transparency_alpha(bn::fixed(_wx_alpha) / 256);
+}
+
+// One frame of a weather change: the old layer thins away, then the new one thickens in.
+void overworld::step_weather_fade()
+{
+    if(_weather && _wx_alpha != _wx_target)
+    {
+        _wx_alpha = _wx_alpha < _wx_target ? bn::min(_wx_target, _wx_alpha + 8) : bn::max(_wx_target, _wx_alpha - 8);
+        bn::blending::set_transparency_alpha(bn::fixed(_wx_alpha) / 256);
+    }
+    else if(_wx_pending != -2 && (! _weather || _wx_alpha == 0))
+    {
+        int key = _wx_pending;
+        _wx_pending = -2;
+        set_weather(key, true);
+    }
+    for(int i = 0; i < 4; ++i)
+    {
+        if(_tint_now[i] != _tint_to[i])
+        {
+            for(int k = 0; k < 4; ++k)
+            {
+                int step = k == 3 ? 4 : 8;
+                int d = _tint_to[k] - _tint_now[k];
+                _tint_now[k] += d > step ? step : d < -step ? -step : d;
+            }
+            apply_tint();
+            break;
+        }
+    }
 }
 
 // The colour laid over the field (the stylesheet's .tod-layer and the weather's haze), as one fade of the
 // map's and the people's palettes toward a colour.
-void overworld::update_tint()
+void overworld::update_tint(bool smooth)
 {
     game_state& g = state();
     // Layers over the field, bottom first: the time of day, then the haze of the weather.
@@ -953,15 +1005,45 @@ void overworld::update_tint()
         B /= 256;
         A = 256 - (256 - A) * (256 - l.a) / 256;
     }
-    bn::color c(0, 0, 0);
-    bn::fixed strength = 0;
+    // R, G, B hold colour x strength / 256.
+    int to[4] = { 0, 0, 0, A };
     if(A > 0)
     {
-        // R, G, B hold colour x strength / 256.
-        int r = bn::min(255, R * 256 / A), gg = bn::min(255, G * 256 / A), b = bn::min(255, B * 256 / A);
-        c = bn::color(r >> 3, gg >> 3, b >> 3);
-        strength = bn::fixed(A) / 256;
+        to[0] = bn::min(255, R * 256 / A);
+        to[1] = bn::min(255, G * 256 / A);
+        to[2] = bn::min(255, B * 256 / A);
     }
+    else
+    {
+        to[0] = _tint_now[0];       // fading out: keep the colour, lose the strength
+        to[1] = _tint_now[1];
+        to[2] = _tint_now[2];
+    }
+    for(int k = 0; k < 4; ++k)
+    {
+        _tint_to[k] = to[k];
+    }
+    if(smooth && _tint_now[3] == 0)
+    {
+        for(int k = 0; k < 3; ++k)
+        {
+            _tint_now[k] = to[k];   // from no tint: start in the new colour, at no strength
+        }
+    }
+    if(! smooth)
+    {
+        for(int k = 0; k < 4; ++k)
+        {
+            _tint_now[k] = to[k];
+        }
+    }
+    apply_tint();       // (step_weather_fade carries a smooth change the rest of the way)
+}
+
+void overworld::apply_tint()
+{
+    bn::color c(_tint_now[0] >> 3, _tint_now[1] >> 3, _tint_now[2] >> 3);
+    bn::fixed strength = bn::fixed(_tint_now[3]) / 256;
     if(_bg)
     {
         bn::bg_palette_ptr pal = _bg->palette();
@@ -1058,8 +1140,9 @@ void overworld::tick()
     }
     if(_bob_timer % 600 == 0)
     {
-        update_tint();
+        update_tint(true);
     }
+    step_weather_fade();
     if(_dust)
     {
         if(++_dust_frames >= 24)
@@ -1510,8 +1593,8 @@ void overworld::cross_area(const place& here)
     }
     load_actors();
     refresh(true);
-    update_weather();
-    update_tint();
+    update_weather(true);
+    update_tint(true);
     show_place_name();
 }
 

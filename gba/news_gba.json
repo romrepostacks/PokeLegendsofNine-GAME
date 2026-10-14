@@ -1,7 +1,19 @@
 {
   "_howto": "The game's WHAT'S NEW: the title screen's message of the day (motd) and the changelog, newest first. Player-facing only.",
-  "motd": "Version 9.3.0: a party of six again, every GYM its own maze, the EVOLVE CANDY and the LINKING CORD+.",
+  "motd": "Version 9.3.1: no more stuck GYMS, TEAM ECLIPSE in its own colours, and weather that drifts in as you walk.",
   "changelog": [
+    {
+      "version": "GBA 9.3.1",
+      "date": "2026-10-14",
+      "title": "Unstuck",
+      "changes": [
+        "No GYM can trap you any more. In some GYMS (FROSTMERE and GALEFORTH among them) a trainer stood in the only way to the LEADER",
+        "CALDERRA's grunts are TEAM ECLIPSE, not TEAM TEMPEST",
+        "Each of CALDERRA's shrines and the ASHEN TOWER has one boss, not the same one twice",
+        "Hidden items are no longer tucked under the tops of trees",
+        "Rain, snow, fog and the light of the hour now fade in and out as you walk from one area to the next, instead of snapping"
+      ]
+    },
     {
       "version": "GBA 9.3.0",
       "date": "2026-10-12",

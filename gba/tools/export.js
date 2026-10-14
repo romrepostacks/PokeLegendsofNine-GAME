@@ -412,7 +412,7 @@ function trainerOut(n, loc){
     team:loc.leaderTeam, fill:leader && G.GYM_JUNIORS[theme] ? G.GYM_JUNIORS[theme].team : G.areaPool(loc),
     intro:[`${name}: "${quote}"`],
     after:leader || n.champion ? [`${name}: "You've already beaten me. The road ahead is waiting for you!"`] : (loc.rivalAfter || []).map(l=>`${name.toUpperCase()}: ${l}`),
-    vanish:!!n.vanish};
+    vanish:!!n.vanish, scene:!!n.dup};
 }
 
 // The CHALLENGE TOWER's rooms (all left by the mat to the tower's door). Floors and chambers are drawn like

@@ -1685,11 +1685,13 @@ function buildRoute(loc){
   const gated = loc.links.find(l=>l.gate);
   if(loc.type==='trainer' && gated){
     const trail = paths[gated.dir], spot = trail[Math.floor(trail.length*0.45)];
-    npcs.push({kind:loc.rivalKind || 'rival', x:spot.x, y:spot.y, facing:OPPOSITE[gated.dir], trainer:true, vanish:true});
+    npcs.push({kind:loc.boss ? loc.bossKind || 'admin' : loc.rivalKind || 'rival', x:spot.x, y:spot.y, facing:OPPOSITE[gated.dir], trainer:true, vanish:true});
   }
   if(loc.boss){
     const trail = paths[loc.links[0].dir], spot = trail[Math.floor(trail.length*0.7)];
-    npcs.push({kind:loc.bossKind || 'admin', x:spot.x, y:spot.y, facing:OPPOSITE[loc.links[0].dir], trainer:true, vanish:true});
+    // 9.3.1: CALDERRA's shrines have a gated way on, so the boss already stands there (above); this second one stays
+    // in the list, never shown, so no trainer's number moves.
+    npcs.push({kind:loc.bossKind || 'admin', x:spot.x, y:spot.y, facing:OPPOSITE[loc.links[0].dir], trainer:true, vanish:true, dup:!!gated && loc.type==='trainer'});
     if(loc.legend) npcs.push({kind:'mon:'+loc.legend, x:cx, y:cy, facing:'down', legend:loc.legend});   // (4.0.0: ZENITH LAB has none)
   }
   // Locals with tips, spread along the route.
@@ -1945,7 +1947,9 @@ function gymLayout(name){
   let seed = 7;
   for(const ch of name) seed = (seed * 31 + ch.charCodeAt(0)) >>> 0;
   const rnd = n=>{ seed = (Math.imul(seed, 1103515245) + 12345) >>> 0; return (seed >>> 8) % n; };
-  const open = (rows, x, y)=>rows[y] && rows[y][x] && rows[y][x]!=='#' && rows[y][x]!=='x';
+  // (9.3.1: the juniors and the guide stand where they stand after a battle too, so their tiles count as walls, and the statues by the door do too.)
+  const people = new Set(['12,9', '2,5', '9,12']);
+  const open = (rows, x, y)=>rows[y] && WALKABLE.has(rows[y][x]) && !people.has(`${x},${y}`);
   const reaches = rows=>{
     const seen = new Set(['7,12']), todo = [[7,12]];
     while(todo.length){
@@ -6395,6 +6399,11 @@ const ELITES_CALDERRA = [
    intro:"Calderra's iron was forged in its fires. So was I.", after:"Tempered well. The next door is open."},
   {kind:'elitePsy', title:'ELITE FOUR SELENE', team:['Espathra','Farigiraf','Hatterene','Armarouge','Veluza','Indeedee'],
    intro:"The beasts showed me your path long ago. Let's walk it together.", after:"Just as they said. The CHAMPION awaits."}];
+// 9.3.1: TEAM ECLIPSE's grunts, in black and ember orange.
+Object.assign(CHARS, {gruntEclipse:{head:'cap', K:'#282830',R:'#302838',W:'#f08830',S:'#f0c098',H:'#1e1e24',B:'#302838',D:'#1a1620',Y:'#f08830'}});
+const ECLIPSE_TEAM = {cls:'ECLIPSE GRUNT', kind:'gruntEclipse', pool:['Maschiff','Nickit','Impidimp','Shroodle','Murkrow','Greavard'],
+  intro:["TEAM ECLIPSE will have the beasts! Out of our way!", "When the sun goes dark, ECLIPSE rises!", "Boss NYX said nobody gets through. Nobody!"],
+  after:["The light... it's too bright...", "Boss NYX won't like this one bit.", "Go on, then. The tower will rise without me."]};
 const CALDERRA = [
   // 0: the start
   {type:'town', name:"Port Calder", at:[0,1], desc:"Gulls wheel over a harbour of black volcanic stone. Three roads leave town: north, west and east.", center:true},
@@ -6472,6 +6481,8 @@ const CALDERRA = [
   Object.assign(CALDERRA[11], {rivalAfter:["The rain beast slips away... It doesn't matter. NYX will have them all."]});
   Object.assign(CALDERRA[18], {rivalAfter:["Burned again. Tell yourself you've won, kid. The tower is where it ends."]});
   Object.assign(CALDERRA[23], {rivalAfter:["No... the tower answers to YOU? Then ECLIPSE is finished.", "Enjoy your crater, CHAMPION of nowhere."]});
+  // 9.3.1: TEAM ECLIPSE's own grunts at the shrines and the tower (they were TEMPEST's, from VELLORIN).
+  for(const k of [4, 11, 18, 23]) CALDERRA[k].gruntTeam = ECLIPSE_TEAM;
   for(const loc of CALDERRA) getMap(loc);
 }
 

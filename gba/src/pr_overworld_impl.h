@@ -130,8 +130,11 @@ public:
     void make_sprite(actor& a);
     void place_actor(bn::sprite_ptr& sprite, int wx, int wy, int lift = 0);
     void set_player_frame(int step, bool run = false);
-    void update_weather();
-    void update_tint();
+    void update_weather(bool smooth = false);
+    void set_weather(int key, bool fade);
+    void update_tint(bool smooth = false);
+    void apply_tint();
+    void step_weather_fade();
     void animate_tiles();
     void sweep_ash(int tx, int ty);
     void show_place_name();
@@ -251,6 +254,10 @@ public:
     bn::optional<bn::regular_bg_ptr> _weather;
     int _weather_kind = -1;
     int _weather_x = 0, _weather_y = 0, _weather_timer = 0;
+    // 9.3.1: walking into an area with other weather fades it (alpha /256) and the tint (r, g, b, strength /256)
+    // over about half a second instead of snapping. _wx_pending: the layer to fade in once the old one is gone.
+    int _wx_alpha = 0, _wx_target = 0, _wx_pending = -2;
+    int _tint_now[4] = {}, _tint_to[4] = {};
     bool _flash = false;     // a cave lit by FLASH (until you leave it)
     int _px = 0, _py = 0, _cam_x = 0, _cam_y = 0;
     int _last_cx = 0x7fffffff, _last_cy = 0x7fffffff;
