@@ -3581,48 +3581,98 @@ namespace
                 return true;
             }
         }
+        for(const auto& f : game_data::multiforms)
+        {
+            if(f[0] == species && f[2] != species)
+            {
+                return true;   // ARCEUS-ELECTRIC and the other forms count as their legendary
+            }
+        }
         return false;
     }
 
-    // 9.3.0: a typed name (the LINKING CORD+'s POKéMON, the MOVE TUTOR's move), matched exactly (any case), else the
-    // first name that starts with it; -1 if none. `skip` leaves some out (legendaries, STRUGGLE).
-    int typed_match(const char* typed, int count, const char* (*name_of)(int), bool (*skip)(int))
+    // 9.3.0: a scrolling pick (the LINKING CORD+'s POKéMON, the MOVE TUTOR's move): a type, then that type's
+    // names A to Z. Returns the pick, or -1 if cancelled at the type list.
+    int pick_by_type(const char* what, int count, const char* (*name_of)(int), bool (*fits)(int, int))
     {
-        int starts = -1;
-        for(int s = 0; s < count; ++s)
+        ui& u = gui();
+        bn::string_view types[types_count + 1];
+        for(int t = 0; t < types_count; ++t)
         {
-            const char* name = name_of(s);
-            int k = 0;
-            while(typed[k] && name[k] && (typed[k] | 0x20) == (name[k] | 0x20))
+            types[t] = type_name(t);
+        }
+        types[types_count] = "CANCEL";
+        int type = 0;
+        while(true)
+        {
+            u.show_text("Which type?");
+            type = u.list(types, types_count + 1, type);
+            u.clear_text();
+            if(type < 0 || type >= types_count)
             {
-                ++k;
+                return -1;
             }
-            if(! typed[k] && ! skip(s))
+            // That type's names A to Z (insertion sort; no C library here).
+            auto after = [](const char* x, const char* y)
             {
-                if(! name[k])
+                while(*x && *x == *y)
                 {
-                    return s;
+                    ++x;
+                    ++y;
                 }
-                starts = starts < 0 ? s : starts;
+                return uint8_t(*x) > uint8_t(*y);
+            };
+            constexpr int most = 400;
+            uint16_t ids[most];
+            bn::string_view views[most + 1];
+            int n = 0;
+            for(int i = 0; i < count && n < most; ++i)
+            {
+                if(fits(i, type))
+                {
+                    int at = n++;
+                    while(at > 0 && after(name_of(ids[at - 1]), name_of(i)))
+                    {
+                        ids[at] = ids[at - 1];
+                        --at;
+                    }
+                    ids[at] = uint16_t(i);
+                }
+            }
+            for(int i = 0; i < n; ++i)
+            {
+                views[i] = name_of(ids[i]);
+            }
+            views[n] = "CANCEL";
+            u.show_text(what);
+            int k = u.list(views, n + 1);
+            u.clear_text();
+            if(k >= 0 && k < n)
+            {
+                return ids[k];
             }
         }
-        return starts;
     }
 
-    int typed_species(const char* typed)
+    int pick_species()
     {
-        return typed_match(typed, species_count, [](int s) { return game_data::species_list[s].name; }, is_legend);
+        return pick_by_type("Which POKéMON?", species_count, [](int s) { return game_data::species_list[s].name; },
+                            [](int s, int t)
+                            {
+                                const pr::species& sp = game_data::species_list[s];
+                                return s > 0 && ! is_legend(s) && (sp.type1 == t || sp.type2 == t);
+                            });
     }
 
-    int typed_move(const char* typed)
+    int pick_move()
     {
-        return typed_match(typed, game_data::moves_count, [](int s) { return move_data(s).name; },
-                           [](int s) { return s == 0; });   // not STRUGGLE
+        return pick_by_type("Which move?", game_data::moves_count, [](int m) { return move_data(m).name; },
+                            [](int m, int t) { return m > 0 && move_data(m).type == t; });   // not STRUGGLE
     }
 }
 
 // TRADEWIND VILLAGE's TRADER: one of yours for a random Pokémon of about the same level (not a legendary).
-// 9.3.0: each trade uses up a LINKING CORD; a LINKING CORD+ lets you name the one you get back.
+// 9.3.0: each trade uses up a LINKING CORD; a LINKING CORD+ lets you pick the one you get back.
 void overworld::trader()
 {
     game_state& g = state();
@@ -3661,17 +3711,13 @@ void overworld::trader()
         int species = -1;
         if(choose)
         {
-            suspend();
-            char typed[16];
-            bool ok = gui().keyboard("Which POKéMON?", typed, 12);
-            resume();
-            species = ok ? typed_species(typed) : -1;
+            species = pick_species();
             if(species < 0)
             {
-                say(ok ? "TRADER: \"Never heard of that one, sorry.\"" : "TRADER: \"Changed your mind?\"");
+                say("TRADER: \"Changed your mind?\"");
                 continue;
             }
-            bn::string<64> ask("TRADER: \"A ");
+            bn::string<64> ask("TRADER: \"");
             ask.append(game_data::species_list[species].name);
             ask.append("? Coming right up!\"");
             say(ask);
@@ -3936,7 +3982,7 @@ bool overworld::escape_rope()
 
 // The MOVE TUTOR (every POKéMON CENTER): a move from the Pokémon's level-up list, up to its level.
 // Calderra's MOVE TUTOR (2.0.0): four of the Gen 8 and 9 moves each day, for money. 9.3.0: $5000 each, to any
-// POKéMON, in every region, or any move in the game for $500000.
+// POKéMON, in every region, or any move in the game (by type, A to Z) for $500000.
 void overworld::tutor_new_move()
 {
     game_state& g = state();
@@ -3954,7 +4000,7 @@ void overworld::tutor_new_move()
         labels[k].append(" $5000");
         views[k] = labels[k];
     }
-    prices[4] = 500000;   // 9.3.0: or any move in the game, named on the keyboard
+    prices[4] = 500000;   // 9.3.0: or any move in the game, picked by type from a list
     views[4] = "ANY MOVE $500000";
     views[5] = "CANCEL";
     u.show_text("Today's moves:");
@@ -3971,14 +4017,9 @@ void overworld::tutor_new_move()
     }
     if(k == 4)
     {
-        suspend();
-        char typed[20];
-        bool ok = u.keyboard("Which move?", typed, 16);
-        resume();
-        moves[4] = ok ? typed_move(typed) : -1;
+        moves[4] = pick_move();
         if(moves[4] < 0)
         {
-            say(ok ? "MOVE TUTOR: \"I don't know that move.\"" : "MOVE TUTOR: \"Changed your mind?\"");
             return;
         }
         bn::string<64> ask("MOVE TUTOR: \"");

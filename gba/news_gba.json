@@ -1,7 +1,17 @@
 {
   "_howto": "The game's WHAT'S NEW: the title screen's message of the day (motd) and the changelog, newest first. Player-facing only.",
-  "motd": "Version 9.3.1: no more stuck GYMS, TEAM ECLIPSE in its own colours, and weather that drifts in as you walk.",
+  "motd": "Version 9.3.2: the MOVE TUTOR and the LINKING CORD+ now let you scroll a list instead of typing.",
   "changelog": [
+    {
+      "version": "GBA 9.3.2",
+      "date": "2026-10-14",
+      "title": "Pick from a list",
+      "changes": [
+        "The MOVE TUTOR's ANY MOVE ($500000): pick a type, then scroll that type's moves from A to Z. No more typing",
+        "The LINKING CORD+ works the same way: pick a type, then the POKéMON you want back",
+        "The TRADER no longer offers legendary forms like ARCEUS-ELECTRIC"
+      ]
+    },
     {
       "version": "GBA 9.3.1",
       "date": "2026-10-14",
