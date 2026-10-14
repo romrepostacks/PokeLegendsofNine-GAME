@@ -3584,19 +3584,20 @@ namespace
         return false;
     }
 
-    // 9.3.0: the LINKING CORD+'s pick: a typed name, matched exactly (any case), else the first name that starts with it.
-    int typed_species(const char* typed)
+    // 9.3.0: a typed name (the LINKING CORD+'s POKéMON, the MOVE TUTOR's move), matched exactly (any case), else the
+    // first name that starts with it; -1 if none. `skip` leaves some out (legendaries, STRUGGLE).
+    int typed_match(const char* typed, int count, const char* (*name_of)(int), bool (*skip)(int))
     {
         int starts = -1;
-        for(int s = 0; s < species_count; ++s)
+        for(int s = 0; s < count; ++s)
         {
-            const char* name = game_data::species_list[s].name;
+            const char* name = name_of(s);
             int k = 0;
             while(typed[k] && name[k] && (typed[k] | 0x20) == (name[k] | 0x20))
             {
                 ++k;
             }
-            if(! typed[k] && ! is_legend(s))
+            if(! typed[k] && ! skip(s))
             {
                 if(! name[k])
                 {
@@ -3606,6 +3607,17 @@ namespace
             }
         }
         return starts;
+    }
+
+    int typed_species(const char* typed)
+    {
+        return typed_match(typed, species_count, [](int s) { return game_data::species_list[s].name; }, is_legend);
+    }
+
+    int typed_move(const char* typed)
+    {
+        return typed_match(typed, game_data::moves_count, [](int s) { return move_data(s).name; },
+                           [](int s) { return s == 0; });   // not STRUGGLE
     }
 }
 
@@ -3924,31 +3936,31 @@ bool overworld::escape_rope()
 
 // The MOVE TUTOR (every POKéMON CENTER): a move from the Pokémon's level-up list, up to its level.
 // Calderra's MOVE TUTOR (2.0.0): four of the Gen 8 and 9 moves each day, for money. 9.3.0: $5000 each, to any
-// POKéMON, in every region.
+// POKéMON, in every region, or any move in the game for $500000.
 void overworld::tutor_new_move()
 {
     game_state& g = state();
     ui& u = gui();
     constexpr int fresh = game_data::moves_count - game_data::moves_v1;
     int today = int(g.play_frames / frames_per_day);
-    int moves[4], prices[4];
+    int moves[5], prices[5];
     bn::string<32> labels[5];
-    bn::string_view views[5];
+    bn::string_view views[6];
     for(int k = 0; k < 4; ++k)
     {
         moves[k] = game_data::moves_v1 + (today * 4 + k) % fresh;
-        const move& mv = move_data(moves[k]);
         prices[k] = 5000;
-        labels[k] = mv.name;
-        labels[k].append(" $");
-        labels[k].append(bn::to_string<6>(prices[k]));
+        labels[k] = move_data(moves[k]).name;
+        labels[k].append(" $5000");
         views[k] = labels[k];
     }
-    views[4] = "CANCEL";
+    prices[4] = 500000;   // 9.3.0: or any move in the game, named on the keyboard
+    views[4] = "ANY MOVE $500000";
+    views[5] = "CANCEL";
     u.show_text("Today's moves:");
-    int k = u.list(views, 5);
+    int k = u.list(views, 6);
     u.clear_text();
-    if(k < 0 || k >= 4)
+    if(k < 0 || k >= 5)
     {
         return;
     }
@@ -3956,6 +3968,23 @@ void overworld::tutor_new_move()
     {
         say("MOVE TUTOR: \"You'll need more money than that, I'm afraid.\"");
         return;
+    }
+    if(k == 4)
+    {
+        suspend();
+        char typed[20];
+        bool ok = u.keyboard("Which move?", typed, 16);
+        resume();
+        moves[4] = ok ? typed_move(typed) : -1;
+        if(moves[4] < 0)
+        {
+            say(ok ? "MOVE TUTOR: \"I don't know that move.\"" : "MOVE TUTOR: \"Changed your mind?\"");
+            return;
+        }
+        bn::string<64> ask("MOVE TUTOR: \"");
+        ask.append(move_data(moves[4]).name);
+        ask.append("? I can teach that!\"");
+        say(ask);
     }
     suspend();
     int pick = party_screen(party_mode::CHOOSE, "Teach which POKéMON?");
@@ -4003,7 +4032,7 @@ void overworld::move_tutor()
     ui& u = gui();
     say("MOVE TUTOR: \"I can help a POKéMON remember a move it learned before, or one it should have learned by now.\"");
     bool calderra = true;   // 9.3.0: new moves in every region
-    say("MOVE TUTOR: \"I also teach new moves, a different four each day, to any POKéMON. $5000 a move!\"");
+    say("MOVE TUTOR: \"I also teach any POKéMON new moves: four each day for $5000, or any move at all for $500000!\"");
     while(true)
     {
         if(calderra)
