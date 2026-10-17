@@ -1,7 +1,16 @@
 {
   "_howto": "The game's WHAT'S NEW: the title screen's message of the day (motd) and the changelog, newest first. Player-facing only.",
-  "motd": "Version 9.3.2: the MOVE TUTOR and the LINKING CORD+ now let you scroll a list instead of typing.",
+  "motd": "Version 9.4.0: new looks for 23 POKéMON of the SUNDERED ISLES, the SKYREACH and GENOVA, and a new species, SAURHORN.",
   "changelog": [
+    {
+      "version": "GBA 9.4.0",
+      "date": "2026-10-17",
+      "title": "New looks",
+      "changes": [
+        "23 regional and homebrew POKéMON of the SUNDERED ISLES, the SKYREACH and GENOVA have new sprites, front and back, normal and shiny",
+        "RHYDON-SKY is now SAURHORN, its own species. RHYHORN-SKY still evolves into it at level 42"
+      ]
+    },
     {
       "version": "GBA 9.3.2",
       "date": "2026-10-14",

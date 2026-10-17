@@ -824,8 +824,8 @@ const SKYREACH_FORMS = [
   ["Rapidash-Sky", "Rapidash", 2016, ["Fire","Flying"], [65,95,65,90,80,115]],
   ["Swablu-Sky", "Swablu", 2017, ["Ice","Flying"], [45,40,60,55,75,50], "Altaria-Sky", 35],
   ["Altaria-Sky", "Altaria", 2018, ["Ice","Dragon"], [75,70,85,95,100,80]],
-  ["Rhyhorn-Sky", "Rhyhorn", 2019, ["Rock","Dragon"], [80,90,90,40,40,30], "Rhydon-Sky", 42],
-  ["Rhydon-Sky", "Rhydon", 2020, ["Rock","Dragon"], [105,135,115,55,55,45]],
+  ["Rhyhorn-Sky", "Rhyhorn", 2019, ["Rock","Dragon"], [80,90,90,40,40,30], "Saurhorn", 42],
+  ["Saurhorn", "Rhydon", 2020, ["Rock","Dragon"], [105,135,115,55,55,45]],
   ["Deoxys-Attack", "Deoxys", 10001, ["Psychic"], [50,180,20,180,20,150]],
   ["Deoxys-Defense", "Deoxys", 10002, ["Psychic"], [50,70,160,70,160,90]],
   ["Deoxys-Speed", "Deoxys", 10003, ["Psychic"], [50,95,90,95,90,180]]];
@@ -6663,7 +6663,7 @@ const ELITES_SKYREACH = [
    intro:"I read the stars, and they read you. Shall we?", after:"The stars didn't see that coming. Neither did I."},
   {kind:'eliteSteele', title:'ELITE FOUR STEELE', team:['Skarmory','Corviknight','Aegislash','Excadrill','Scizor','Archaludon'],
    intro:"Up here, only the toughest metal survives the wind!", after:"Tempered and tested. The next door is yours."},
-  {kind:'eliteWyra', title:'ELITE FOUR WYRA', team:['Garchomp','Hydreigon','Dragapult','Rhydon-Sky','Haxorus','Kingdra'],
+  {kind:'eliteWyra', title:'ELITE FOUR WYRA', team:['Garchomp','Hydreigon','Dragapult','Saurhorn','Haxorus','Kingdra'],
    intro:"Dragons ride the winds around the pillar. Can you ride them too?", after:"You've earned the crown's door. The CHAMPION waits."}];
 const SKYREACH = [
   // 0-8: the CANYON FLOOR, west to east
@@ -6671,7 +6671,7 @@ const SKYREACH = [
   {type:'route', name:"Canyon Route 1", at:[3,3], theme:'rocky', tint:'mesa', wind:true, desc:"A dry canyon west of WINDWARD. Gusts race along the riverbed.", pool:['Sandile','Trapinch','Geodude-Sky','Rhyhorn-Sky','Diglett','Mudbray']},
   {type:'gym', name:"Cascade Gorge", at:[2,3], center:true, tint:'mesa', desc:"Waterfalls pour down the canyon walls into a green gorge. Leader Rill's gym is a raft dock.", leaderName:"Rill", leaderTeam:['Ludicolo','Swampert','Tangrowth','Kingler']},
   {type:'route', name:"Canyon Route 2", at:[1,3], theme:'rocky', tint:'mesa', wind:true, treasure:['stoneplate'], desc:"Old mine carts rust beside the trail to OCHRE GULCH. Something hums deep in a side tunnel.", pool:['Geodude-Sky','Rolycoly','Onix','Drilbur','Sandile','Roggenrola']},
-  {type:'gym', name:"Ochre Gulch", at:[0,3], center:true, tint:'mesa', desc:"A mining town cut into ochre cliffs. Leader Dusty's gym is the old mine itself.", leaderName:"Dusty", leaderTeam:['Golem','Rhydon-Sky','Gliscor','Lycanroc']},
+  {type:'gym', name:"Ochre Gulch", at:[0,3], center:true, tint:'mesa', desc:"A mining town cut into ochre cliffs. Leader Dusty's gym is the old mine itself.", leaderName:"Dusty", leaderTeam:['Golem','Saurhorn','Gliscor','Lycanroc']},
   {type:'route', name:"Canyon Route 3", at:[5,3], theme:'rocky', tint:'mesa', wind:true, desc:"The road east to STARFALL. At night the sky here is full of shooting stars.", pool:['Ponyta-Sky','Baltoy','Elgyem','Solrock','Lunatone','Cleffa']},
   {type:'gym', name:"Starfall", at:[6,3], center:true, tint:'mesa', desc:"A town of observatories beside the SPACE CENTER. Leader Selene's gym has a glass roof open to the stars.", leaderName:"Selene", leaderTeam:['Clefable','Gardevoir','Hatterene','Bronzong']},
   {type:'trainer', kind:'boss', name:"Meteor Crater", at:[7,3], boss:true, shrine:true, legend:'Deoxys', grunts:3, theme:'rocky', tint:'mesa', gruntTeam:ZENITH_TEAM, bossKind:'adminZenith',
@@ -6697,12 +6697,12 @@ const SKYREACH = [
   {type:'route', name:"Cloud Route 9", at:[3,-1], theme:'rocky', tint:'cloud', wind:true, desc:"A causeway of floating rock toward the top of the SKY PILLAR. The wind is fierce.", pool:['Altaria-Sky','Noivern','Shelgon','Snover','Bergmite','Amaura']},
   {type:'trainer', kind:'boss', name:"Sky Pillar", at:[4,-1], boss:true, shrine:true, legend:'Rayquaza', grunts:3, theme:'rocky', tint:'cloud', gruntTeam:ZENITH_TEAM, bossKind:'bossZenith',
    desc:"The top of the SKY PILLAR, above the clouds. Director HALLEY waits by the old altar. \"Rayquaza will fall, and my perfect POKéMON will rule the sky!\"",
-   leaderName:"Director Halley", leaderTeam:['Metagross','Porygon-Z','Rhydon-Sky','Altaria-Sky','Magnezone','Reuniclus'], pool:['Altaria-Sky','Noivern','Salamence','Dragonair']},
+   leaderName:"Director Halley", leaderTeam:['Metagross','Porygon-Z','Saurhorn','Altaria-Sky','Magnezone','Reuniclus'], pool:['Altaria-Sky','Noivern','Salamence','Dragonair']},
   {type:'route', name:"Cloud Route 10", at:[5,-1], theme:'rocky', tint:'cloud', wind:true, treasure:['skyplate'], desc:"Dragons nest on the floating rocks here. Something glints on the highest one.", pool:['Altaria-Sky','Noibat','Gible','Dratini','Staravia','Bagon']},
   {type:'gym', name:"The Aerie", at:[6,-1], center:true, tint:'cloud', desc:"Dragon nests on floating rock, joined by rope bridges. Leader Aerin's gym is the biggest nest.", leaderName:"Aerin", leaderTeam:['Dragonite','Salamence','Altaria-Sky','Noivern']},
   {type:'route', name:"Cloud Route 8", at:[6,0], badges:6, theme:'rocky', tint:'cloud', wind:true, desc:"An updraft lifts you from the storm mesa into the clouds.", pool:['Swablu-Sky','Noibat','Bagon','Rhyhorn-Sky','Skarmory','Staravia']},
   // 22-23: inside the SKY PILLAR
-  {type:'route', name:"Pillar Heart", at:[4,2], badges:8, aces:true, theme:'cave', desc:"Stairs wind up the inside of the SKY PILLAR. Only trainers with all eight Skyreach badges, who settled RAYQUAZA and DEOXYS, may climb.", pool:['Rhydon-Sky','Graveler-Sky','Gabite','Shelgon','Metang','Altaria-Sky']},
+  {type:'route', name:"Pillar Heart", at:[4,2], badges:8, aces:true, theme:'cave', desc:"Stairs wind up the inside of the SKY PILLAR. Only trainers with all eight Skyreach badges, who settled RAYQUAZA and DEOXYS, may climb.", pool:['Saurhorn','Graveler-Sky','Gabite','Shelgon','Metang','Altaria-Sky']},
   {type:'town', name:"Skyreach League", at:[4,1], center:true, league:true, champion:true, elites:ELITES_SKYREACH, championKind:'championAltair',
    championQuote:"You calmed the sky and the thing that fell from it. Now you stand in the pillar's crown. I am ALTAIR, CHAMPION of the SKYREACH!",
    desc:"The Pokémon League of the Skyreach, in the crown of the SKY PILLAR. Four elite trainers wait inside, and beyond them, the Champion.",
@@ -7258,7 +7258,7 @@ Object.assign(GYM_STYLE, {
   Elegy:{kind:'championElegy', type:'the HOLLOW LANDS\' best', theme:'ghost', juniors:{cls:'ACE TRAINER', kind:'oldwoman', team:['Gengar','Dusknoir','Froslass','Mimikyu','Chandelure','Spiritomb']}},
   Zephyra:{kind:'championZephyra', type:'TEMPESTA\'s best', theme:'ice', juniors:{cls:'ACE TRAINER', kind:'girl', team:['Sawsbuck','Kilowattrel','Lapras','Florges','Castform','Weavile']}}});
 const ELITES_ORIGIN = [
-  {kind:'bossZenith', title:'ELITE FOUR HALLEY', team:['Deoxys','Metagross','Porygon-Z','Rhydon-Sky','Magnezone','Reuniclus'],
+  {kind:'bossZenith', title:'ELITE FOUR HALLEY', team:['Deoxys','Metagross','Porygon-Z','Saurhorn','Magnezone','Reuniclus'],
    intro:"I chased the perfect POKéMON across the sky. I'm still looking. Show me yours.", after:"Not perfect. Better. Go on."},
   {kind:'bossVoss', title:'ELITE FOUR VOSS', team:['Mewtwo','Helixeon','Metagross','Porygon-Z','Mimicore','Magnezone'],
    intro:"MEWTWO forgave me. I asked it to come here and fight beside me. It said yes.", after:"Science without limits... I've found my limit. It's you."},
