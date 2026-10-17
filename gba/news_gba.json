@@ -1,9 +1,9 @@
 {
   "_howto": "The game's WHAT'S NEW: the title screen's message of the day (motd) and the changelog, newest first. Player-facing only.",
-  "motd": "Version 9.4.0: new looks for 23 POKéMON of the SUNDERED ISLES, the SKYREACH and GENOVA, and a new species, SAURHORN.",
+  "motd": "Version 9.3.3: new looks for 23 POKéMON of the SUNDERED ISLES, the SKYREACH and GENOVA, and a new species, SAURHORN.",
   "changelog": [
     {
-      "version": "GBA 9.4.0",
+      "version": "GBA 9.3.3",
       "date": "2026-10-17",
       "title": "New looks",
       "changes": [
