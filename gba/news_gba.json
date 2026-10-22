@@ -1,7 +1,17 @@
 {
   "_howto": "The game's WHAT'S NEW: the title screen's message of the day (motd) and the changelog, newest first. Player-facing only.",
-  "motd": "Version 9.3.3: new looks for 23 POKéMON of the SUNDERED ISLES, the SKYREACH and GENOVA, and a new species, SAURHORN.",
+  "motd": "Version 9.3.4: three new POKéMON CENTERS, each with its own look inside and out.",
   "changelog": [
+    {
+      "version": "GBA 9.3.4",
+      "date": "2026-10-22",
+      "title": "New POKéMON CENTERS",
+      "changes": [
+        "POKéMON CENTERS come in three new styles: a red arch with a big POKé BALL, a striped awning, and a glass atrium between two wings",
+        "Each style has its own interior: classic yellow tiles, a cosy cottage with a fireplace and lounges, and an indoor park with trees and benches",
+        "Every region has all three"
+      ]
+    },
     {
       "version": "GBA 9.3.3",
       "date": "2026-10-17",

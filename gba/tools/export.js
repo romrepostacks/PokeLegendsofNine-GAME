@@ -83,6 +83,33 @@ function writePng(file, w, h, rgb){
 }
 function crop(c, x0, y0, w, h){ const out = new Canvas(w, h); for(let y=0; y<h; y++) c.d.copy(out.d, y*w*3, ((y0+y)*c.w + x0)*3, ((y0+y)*c.w + x0 + w)*3); return out; }
 const savePng = (name, c)=>writePng(path.join(OUT, name), c.w, c.h, c.d);
+// 9.3.4: hand-drawn art in gba/data (tools/art/*.py), 8-bit RGB or RGBA, as {w, h, px} (null = transparent).
+function readPng(name){
+  const b = fs.readFileSync(path.join(__dirname, '..', 'data', name)), w = b.readUInt32BE(16), h = b.readUInt32BE(20), n = b[25]===6 ? 4 : 3;
+  if(b[24]!==8 || ![2,6].includes(b[25]) || b[28]) throw new Error(name + ': only 8-bit RGB(A) PNGs');
+  const idat = [];
+  for(let i=8; i<b.length; i += 12 + b.readUInt32BE(i)) if(b.toString('ascii', i+4, i+8)==='IDAT') idat.push(b.subarray(i+8, i+8+b.readUInt32BE(i)));
+  const raw = zlib.inflateSync(Buffer.concat(idat)), st = w*n, out = Buffer.alloc(st*h);
+  for(let y=0; y<h; y++){
+    const f = raw[y*(st+1)];
+    for(let x=0; x<st; x++){
+      const a = x>=n ? out[y*st+x-n] : 0, u = y ? out[(y-1)*st+x] : 0, c = x>=n && y ? out[(y-1)*st+x-n] : 0;
+      const p = a + u - c, pr = Math.abs(p-a)<=Math.abs(p-u) && Math.abs(p-a)<=Math.abs(p-c) ? a : Math.abs(p-u)<=Math.abs(p-c) ? u : c;
+      out[y*st+x] = raw[y*(st+1)+1+x] + [0, a, u, (a+u)>>1, pr][f];
+    }
+  }
+  return {w, h, px:Array.from({length:h}, (_,y)=>Array.from({length:w}, (_,x)=>{ const i = y*st+x*n;
+    return n===4 && out[i+3]<128 ? null : [out[i], out[i+1], out[i+2]]; }))};
+}
+// 9.3.4: the three POKéMON CENTERS (tools/art/centers.py, center_rooms.py), taken in turn by the towns that have one,
+// in area order, so each region gets all three.
+const CENTER_ROOMS = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data', 'center_rooms.json'), 'utf8'));
+const CENTER_FRONT = Object.fromEntries(Object.keys(CENTER_ROOMS).map(k=>[k, readPng(`center_${k}.png`)]));
+const centerTowns = G.LOCATIONS.filter(l=>l.center);
+for(const loc of G.LOCATIONS){
+  const own = loc.twinOf!==undefined ? G.LOCATIONS[loc.twinOf] : loc, map = G.getMap(loc);
+  if(map.buildings.some(b=>b.kind==='center')) map.centerStyle = Object.keys(CENTER_ROOMS)[Math.max(0, centerTowns.indexOf(own)) % 3];
+}
 
 // ---------- Tile behaviours (what the GBA needs to know about each tile) ----------
 const GRASS = hex(G.GROUND.base);
@@ -171,6 +198,11 @@ function drawArea(map, view, opts={}){
   }
   // Buildings (as buildingHtml lays them out).
   for(const b of map.buildings){
+    if(b.kind==='center' && map.centerStyle){
+      if(b.w!==5 || b.h!==4 || b.door.x-b.x!==2) throw new Error('a CENTER the art does not fit');
+      c.draw(CENTER_FRONT[map.centerStyle], b.x*16, b.y*16 - 8);
+      continue;
+    }
     const roof = b.kind==='center' ? 'red' : b.kind==='mart' ? 'blue' : b.kind==='gym' || b.kind==='league' || b.kind==='tower' ? 'slate'
       : G.HOUSE_ROOF_NAMES[G.HOUSE_ROOFS.indexOf(b.roof)] || 'green';
     const wall = b.kind==='gym' || b.kind==='league' || b.kind==='tower' ? 'grey' : 'cream';
@@ -366,6 +398,7 @@ function drawGym(room, opts={}){
 // A League gate tile, open: the floor.
 function leagueFloor(){ const c = new Canvas(16, 16, hex('#c0b8d8')); return c; }
 function drawRoom(room, opts={}){
+  if(room.style){ const a = readPng(`center_room_${room.style}.png`), c = new Canvas(a.w, a.h); c.draw(a, 0, 0); return c; }
   if(room.interior==='gym' || room.interior==='league') return drawGym(room, opts);
   const art = ROOM_ART[room.interior], c = new Canvas(room.w*16, room.h*16, [0,0,0]);
   const at = (x,y)=>room.tiles[y] ? room.tiles[y][x] : '#';
@@ -490,13 +523,15 @@ for(const li of AREAS){
   });
   const doors = map.buildings.map((b, bi)=>{
     if(b.kind==='tower') return towerRooms(li, bi, b);
-    const room = G.getInterior(loc, bi);
-    const art = room.interior==='gym' ? `gym_${room.theme}_${li}` : room.interior;    // 9.3.0: each gym its own layout
-    if(!roomArts.has(art)) roomArts.set(art, {area:li, building:bi});
+    let room = G.getInterior(loc, bi);
+    // 9.3.4: each CENTER style has its own room, drawn by hand, with its own tile rows.
+    if(room.interior==='center') room = {...room, style:map.centerStyle, tiles:CENTER_ROOMS[map.centerStyle].rows.map(r=>[...r])};
+    const art = room.interior==='gym' ? `gym_${room.theme}_${li}` : room.style ? `center_${room.style}` : room.interior;    // 9.3.0: each gym its own layout
+    if(!roomArts.has(art)) roomArts.set(art, {area:li, building:bi, room});
     for(const n of room.npcs) peopleKinds.add(n.kind);
     const roomTrainers = room.npcs.filter(n=>n.trainer).map(n=>trainerOut(n, loc));
     for(const t of roomTrainers) [...t.team, ...(t.fill || [])].forEach(s=>trainerSpecies.add(s));
-    rooms.push({area:li, building:bi, kind:room.interior, art, theme:room.theme, home:!!b.home, w:room.w, h:room.h, tiles:room.tiles.map(r=>r.join('')),
+    rooms.push({area:li, building:bi, kind:room.interior, art, tutor:room.style ? CENTER_ROOMS[room.style].tutor : null, theme:room.theme, home:!!b.home, w:room.w, h:room.h, tiles:room.tiles.map(r=>r.join('')),
       trainers:roomTrainers, gym:room.interior==='gym' ? {name:loc.name.toUpperCase(), leader:loc.leaderName} : null,
       behaviour:room.tiles.map(r=>r.map(behaviour)), spawn:room.spawn, door:{x:b.door.x, y:b.door.y},
       people:room.npcs.filter(n=>!n.trainer).map(n=>({kind:n.kind, x:n.x, y:n.y, facing:n.facing, role:n.role || '', wander:!!n.wander, lines:lines(n)})),

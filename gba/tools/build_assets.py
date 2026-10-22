@@ -748,7 +748,9 @@ def build_world(exp, data, out_inc):
         people = r['people']
         if r['kind'] == 'center' and not any(n.get('role') == 'tutor' for n in people):
             # GBA 1.8: the MOVE TUTOR in every POKéMON CENTER, by the right-hand wall.
-            people.append({'kind': 'gentleman', 'x': 11, 'y': 6, 'facing': 'left', 'role': 'tutor', 'wander': False,
+            # 9.3.4: each CENTER style says where its tutor stands.
+            tx, ty = r.get('tutor') or (11, 6)
+            people.append({'kind': 'gentleman', 'x': tx, 'y': ty, 'facing': 'left', 'role': 'tutor', 'wander': False,
                            'lines': ['MOVE TUTOR: "I can help POKéMON remember moves."']})
         people_rows(p, people)
         area, aai = by_index[r['area']], ai_of[r['area']]
