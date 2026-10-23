@@ -29,7 +29,7 @@ namespace
         bn::bitset<max_tiles> holes;    // open pits (and broken floor)
         bn::bitset<max_tiles> rocks;    // boulders
     };
-    BN_DATA_EWRAM_BSS puzzle_run pzr;
+    BN_DATA_EWRAM puzzle_run pzr;
 
     bool has(const char* set, char c)
     {
