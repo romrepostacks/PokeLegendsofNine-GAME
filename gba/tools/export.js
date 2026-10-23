@@ -106,6 +106,10 @@ function readPng(name){
 const CENTER_ROOMS = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data', 'center_rooms.json'), 'utf8'));
 const CENTER_FRONT = Object.fromEntries(Object.keys(CENTER_ROOMS).map(k=>[k, readPng(`center_${k}.png`)]));
 const centerTowns = G.LOCATIONS.filter(l=>l.center);
+// 9.3.4: the CHALLENGE TOWER's front and a SUMMONING CHAMBER for each legendary (tools/art/chambers/build.py).
+const TOWER_FRONT = readPng('tower_front.png');
+const CHAMBERS = fs.readdirSync(path.join(__dirname, '..', 'data')).map(f=>f.match(/^chamber_(\d+)(_shiny)?\.png$/)).filter(Boolean)
+  .map(m=>({num:+m[1], shiny:!!m[2], art:m[0].slice(0, -4)})).sort((a, b)=>a.num-b.num || a.shiny-b.shiny);
 for(const loc of G.LOCATIONS){
   const own = loc.twinOf!==undefined ? G.LOCATIONS[loc.twinOf] : loc, map = G.getMap(loc);
   if(map.buildings.some(b=>b.kind==='center')) map.centerStyle = Object.keys(CENTER_ROOMS)[Math.max(0, centerTowns.indexOf(own)) % 3];
@@ -219,6 +223,11 @@ function drawArea(map, view, opts={}){
     if(b.kind==='center' && map.centerStyle){
       if(b.w!==5 || b.h!==4 || b.door.x-b.x!==2) throw new Error('a CENTER the art does not fit');
       c.draw(CENTER_FRONT[map.centerStyle], b.x*16, b.y*16 - 8);
+      continue;
+    }
+    if(b.kind==='tower'){
+      if(b.w!==7 || b.door.x-b.x!==3) throw new Error('a TOWER the art does not fit');
+      c.draw(TOWER_FRONT, b.x*16, (b.door.y+1)*16 - TOWER_FRONT.h);
       continue;
     }
     const roof = b.kind==='center' ? 'red' : b.kind==='mart' ? 'blue' : b.kind==='gym' || b.kind==='league' || b.kind==='tower' ? 'slate'
@@ -416,6 +425,7 @@ function drawGym(room, opts={}){
 // A League gate tile, open: the floor.
 function leagueFloor(){ const c = new Canvas(16, 16, hex('#c0b8d8')); return c; }
 function drawRoom(room, opts={}){
+  if(room.chamber){ const a = readPng(room.chamber + '.png'), c = new Canvas(a.w, a.h); c.draw(a, 0, 0); return c; }
   if(room.style){ const a = readPng(`center_room_${room.style}.png`), c = new Canvas(a.w, a.h); c.draw(a, 0, 0); return c; }
   if(room.puzzle!=null){ const a = readPng(`gym_${room.puzzle}_0.png`), c = new Canvas(a.w, a.h); c.draw(a, 0, 0); return c; }
   if(room.interior==='gym' || room.interior==='league') return drawGym(room, opts);
@@ -496,6 +506,7 @@ function towerRooms(li, bi, b){
   towerRoom(li, `${bi}/summit`, 'summit', 'league', TOWER_ROOMS.summit, b, [],
     [{x:7, y:5, text:['A SUMMONING STONE. It hums faintly.']}]);
   for(const t of CHAMBER_THEMES) towerRoom(li, `${bi}/chamber_${t}`, 'chamber', t, TOWER_ROOMS.chamber, b, [], []);
+  towerAt = {li, bi, b};
   return {x:b.door.x, y:b.door.y, kind:'tower', room:first};
 }
 
@@ -503,6 +514,7 @@ fs.mkdirSync(OUT, {recursive:true});
 G.setAdv({cleared:{}, picked:{}, story:{}, items:{}, party:[], box:[]});   // the League's gates start shut
 const areas = [], rooms = [], peopleKinds = new Set(['player', 'prof', 'nurse', 'clerk', 'mom', 'rival', 'grunt', 'admin', 'captain', 'pilot']);
 const roomArts = new Map(), trainerSpecies = new Set();
+let towerAt = null;
 const lines = n=>n.lines || [];
 const STRIP_X = 10, STRIP_Y = 8;   // how far into a neighbour the camera can see (and the BG draws)
 const locIndex = new Map(G.LOCATIONS.map((l,i)=>[l, i]));
@@ -584,6 +596,20 @@ for(const li of AREAS){
     leader_team:loc.leaderTeam || [], rival_after:loc.rivalAfter || [], own_pool:!!loc.pool,
     extras:loc.extras || [], twin:loc.twin ?? loc.twinOf ?? -1, mirror:!!(loc.mirror || (loc.twin!==undefined && G.LOCATIONS[loc.twin].mirror))});
   if(legend) trainerSpecies.add(legend.legend);
+}
+// 9.3.4: one SUMMONING CHAMBER per legendary, after every region's rooms (`late`) so no saved map index moves.
+// The art is the whole room; you walk the stone path from the mat up to the dais.
+if(towerAt){
+  const {li, bi, b} = towerAt;
+  const rows = ['###############','###############','###############','###############',
+    ...Array(8).fill('#######_#######'), '#######M#######'];
+  for(const ch of CHAMBERS){
+    const room = {w:15, h:13, tiles:rows.map(r=>r.split('')), chamber:ch.art};
+    roomArts.set(ch.art, {area:li, building:`${bi}/${ch.art}`, room});
+    rooms.push({area:li, building:`${bi}/${ch.art}`, kind:'chamber', art:ch.art, theme:null, home:false, w:15, h:13, tiles:rows,
+      trainers:[], gym:null, behaviour:room.tiles.map(r=>r.map(behaviour)), spawn:{x:7, y:11}, door:{x:b.door.x, y:b.door.y},
+      people:[], things:[], gates:[], floor:-1, legend:ch.num, legend_shiny:ch.shiny, baked:ch.num===382, late:true});
+  }
 }
 for(const [art, {area, building, room:own}] of roomArts){
   const room = own || G.getInterior(G.LOCATIONS[area], building);

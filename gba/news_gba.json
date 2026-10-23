@@ -1,6 +1,6 @@
 {
   "_howto": "The game's WHAT'S NEW: the title screen's message of the day (motd) and the changelog, newest first. Player-facing only.",
-  "motd": "Version 9.3.4: every GYM rebuilt as its own challenge, and three new POKéMON CENTERS.",
+  "motd": "Version 9.3.4: new GYMS, new POKéMON CENTERS and a chamber for every legendary.",
   "changelog": [
     {
       "version": "GBA 9.3.4",
@@ -11,7 +11,9 @@
         "Some GYMS have more junior trainers, and dark GYMS light up as you beat them",
         "POKéMON CENTERS come in three new styles: a red arch with a big POKé BALL, a striped awning, and a glass atrium between two wings",
         "Each style has its own interior: classic yellow tiles, a cosy cottage with a fireplace and lounges, and an indoor park with trees and benches",
-        "Every region has all three"
+        "Every region has all three",
+        "The CHALLENGE TOWER in SPIRECREST TOWN has a new look: a white hall with a beacon column rising above it",
+        "Every legendary POKéMON now waits in a SUMMONING CHAMBER of its own, 92 in all, from a lava cave for GROUDON to a sunrise glade for XERNEAS. KYOGRE rests half under the water of its pool"
       ]
     },
     {

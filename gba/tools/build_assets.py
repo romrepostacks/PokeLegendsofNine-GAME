@@ -376,7 +376,9 @@ def build_world(exp, data, out_inc):
     map_order = []
     for rg in regions:
         map_order += [('area', ai) for ai, a in enumerate(areas) if a['region'] == rg]
-        map_order += [('room', ri) for ri, r in enumerate(rooms) if region_of[r['area']] == rg]
+        map_order += [('room', ri) for ri, r in enumerate(rooms) if region_of[r['area']] == rg and not r.get('late')]
+    # 9.3.4: rooms added later than every region (the SUMMONING CHAMBERS) go last.
+    map_order += [('room', ri) for ri, r in enumerate(rooms) if r.get('late')]
     map_index = {k: mi for mi, k in enumerate(map_order)}
     by_index = {a['index']: map_index[('area', ai)] for ai, a in enumerate(areas)}
     tilesets = []
@@ -807,8 +809,15 @@ def build_world(exp, data, out_inc):
         if r.get('puzzle'):
             puzzle_rows(p, r['puzzle'], info)
             puzzle = '&%spuzzle' % p
-        L.append('constexpr room_info %sroom = {room_kind::%s, gym_theme::%s, %sgates, %d, %d, %s, %d, %s};' % (
-            p, kind, theme, p, len(r['gates']), info['gate_meta'], 'true' if r['home'] else 'false', r.get('floor', -1), puzzle))
+        legend, lx, ly, lk = 'int16_t(-1)', 0, 0, 256
+        if r.get('legend'):
+            theme = 'NONE'
+            sp = next(sp for sp in data['species'] if sp['num'] == r['legend'])
+            legend = 'int16_t(species_id::%s)' % enum_name(sp['name'])
+            lx, ly, lk = chamber_placement(r['legend'])
+        L.append('constexpr room_info %sroom = {room_kind::%s, gym_theme::%s, %sgates, %d, %d, %s, %d, %s, %s, %s, %s, %d, %d, %d};' % (
+            p, kind, theme, p, len(r['gates']), info['gate_meta'], 'true' if r['home'] else 'false', r.get('floor', -1), puzzle,
+            legend, 'true' if r.get('legend_shiny') else 'false', 'true' if r.get('baked') else 'false', lx, ly, lk))
         map_rows[map_index[('room', ri)]] = ('{%s, %d, %d, %d, %s_map, %sbehaviour, nullptr, 0, nullptr, 0, %speople, %d, %strainers, %d, nullptr, 0, '
                         '%sthings, %d, nullptr, 0, nullptr, 0, %d, %d, %d, %d, %d, %d, %d, gate_kind::NONE, %s, %s, nullptr, nullptr, nullptr, "", &%sroom}' % (
             c_text(name), info['ts'], r['w'], r['h'], 'room_' + r['art'], p, p, len(r['people']), p, len(r['trainers']),
@@ -1024,6 +1033,17 @@ def mon_sprite(path, box_of=None):
     out = Image.new('RGBA', (64, 64), (0, 0, 0, 0))
     out.alpha_composite(img.crop(box), ((64 - w) // 2, 64 - h - 2 if h < 62 else 0))
     return out
+
+def chamber_placement(num):
+    """9.3.4: a SUMMONING CHAMBER's legendary as the approved art shows it (tools/art/chambers/place.py: the 96 px
+    sprite at 64 px, centred on x 120, feet on y 66). The game's 64x64 frame (mon_sprite) is drawn centred on
+    (120, 36); this is the affine scale and the offset of that centre that puts it there."""
+    path = os.path.join(ROOT, 'sprites', 'pokemon', '%d.png' % num)
+    x0, y0, x1, y1 = Image.open(path).convert('RGBA').getbbox()
+    k = max(64, x1 - x0, y1 - y0) / 96
+    f0, g0, f1, g1 = mon_sprite(path).getbbox()
+    cx, bottom = 120 - ((f0 + f1) / 2 - 32) * k, 66 - (g1 - 32) * k
+    return round(cx - 120), round(bottom - 36) - 16, round(k * 256)   # the actor stands a tile lower (7, 4)
 
 def shiny_palette(pal, idx, shiny, alpha_from=None):
     """The shiny colours for a sprite's palette: for each colour slot, the commonest colour the shiny sprite

@@ -6380,6 +6380,20 @@ for(const loc of [TRADE_TOWN, SAFARI]){ const m = getMap(loc); m.npcs = m.npcs.f
 }
 
 
+// 9.3.4: the CHALLENGE TOWER's own front (gba/tools/art/chambers/towers.py): a hall 7 tiles wide, the beacon
+// column rising four tiles over its middle three; the MART steps a tile west to leave a gap.
+{
+  const m = getMap(TOWER_TOWN), t = m.buildings.find(b=>b.kind==='tower'), mart = m.buildings.find(b=>b.kind==='mart');
+  const clear = b=>{ for(let y=b.y; y<b.y+b.h; y++) for(let x=b.x; x<b.x+b.w; x++) m.tiles[y][x] = '.'; };
+  const stamp = b=>{ for(let y=b.y; y<b.y+b.h; y++) for(let x=b.x; x<b.x+b.w; x++) m.tiles[y][x] = 'B'; m.tiles[b.door.y][b.door.x] = 'D'; };
+  if(t && mart && t.w===6 && mart.x+mart.w===t.x-1){
+    clear(t); clear(mart);
+    mart.x -= 1; mart.door.x -= 1;
+    t.x -= 1; t.w = 7; t.door.x = t.x + 3;
+    stamp(mart); stamp(t);
+    for(let y=t.y+t.h-9; y<t.y; y++) for(let x=t.x+2; x<t.x+5; x++) m.tiles[y][x] = 'B';   // the column
+  }
+}
 {
   const m = getMap(TOWER_TOWN), t = m.buildings.find(b=>b.kind==='tower');
   if(t) m.npcs.push({kind:'gentleman', x:t.door.x+2, y:t.door.y+1, facing:'left', role:'tower', lines:['The CHALLENGE TOWER opens to CHAMPIONS.']});

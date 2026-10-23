@@ -402,6 +402,11 @@ struct room_info
     bool home;
     int8_t floor;                   // CHALLENGE TOWER floors: 0-4, else -1
     const gym_puzzle* puzzle;       // 9.3.4: the gym's challenge, or nullptr
+    int16_t legend;                 // 9.3.4: the SUMMONING CHAMBER's own legendary (species index), or -1
+    bool legend_shiny;              // ... the room for a shiny one (Kyogre's, drawn into the art)
+    bool baked;                     // the legendary is part of the picture: no sprite
+    int8_t legend_dx, legend_dy;    // its sprite's centre, from the usual legend spot
+    int16_t legend_scale;           // 256 = full size (the art shows it as big as it would be at 64 px)
 };
 
 // An area or a room.

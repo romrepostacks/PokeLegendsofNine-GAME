@@ -490,6 +490,15 @@ void overworld::make_sprite(actor& a)
         a.sprite = s.front.create_sprite(0, 0);
         apply_shiny(*a.sprite, int(a.legend_species), a.legend_shiny, mon_view::FRONT);
         a.sprite->set_bg_priority(1);
+        // 9.3.4: in its own SUMMONING CHAMBER it's drawn as the art has it (or is part of the art).
+        if(const room_info* r = _map->room; r && r->legend >= 0)
+        {
+            a.sprite->set_visible(! r->baked);
+            if(r->legend_scale != 256)
+            {
+                a.sprite->set_scale(bn::fixed(r->legend_scale) / 256);
+            }
+        }
         return;
     }
     a.sprite = person_sprites[int(a.kind)]->create_sprite(0, 0, 0);
@@ -574,7 +583,7 @@ void overworld::load_actors()
         a.legend_species = species_id(g.tower.legend);
         a.legend_shiny = g.tower.legend_shiny;
         a.x = a.home_x = 7;
-        a.y = a.home_y = 3;
+        a.y = a.home_y = _map->room->legend >= 0 ? 4 : 3;     // 9.3.4: its own chamber: you face it from the path
         _actors.push_back(a);
     }
     // People in the connected areas, standing where they are (nbNpcs).
@@ -753,7 +762,14 @@ void overworld::refresh(bool force)
         {
             // The guardian floats over its spot (.ow-legend: 64x64 art, centred, bobbing).
             int bob = (_bob_timer / 45) % 2 ? -2 : 0;
-            a.sprite->set_position(sx(a.x * 16 - _cam_x + 8), sy(a.y * 16 - _cam_y - 12 + bob));
+            int lx = 0, ly = 0;
+            if(const room_info* r = _map->room; r && r->legend >= 0)
+            {
+                bob = 0;
+                lx = r->legend_dx;
+                ly = r->legend_dy;
+            }
+            a.sprite->set_position(sx(a.x * 16 - _cam_x + 8 + lx), sy(a.y * 16 - _cam_y - 12 + bob + ly));
             a.sprite->set_z_order(-bn::clamp((a.y * 16 - _cam_y + 8 + 32) >> 4, 0, 16) - 2);
             continue;
         }
