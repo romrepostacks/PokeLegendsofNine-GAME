@@ -1,12 +1,14 @@
 {
   "_howto": "The game's WHAT'S NEW: the title screen's message of the day (motd) and the changelog, newest first. Player-facing only.",
-  "motd": "Version 9.3.4: three new POKéMON CENTERS, each with its own look inside and out.",
+  "motd": "Version 9.3.4: every GYM rebuilt as its own challenge, and three new POKéMON CENTERS.",
   "changelog": [
     {
       "version": "GBA 9.3.4",
-      "date": "2026-10-22",
-      "title": "New POKéMON CENTERS",
+      "date": "2026-10-23",
+      "title": "New GYMS and POKéMON CENTERS",
       "changes": [
+        "All 72 GYMS are rebuilt, each with its own challenge: ice slides, boulders and pits, switches and fences, fans and currents, warp pads, cracked floors, tesla coils, gas valves, rooms that change with the tide, the season or the clock, and more",
+        "Some GYMS have more junior trainers, and dark GYMS light up as you beat them",
         "POKéMON CENTERS come in three new styles: a red arch with a big POKé BALL, a striped awning, and a glass atrium between two wings",
         "Each style has its own interior: classic yellow tiles, a cosy cottage with a fireplace and lounges, and an indoor park with trees and benches",
         "Every region has all three"
