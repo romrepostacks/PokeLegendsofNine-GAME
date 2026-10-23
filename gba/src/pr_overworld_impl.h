@@ -158,6 +158,22 @@ public:
     void tower_legend_battle(species_id s, int level);
     void hold_until_released();
 
+    // ----- 9.3.4: a gym's own challenge (pr_gym.cpp) -----
+    [[nodiscard]] const gym_puzzle* puzzle() const;              // the room's challenge, or nullptr
+    [[nodiscard]] char puzzle_cell(int tx, int ty) const;
+    [[nodiscard]] bool puzzle_solid(int tx, int ty) const;
+    [[nodiscard]] bool puzzle_water(int tx, int ty) const;
+    [[nodiscard]] int puzzle_metatile(int tx, int ty) const;
+    [[nodiscard]] bool puzzle_skips(const trainer& t) const;     // a gate junior, gone once beaten
+    void puzzle_enter();
+    void puzzle_step(direction d);
+    bool puzzle_interact();
+    bool puzzle_sight();
+    void puzzle_redraw();
+    void puzzle_bump();
+    void puzzle_glide(direction d, int frames, bool jump, bool carried);
+    void puzzle_warp(int tx, int ty);
+
     // ----- Field (pr_field.cpp) -----
     void interact();
     void talk_to(int index);

@@ -262,6 +262,10 @@ void overworld::interact()
         talk_to(who);
         return;
     }
+    if(puzzle() && puzzle_interact())
+    {
+        return;
+    }
     // Signs and tablets on this map.
     for(int i = 0; i < _map->signs_count; ++i)
     {

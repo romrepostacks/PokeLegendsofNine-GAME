@@ -111,6 +111,24 @@ for(const loc of G.LOCATIONS){
   if(map.buildings.some(b=>b.kind==='center')) map.centerStyle = Object.keys(CENTER_ROOMS)[Math.max(0, centerTowns.indexOf(own)) % 3];
 }
 
+// 9.3.4: every gym its own challenge (tools/gym/gym_rooms.py draws them; tools/gym/solver.py tests them): the room's
+// tiles, people and rules. Its juniors keep their #gym0/#gym1 ids; any more get ids after everyone else's.
+const GYM_PUZZLES = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data', 'gym_puzzles.json'), 'utf8'));
+function puzzleRoom(room, loc, li){
+  const P = GYM_PUZZLES[li], tiles = P.states[0].map(r=>[...r]);
+  const g = G.GYM_STYLE[loc.leaderName] || {kind:'leaderFire', type:'tough'};
+  const J = g.juniors || G.GYM_JUNIORS[room.theme] || G.GYM_JUNIORS.fire, pick = (k,n)=>Array.from({length:n}, (_,i)=>J.team[(k*2+i) % J.team.length]);
+  const names = J.kind==='lass' || J.kind==='oldwoman' ? ['MAYA','LENA','ROSE','JUNE'] : ['TOMMY','CARL','JAKE','OWEN'];
+  const [gx, gy] = P.guide;
+  const npcs = [{kind:g.kind, x:P.leader[0], y:P.leader[1], facing:'down', trainer:true, gymLeader:true},
+    {kind:'gentleman', x:gx, y:gy, facing:gx < P.w/2 ? 'right' : 'left', lines:room.npcs.find(n=>n.kind==='gentleman' && !n.trainer).lines},
+    ...P.juniors.map(([x,y,facing],k)=>({kind:J.kind, x, y, facing, trainer:true, id:`${loc.name}#gym${k}`, extra:k>=2,
+      title:`${J.cls} ${names[k]}`, team:pick(k, 3 + k%2), intro:`${loc.leaderName} is the best! You'll have to get past me first!`,
+      after:`${loc.leaderName} is waiting at the top. Good luck!`}))];
+  for(const n of npcs) n.home = {x:n.x, y:n.y};
+  return {...room, w:P.w, h:P.h, tiles, npcs, puzzle:li, spawn:{x:P.start[0], y:P.start[1]}, mat:{x:tiles[P.h-1].indexOf('M'), y:P.h-1}};
+}
+
 // ---------- Tile behaviours (what the GBA needs to know about each tile) ----------
 const GRASS = hex(G.GROUND.base);
 const tallGrass = svgPixels(G.tallGrassSvg());
@@ -399,6 +417,7 @@ function drawGym(room, opts={}){
 function leagueFloor(){ const c = new Canvas(16, 16, hex('#c0b8d8')); return c; }
 function drawRoom(room, opts={}){
   if(room.style){ const a = readPng(`center_room_${room.style}.png`), c = new Canvas(a.w, a.h); c.draw(a, 0, 0); return c; }
+  if(room.puzzle!=null){ const a = readPng(`gym_${room.puzzle}_0.png`), c = new Canvas(a.w, a.h); c.draw(a, 0, 0); return c; }
   if(room.interior==='gym' || room.interior==='league') return drawGym(room, opts);
   const art = ROOM_ART[room.interior], c = new Canvas(room.w*16, room.h*16, [0,0,0]);
   const at = (x,y)=>room.tiles[y] ? room.tiles[y][x] : '#';
@@ -433,7 +452,7 @@ function trainerOut(n, loc){
   // Elite Four: their own six, at your average level plus their place in line (startTrainerBattle).
   if(n.elite!=null) return {kind:n.kind, x:n.x, y:n.y, facing:n.facing, role:'elite', elite:n.elite, title:n.title, team:n.team,
     intro:[`${n.title}: "${n.intro}"`], after:[`${n.title}: "${n.after}"`], vanish:false};
-  if(n.id) return {kind:n.kind, x:n.x, y:n.y, facing:n.facing, role:/#gym\d/.test(n.id) ? 'junior' : 'route', title:n.title, team:n.team,
+  if(n.id) return {kind:n.kind, x:n.x, y:n.y, facing:n.facing, role:/#gym\d/.test(n.id) ? 'junior' : 'route', extra:!!n.extra, title:n.title, team:n.team,
     intro:[`${n.title}: "${n.intro}"`], after:[`${n.title}: "${n.after}"`], vanish:false, grunt:n.kind==='grunt'};
   const leader = loc.type==='gym', name = loc.leaderName;
   const quote = n.champion ? loc.championQuote || "So you made it. I always knew it'd be you. One last battle, for real this time!"
@@ -526,6 +545,7 @@ for(const li of AREAS){
     let room = G.getInterior(loc, bi);
     // 9.3.4: each CENTER style has its own room, drawn by hand, with its own tile rows.
     if(room.interior==='center') room = {...room, style:map.centerStyle, tiles:CENTER_ROOMS[map.centerStyle].rows.map(r=>[...r])};
+    if(room.interior==='gym' && GYM_PUZZLES[li]) room = puzzleRoom(room, loc, li);
     const art = room.interior==='gym' ? `gym_${room.theme}_${li}` : room.style ? `center_${room.style}` : room.interior;    // 9.3.0: each gym its own layout
     if(!roomArts.has(art)) roomArts.set(art, {area:li, building:bi, room});
     for(const n of room.npcs) peopleKinds.add(n.kind);
@@ -533,9 +553,10 @@ for(const li of AREAS){
     for(const t of roomTrainers) [...t.team, ...(t.fill || [])].forEach(s=>trainerSpecies.add(s));
     rooms.push({area:li, building:bi, kind:room.interior, art, tutor:room.style ? CENTER_ROOMS[room.style].tutor : null, theme:room.theme, home:!!b.home, w:room.w, h:room.h, tiles:room.tiles.map(r=>r.join('')),
       trainers:roomTrainers, gym:room.interior==='gym' ? {name:loc.name.toUpperCase(), leader:loc.leaderName} : null,
-      behaviour:room.tiles.map(r=>r.map(behaviour)), spawn:room.spawn, door:{x:b.door.x, y:b.door.y},
+      behaviour:room.puzzle!=null ? room.tiles.map(r=>r.map(ch=>ch==='M' ? BEHAVIOUR.mat : ch==='u' ? BEHAVIOUR.statue : BEHAVIOUR.walk)) : room.tiles.map(r=>r.map(behaviour)),
+      spawn:room.spawn, door:{x:b.door.x, y:b.door.y}, puzzle:room.puzzle!=null ? {...GYM_PUZZLES[li], area:li} : null,
       people:room.npcs.filter(n=>!n.trainer).map(n=>({kind:n.kind, x:n.x, y:n.y, facing:n.facing, role:n.role || '', wander:!!n.wander, lines:lines(n)})),
-      things:room.tiles.flatMap((r,y)=>r.map((ch,x)=>({x, y, text:G.THING_TEXT[(G.TILE_CLS[ch]||'').split(' ')[0]]})).filter(t=>t.text)),
+      things:room.puzzle!=null ? [] : room.tiles.flatMap((r,y)=>r.map((ch,x)=>({x, y, text:G.THING_TEXT[(G.TILE_CLS[ch]||'').split(' ')[0]]})).filter(t=>t.text)),
       // League: the gate rows that open as each Elite Four trainer is beaten (leagueGates).
       gates:room.interior==='league' ? [17,13,9,5].map((row,k)=>({y:row, x0:6, x1:8, elite:k})) : []});
     return {x:b.door.x, y:b.door.y, kind:b.kind, room:rooms.length-1};

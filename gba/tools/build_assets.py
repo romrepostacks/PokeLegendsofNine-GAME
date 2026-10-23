@@ -14,12 +14,13 @@
 Needs Node.js and Pillow. Called by the Makefile (EXTTOOL) before every build; it skips work when its
 inputs haven't changed.
 """
-import argparse, hashlib, json, os, re, subprocess
+import argparse, glob, hashlib, json, os, re, subprocess
 import numpy as np
 from PIL import Image, ImageDraw
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 GBA = os.path.dirname(HERE)
+DATA = os.path.join(GBA, 'data')
 ROOT = os.path.dirname(GBA)
 MAP_BANKS = 14          # BG palette banks a map tileset may use; the 15th is the weather's, the 16th the UI's
 MAX_TRAINERS = 2048     # bits in game_state::beaten
@@ -413,6 +414,11 @@ def build_world(exp, data, out_inc):
                 'fill': ts.add(solid((0, 0, 0)))}
         if r['kind'] == 'league':
             info['gate'] = ts.add(png(exp, 'league_floor.png'))
+        if r.get('puzzle'):
+            # 9.3.4: each state of the gym as drawn, switched and with boulders (tools/gym/gym_rooms.py).
+            pz = r['puzzle']
+            info['pz'] = [[ts.add(png(DATA, 'gym_%d_%d%s.png' % (pz['area'], k, suf))) for suf in ('', '_alt', '_rock')]
+                          for k in range(len(pz['states']))]
         tilesets.append(ts)
         room_ts[art] = info
     for ts in tilesets:
@@ -437,6 +443,8 @@ def build_world(exp, data, out_inc):
         info['meta'] = ts.metatiles_of(info['map'])
         info['fill_meta'] = ts.metatiles_of(info['fill'])[0]
         info['gate_meta'] = ts.metatiles_of(info['gate'])[0] if 'gate' in info else -1
+        if 'pz' in info:
+            info['pz_meta'] = [[ts.metatiles_of(pic) for pic in pics] for pics in info['pz']]
     fills = {}
     for info in area_info:
         fills[info['ts']] = info['fill_meta']
@@ -473,15 +481,27 @@ def build_world(exp, data, out_inc):
     # 3.0.0: KAI's fights (2.0.1) took the ids right after Calderra's, so later regions' trainers come after them.
     ids = {}
     next_id, kai_next = 0, None
+    extra = []
     kai_count = sum(1 for a in areas if a['name'] in KAI_FIGHTS)
     for kind, i in map_order:
         if kai_next is None and (areas[i]['region'] if kind == 'area' else region_of[rooms[i]['area']]) >= 3:
             kai_next, next_id = next_id, next_id + kai_count
-        for ti in range((areas if kind == 'area' else rooms)[i]['trainers'].__len__()):
+        own = (areas if kind == 'area' else rooms)[i]['trainers']
+        for ti, t in enumerate(own):
+            if t.get('extra'):
+                extra.append((kind, i, ti))
+                continue
             ids[(kind, i, ti)] = next_id
             next_id += 1
+        if kind == 'room' and rooms[i].get('puzzle'):
+            # 9.3.4: a gym keeps its leader's and two juniors' ids even with a single junior now.
+            next_id += max(0, 3 - sum(1 for t in own if not t.get('extra')))
     if kai_next is None:
         kai_next, next_id = next_id, next_id + kai_count
+    # 9.3.4: the juniors the new gyms added come after everyone else, so no older id moves.
+    for key in extra:
+        ids[key] = next_id
+        next_id += 1
     if next_id > MAX_TRAINERS:
         raise SystemExit('%d trainers (max %d)' % (len(ids), MAX_TRAINERS))
     def leader_of(ai):
@@ -515,6 +535,21 @@ def build_world(exp, data, out_inc):
                 'true' if t.get('scene') else 'false'))
         L.append('constexpr trainer %strainers[] = {%s};' % (p, nonempty(', '.join(rows),
             '{0, 0, person_kind::player, direction::DOWN, trainer_role::ROUTE, "", nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0, false, 0, -1, 0, false}')))
+
+    def puzzle_rows(p, pz, info):
+        """9.3.4: a gym's challenge (gym_puzzle): its tiles in each state, their metatiles, and its rules."""
+        cells = ''.join(''.join(state) for state in pz['states'])
+        L.append('constexpr char %scells[] = {%s};' % (p, ', '.join(str(ord(c)) for c in cells)))
+        L.append('constexpr uint16_t %smetas[] = {%s};' % (p, ', '.join(str(m) for pics in info['pz_meta'] for meta in pics for m in meta)))
+        L.append('constexpr int16_t %saux[] = {%s};' % (p, ', '.join(str(a) for a in pz['aux'])))
+        flags = [n for n, on in (('SURF', pz['surf']), ('DIVE', pz['dive']), ('RAFT', pz['raft']), ('R_SOLID', pz['R'] == 'solid'),
+                                 ('J_STEP', pz['J'] == 'step'), ('Y_JET', pz['Y'] == 'jet'), ('E_MAG', pz['e'] == 'mag'),
+                                 ('ERA_SWITCH', pz['era_by'] == 'switch'), ('STEP_ASIDE', pz['step_aside']), ('S_FANS', pz['S'] == 'fans'),
+                                 ('GATE_PLATES', pz['gate'] == 'plates'), ('GATE_PEARLS', pz['gate'] == 'pearls'),
+                                 ('GATE_JUNIORS', pz['gate'] == 'juniors')) if on]
+        L.append("constexpr gym_puzzle %spuzzle = {%scells, %smetas, %saux, %d, '%s', %d, %d, %s, %d};" % (
+            p, p, p, p, len(pz['states']), pz['over'], pz['fans'], pz['pulse'],
+            ' | '.join('puzzle_flag::' + f for f in flags) or '0', 2 if pz['dark'] == 'fog' else 1 if pz['dark'] else 0))
 
     def species_array(name, names):
         L.append('constexpr species_id %s[] = {%s};' % (name, ', '.join('species_id::%s' % enum_name(n) for n in names) or 'species_id::PIDGEY'))
@@ -768,8 +803,12 @@ def build_world(exp, data, out_inc):
         kind = {'center': 'CENTER', 'mart': 'MART', 'gym': 'GYM', 'league': 'LEAGUE', 'house': 'HOUSE', 'tower': 'TOWER',
                 'summit': 'SUMMIT', 'chamber': 'CHAMBER'}[r['kind']]
         theme = (r.get('theme') or '').upper() or ('LEAGUE' if r['kind'] in ('summit', 'chamber') else 'NONE')
-        L.append('constexpr room_info %sroom = {room_kind::%s, gym_theme::%s, %sgates, %d, %d, %s, %d};' % (
-            p, kind, theme, p, len(r['gates']), info['gate_meta'], 'true' if r['home'] else 'false', r.get('floor', -1)))
+        puzzle = 'nullptr'
+        if r.get('puzzle'):
+            puzzle_rows(p, r['puzzle'], info)
+            puzzle = '&%spuzzle' % p
+        L.append('constexpr room_info %sroom = {room_kind::%s, gym_theme::%s, %sgates, %d, %d, %s, %d, %s};' % (
+            p, kind, theme, p, len(r['gates']), info['gate_meta'], 'true' if r['home'] else 'false', r.get('floor', -1), puzzle))
         map_rows[map_index[('room', ri)]] = ('{%s, %d, %d, %d, %s_map, %sbehaviour, nullptr, 0, nullptr, 0, %speople, %d, %strainers, %d, nullptr, 0, '
                         '%sthings, %d, nullptr, 0, nullptr, 0, %d, %d, %d, %d, %d, %d, %d, gate_kind::NONE, %s, %s, nullptr, nullptr, nullptr, "", &%sroom}' % (
             c_text(name), info['ts'], r['w'], r['h'], 'room_' + r['art'], p, p, len(r['people']), p, len(r['trainers']),
@@ -2111,6 +2150,7 @@ def inputs_hash():
     files.append(os.path.join(HERE, '..', 'news_gba.json'))
     files.append(os.path.join(HERE, '..', 'data', 'extras.json'))
     files += [os.path.join(HERE, '..', 'data', 'title_%s.png' % n) for n in ('sky', 'logo', 'spark', 'hooh')]
+    files += sorted(glob.glob(os.path.join(HERE, '..', 'data', '*.png')) + glob.glob(os.path.join(HERE, '..', 'data', '*.json')))
     for f in files:
         h.update(open(f, 'rb').read())
     h.update(MON_COMPRESSION.encode())

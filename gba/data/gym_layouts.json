@@ -1,0 +1,1844 @@
+{
+"3": {
+"theme": "fire",
+"rows": [
+"uT____L____Tu",
+"KKKK_____KKKK",
+"KKKj_____KKKK",
+"KYKK_____KKYK",
+"KKKK_____jKKK",
+"KKKK_____KKKK",
+"KKKj_____KKKK",
+"KYKK_____KKYK",
+"KKKK_____jKKK",
+"KKKK_____KKKK",
+"u_____o____gu"
+],
+"states": [],
+"cfg": {
+"surf": false
+},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"5": {
+"theme": "water",
+"rows": [
+"u~~~==L==~~~u",
+"~~~~=====~~~~",
+"~~~~~~=~~~~~~",
+"~~~~~~===={~~",
+"~~~~~~~~~==~~",
+"~~~~~~~~~=v~~",
+"~====>>>>=v~~",
+"~=~`~~~~~~v~~",
+"~=<<<<~~~~v~~",
+"~~~~~=~~~~v~~",
+"u~~~g=o___=~u"
+],
+"states": [],
+"cfg": {
+"surf": false,
+"raft": true,
+"over": "~"
+},
+"dark": false,
+"mirror": false,
+"raft": true
+},
+"7": {
+"theme": "ground",
+"rows": [
+"uHHHHHLHHHHHu",
+"HHHHHHHHHHHHH",
+"HHHHHHHHHHHHH",
+"lslllllllllll",
+"_____________",
+"HHHHH!HHHHHsH",
+"lslllHlllllll",
+"______!______",
+"_____________",
+"HHHHHH!HHHHsH",
+"lsllllHllllll",
+"___x_____x___",
+"u_____o____gu"
+],
+"states": [],
+"cfg": {},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"11": {
+"theme": "ghost",
+"rows": [
+"u____TLT____u",
+"_____________",
+"xxxxxxT!xxx_x",
+"x___________x",
+"x_xxxxxxxxxxx",
+"x___________x",
+"xxxxxxxxT`x_x",
+"x___________x",
+"x_xxxxxxxxxxx",
+"x___________x",
+"u__g__o_____u"
+],
+"states": [],
+"cfg": {},
+"dark": true,
+"mirror": false,
+"raft": false
+},
+"19": {
+"theme": "electric",
+"rows": [
+"uE____L____Eu",
+"_____________",
+"PPPPPFFFPPPPP",
+"_2__}_______1",
+"_____________",
+"PPPPPPPPPfffP",
+"_1______}____",
+"____________2",
+"PFFFPPPPPPPPP",
+"____{________",
+"u_____o_1__gu"
+],
+"states": [],
+"cfg": {},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"21": {
+"theme": "grass",
+"rows": [
+"xxxxxxxxxxuLuxxxxxxxx",
+"x___x_______________x",
+"x_x_x_xxxx___xx_xxx_x",
+"x_x_x_x_______x_x___x",
+"x_x_x_x_xxx_x_xxx_x_x",
+"x_x_x_x_x___x_____x_x",
+"x_xxx_x_x_xxxxxxxxx_x",
+"x___x_x_x_______x!x_x",
+"xxx_x_xxxxx_xxx_x_x_x",
+"x___x_____x___x_x_x_x",
+"x_xxxxxxx_x_xxx_x_x_x",
+"x_x___x___x_x___x___x",
+"x_x_x_x_xxxxx_xxx_xxx",
+"x___x_x_______x!x_x!x",
+"x_xxx_xxxxxxxxx_x_x_x",
+"x___x___x_______x___x",
+"xxx_x_xxx_xxxxx_xxx_x",
+"x___x_________x_____x",
+"xxxxxxxxxxx_xxxxxxxxx",
+"ug________o_________u"
+],
+"states": [],
+"cfg": {},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"24": {
+"theme": "ice",
+"rows": [
+"u_____L_____u",
+"xxxx}___{xxxx",
+"iiiiiiiiiiiii",
+"iriiiiriiiiii",
+"iiiiriiiiiiii",
+"iirirriiiiiii",
+"iiiiiiiiiiiii",
+"iiriiiiriiiri",
+"iiiriiriiiiir",
+"iiiriiiiiiiii",
+"_____________",
+"u_____o____gu"
+],
+"states": [],
+"cfg": {},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"26": {
+"theme": "dragon",
+"rows": [
+"u_xxxxLxxxx_u",
+"_________{___",
+"_____________",
+"xxxx~~D~~xxxx",
+"xxxxxxxxxxxxx",
+"~~~~~~~~~~~~~",
+"~~~~~~D~~~~~~",
+"~~~~~~~~~~~~~",
+"x_________~~x",
+"_____________",
+"xxxxxxxxx_{xx",
+"x~~~~~~~~~~~x",
+"x~~~~~~~~~~~x",
+"xxxx}___xxxxx",
+"_____________",
+"u_____o____gu"
+],
+"states": [],
+"cfg": {},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"39": {
+"theme": "electric",
+"rows": [
+"uE_____L_____Eu",
+"_______________",
+"PPPPPPPPPPFFFPP",
+"_3______}______",
+"______________1",
+"PPGGGPPPPPPPPPP",
+"_____{_______3_",
+"_2_____________",
+"PPPPPPPfffPPPPP",
+"______}________",
+"u______o_2___gu"
+],
+"states": [],
+"cfg": {},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"42": {
+"theme": "flying",
+"rows": [
+"u______L______u",
+"_______________",
+"___1__}________",
+"pvppppp^ppppppp",
+"pvppppp^ppppppp",
+"pvppppp^ppppppp",
+"_______________",
+"___2_______{___",
+"ppppvppppp^pppp",
+"ppppvppppp^pppp",
+"ppppvppppp^pppp",
+"____________{__",
+"__1____________",
+"u______o_____gu"
+],
+"states": [],
+"cfg": {
+"over": "p",
+"lanes": [
+[
+1,
+3,
+1
+],
+[
+7,
+3,
+2
+],
+[
+10,
+8,
+1
+],
+[
+4,
+8,
+2
+]
+]
+},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"44": {
+"theme": "normal",
+"rows": [
+"u_____L_____u",
+"x___________x",
+"xxxxxx_{xxxxx",
+"xNNNNN+NNNNNx",
+"xNNN+++NNNNNx",
+"xNNN+NNNNNNNx",
+"xNNN++++NNNNx",
+"xNNNNNN+NNNNx",
+"xNNNN+++NNNNx",
+"xNNNN+NNNNNNx",
+"xxxxx_{xxxxxx",
+"_____________",
+"u__g__o_____u"
+],
+"states": [],
+"cfg": {},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"46": {
+"theme": "ice",
+"rows": [
+"u_____L_____u",
+"xxxx}___{xxxx",
+"iiiiiiiiiiiii",
+"riiii~~iiirii",
+"iiii~iiiiiiii",
+"riirrirrii~~i",
+"~~iiiriiii~~i",
+"~~iiiiiriiiii",
+"iiiii~~~iirii",
+"iirii~~~iiiii",
+"riiiiiriiiiii",
+"_____________",
+"u_____o____gu"
+],
+"states": [],
+"cfg": {},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"49": {
+"theme": "water",
+"rows": [
+"u______L______u",
+"____}__________",
+"xxxxx~~D~~xxxxx",
+"xxxxxxxxxxxxxxx",
+"~~~~~~~D~~~~~~~",
+"~~~~~~~~~~~~~~~",
+"~~~~~~~~~~~~~~~",
+"xxxxxxxxxxx~xxx",
+"____________{__",
+"~~~~~_!_~~~~~~~",
+"~~~~~~~~~~~~~~~",
+"xxxxxx~xxxxxxxx",
+"_______________",
+"u______o_____gu"
+],
+"states": [],
+"cfg": {},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"53": {
+"theme": "rock",
+"rows": [
+"u_____L_____u",
+"_____________",
+"_____}_______",
+"xxxxxxpxxxxxx",
+"xxxxxxpxxxxxx",
+"_p_O___O___p_",
+"_____________",
+"___________{_",
+"xxxxxxxxxpxxx",
+"xxxxxxxxxpxxx",
+"_____O___O___",
+"_p_________p_",
+"u__g__o_____u"
+],
+"states": [],
+"cfg": {},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"56": {
+"theme": "fire",
+"rows": [
+"u_____L_____u",
+"_____________",
+"KKKYKKKKKKKKK",
+"KK__{KK__KKKK",
+"KK_KKKK__KKKK",
+"KK_KKKKK_KKKK",
+"_____________",
+"KKKKKKKKKYKKK",
+"KKKK__KK__{KK",
+"KKKK_KKKK_KKK",
+"KKKK_KKKK_KKK",
+"_____________",
+"u__g__o_____u"
+],
+"states": [],
+"cfg": {
+"Y": "jet"
+},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"58": {
+"theme": "ground",
+"rows": [
+"u_____L_____u",
+"_____________",
+"_____________",
+">>>>v<s>>>>vv",
+">>>>v}HHHH>vv",
+">>>>>>vvvH>Z<",
+">>>>>>Z<<H^^<",
+"^^HHHHHHHH^^<",
+"^^H>>vvvv`^^<",
+"^^s>>>>>>>^^<",
+"_____________",
+"_____________",
+"u__g__o_____u"
+],
+"states": [],
+"cfg": {},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"73": {
+"theme": "fighting",
+"rows": [
+"u_xxxxxxxxx_u",
+"__x___L___x__",
+"__x_}_____x__",
+"__xxxxFxxxx__",
+"_________{___",
+"x_q_______q_x",
+"xx_O_____O_xx",
+"xx_________xx",
+"xxxx=====xxxx",
+"xxxxx===xxxxx",
+"uxxxx_o_gxxxu"
+],
+"states": [],
+"cfg": {
+"gate": "plates"
+},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"74": {
+"theme": "ghost",
+"rows": [
+"u____xLx____u",
+"x_J__}____J_x",
+"xx__~~D~~__xx",
+"xxxxxxxxxxxxx",
+"~~~~~~~~~~~D~",
+"xxxxxx~xxxxxx",
+"~=====~{====~",
+"~~~~~~~~~~~~~",
+"J___________J",
+"_____________",
+"u__g__o_____u"
+],
+"states": [],
+"cfg": {},
+"dark": true,
+"mirror": false,
+"raft": false
+},
+"75": {
+"theme": "steel",
+"rows": [
+"uxxxxxLxxxxxu",
+"xxxxx}_____1x",
+"xxxxxxxxxxx_x",
+"_<<<<<<<<<<<x",
+"_xx!xxxxxxxxx",
+"_________1___",
+"xxxxxxxxxxxx_",
+"x>>>>>>>>>>>>",
+"_____________",
+"_____________",
+"u__g__o_____u"
+],
+"states": [
+[
+"belts",
+{}
+],
+[
+"reversed",
+{
+"<": ">",
+">": "<"
+}
+]
+],
+"cfg": {
+"era_by": "switch"
+},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"76": {
+"theme": "psychic",
+"rows": [
+"uxxxxxLxxxxxu",
+"xxxx}_______x",
+"xxxxxxxxIxxxx",
+"x_b_________x",
+"xxxxxxxxxxxxx",
+"x_a___X___b_x",
+"xxxxx___x`xxx",
+"xxxxxxxxxxxxx",
+"x_a_xxxxxxxxx",
+"xx}Ixxxxxxxxx",
+"_________X___",
+"u__g__o_____u"
+],
+"states": [],
+"cfg": {},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"77": {
+"theme": "grass",
+"rows": [
+"uxxxxxLxxxxxu",
+"xxxxxxVxxxxxx",
+"xxxx}_______x",
+"xxxxxxxxx~xxx",
+"x~~~~~~~~~~~x",
+"x~~~~~~~~~~~x",
+"x~~~~~~~~~~~x",
+"xxxxxxxxxVxxx",
+"x_R_R______{x",
+"x___________x",
+"u__g__o_____u"
+],
+"states": [],
+"cfg": {},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"78": {
+"theme": "bug",
+"rows": [
+"uxxxxxLxxxxxu",
+"xxxxx}_______",
+"xxxxxxxxxxx^v",
+"xxxxxxxxxxx^v",
+"x____!xxxxx^v",
+"x_____>>>>>^v",
+"x^xxxvxxxxxxv",
+"x^xxxvxxxxxxv",
+"x^x!xvxxxxxxv",
+"_____________",
+"u__g__o_____u"
+],
+"states": [],
+"cfg": {},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"79": {
+"theme": "fairy",
+"rows": [
+"uxxxxxLxxxxxu",
+"xxxxxxFxxxxxx",
+"~Q_~~___{~~Q~",
+"~__~~~~~~~~_~",
+"~~~~~~~~~~~~~",
+"~~~~~~Q~~~~~~",
+"~~~~~~~~~~~~~",
+"~~~~~~~~~~~~~",
+"xxxxxx~xxxxxx",
+"_____}_______",
+"u__g__o_____u"
+],
+"states": [],
+"cfg": {
+"gate": "pearls"
+},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"80": {
+"theme": "poison",
+"rows": [
+"uxxxxxLxxxxxu",
+"xxxx}_______x",
+"xxxxx~D~xxxxx",
+"xxxxxxxxxxxxx",
+"ZZ~~~~D~~~~ZZ",
+"ZZZZ~~ZZZZZZZ",
+"ZZZZ_ZZZZZZZZ",
+"ZZZ}____ZZZZZ",
+"ZZZZZZ_ZZZZZZ",
+"_____________",
+"u__g__o_____u"
+],
+"states": [],
+"cfg": {},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"96": {
+"theme": "water",
+"rows": [
+"uxxxxxLxxxxxu",
+"xxxx}____xxxx",
+"xxxxxxx^vxxxx",
+"x~~x>>>^vx~~x",
+"x^vx^xxxvx^vx",
+"x^vx^xxxvx^vx",
+"x^vx^<<<vx^vx",
+"x^vxxxx^vx^vx",
+"~~~~~~~~~~~~~",
+"xxxxxxxxx~{xx",
+"ug____o_____u"
+],
+"states": [],
+"cfg": {
+"over": "~"
+},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"98": {
+"theme": "rock",
+"rows": [
+"uxxxxxLxxxxxu",
+"xxxx}_______x",
+"xxxxxxxxxxsxx",
+"xHHHHpHH!pHxx",
+"xHOHHpHOHpHxx",
+"xllllpxxxpllx",
+"xs__________x",
+"x___________x",
+"_____________",
+"u__g__o_____u"
+],
+"states": [],
+"cfg": {},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"100": {
+"theme": "psychic",
+"rows": [
+"uxxxxxLxxxxxu",
+"pppppc_{ppppp",
+"pppp!pppppppp",
+"pa_____bppppp",
+"ppppppppppppp",
+"ppppppppp!ppp",
+"ppppppb_____c",
+"ppppppppppppp",
+"______a______",
+"_____________",
+"u__g__o_____u"
+],
+"states": [],
+"cfg": {},
+"dark": true,
+"mirror": false,
+"raft": false
+},
+"104": {
+"theme": "flying",
+"rows": [
+"uxxxxxLxxxxxu",
+"xxxx}___xxxxx",
+"ppppppv^ppppp",
+"ppppppv^ppppp",
+"__ppp____<<__",
+"__ppp___`pp__",
+"^vppppvpppp^p",
+"^vppppvpppp^p",
+"^vppppvpppp^p",
+"____________{",
+"u__g__o_____u"
+],
+"states": [],
+"cfg": {
+"over": "p"
+},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"106": {
+"theme": "fire",
+"rows": [
+"uxxxxxLxxxxxu",
+"xxxx}___xxxxx",
+"KKKKKKv^KKKKK",
+"KKKKKKv^KKKKK",
+"K__KKK____KKK",
+"Kv^KKKvK`^KKK",
+"Kv^KKKvKK^KKK",
+"K_^KKK_KK^KKK",
+"K__KKK__K_{KK",
+"KK_________KK",
+"KKKKKK_KKKKKK",
+"ug____o_____u"
+],
+"states": [],
+"cfg": {},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"108": {
+"theme": "electric",
+"rows": [
+"xxxxxxuLuxxxxxx",
+"x!x_______x___x",
+"x_x_x_____x_x_x",
+"x___x___x___x_x",
+"x_xxxxx_xxxxx_x",
+"x_____x_____x_x",
+"xxxxx_xxx_xxx_x",
+"x!x___x!x_x___x",
+"x_x_xxx_x_x_xxx",
+"x___x___x_x___x",
+"x_xxxxx_x_xxx_x",
+"x_______x_____x",
+"xxxxxxx_xxxxxxx",
+"ug_____o______u"
+],
+"states": [],
+"cfg": {},
+"dark": true,
+"mirror": false,
+"raft": false
+},
+"111": {
+"theme": "ice",
+"rows": [
+"u_____L_____u",
+"xxxx}___{xxxx",
+"iriiriiiiiiii",
+"iiiiiiiiiiiii",
+"iiiiiiiiiiiii",
+"iriiiiiiiiiii",
+"HHHsHHHHHHHHH",
+"iiiiiiiriiiii",
+"iiiiiiiiiriii",
+"iiiiiiiiiiiii",
+"iiriiiiiriiii",
+"HHHHHHHHHsHHH",
+"iiiriiiiriiii",
+"iiiiiiiiiriii",
+"iiiriiiiiiiir",
+"_____________",
+"u_____o____gu"
+],
+"states": [],
+"cfg": {},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"115": {
+"theme": "dragon",
+"rows": [
+"uxxxxxLxxxxxu",
+"xxxx}HHHHHHxx",
+"______s_____v",
+"slllllllllllv",
+"_<<<<<<<<<<_v",
+"`llllllllllsv",
+"_>>>>>>>>>>_v",
+"sllllllllll`v",
+"_<<<<<<<<<<_v",
+"`llllllllllsv",
+"____________v",
+"u_____o____gu"
+],
+"states": [],
+"cfg": {},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"121": {
+"theme": "steel",
+"rows": [
+"u_____L_____u",
+"xxxx}___{xxxx",
+"eeeeekkeeekee",
+"reeeeeeeeeree",
+"rkkeeeeeeeeee",
+"eeeeekeeeeerk",
+"eeeerkeereeee",
+"eekeeeekeeeee",
+"eerkeekreekee",
+"ekrerrreeeekk",
+"_1___________",
+"u_____o____gu"
+],
+"states": [
+[
+"on",
+{
+"k": "e"
+}
+],
+[
+"flipped",
+{
+"r": "e",
+"k": "r"
+}
+]
+],
+"cfg": {
+"e": "mag",
+"era_by": "switch"
+},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"123": {
+"theme": "water",
+"rows": [
+"uxxxxxLxxxxxu",
+"xxxx}_______x",
+";;;;;;;;;;;;;",
+";;;;;;;;;;;;;",
+"xxxxx_2_{xxxx",
+"~~~~~~~~~~~~~",
+"~~~~~~~~~~~~~",
+"_____________",
+"u__g__o_____u"
+],
+"states": [
+[
+"A flooded",
+{
+";": "p"
+}
+],
+[
+"B flooded",
+{
+"~": "p",
+";": "~"
+}
+]
+],
+"cfg": {
+"era_by": "switch"
+},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"125": {
+"theme": "electric",
+"rows": [
+"uxxxxxLxxxxxu",
+"xxxxxPFPxxxxx",
+"x___xx_xx___x",
+"x_E_xE__x_E_x",
+"x_!_x_!_x_!_x",
+"x___x___x___x",
+"x___x___x___x",
+"xx_xxx_xxx_xx",
+"x___________x",
+"xxxxx___xxxxx",
+"uxxxx_o_gxxxu"
+],
+"states": [],
+"cfg": {
+"gate": "juniors"
+},
+"dark": true,
+"mirror": false,
+"raft": false
+},
+"128": {
+"theme": "psychic",
+"rows": [
+"uxxxxxLxxxxxu",
+"xxxx}__cxxxxx",
+"xxxxxxxxxxxxx",
+"x_b_xxxxxxxxx",
+"xxxx!xxxxxxxx",
+"xa______cxxxx",
+"xxxxxbxxxxxxx",
+"xxxxxxxxxxxxx",
+"____a________",
+"_____________",
+"u__g__o_____u"
+],
+"states": [],
+"cfg": {},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"130": {
+"theme": "ghost",
+"rows": [
+"XXXXXXuLuXXXX",
+"X!X_________X",
+"X_X_X____XX_X",
+"X___X_______X",
+"X_XXXXXXXXXXX",
+"X_X}________X",
+"X_XXXXX_XXX_X",
+"X_______X___X",
+"XXXXXXXXX_XXX",
+"X__________{X",
+"XXXXXXX_XXXXX",
+"ug____o_____u"
+],
+"states": [],
+"cfg": {},
+"dark": true,
+"mirror": false,
+"raft": false
+},
+"132": {
+"theme": "bug",
+"rows": [
+"uxxxxxLxxxxxu",
+"xxxx}___xxxxx",
+"ppppppv^ppppp",
+"==pppp==<<<==",
+"v^ppppv`ppp^p",
+"v^ppppvpppp^p",
+"v^ppppvpppp^p",
+"v^ppppvpppp^p",
+"____________{",
+"u__g__o_____u"
+],
+"states": [],
+"cfg": {
+"over": "p"
+},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"136": {
+"theme": "flying",
+"rows": [
+"uxxxxxLxxxxxu",
+"xxxx}______xx",
+"ppppppppp^vpp",
+"ppppppppp^vpp",
+"___ppppp!__pp",
+"___>>>>>___pp",
+"^vpppppppvppp",
+"^vpppppppvppp",
+"^vpppppppvppp",
+"_____________",
+"u__S__o___g_u"
+],
+"states": [],
+"cfg": {
+"over": "p",
+"fans": 1,
+"S": "fans"
+},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"138": {
+"theme": "poison",
+"rows": [
+"uxxxxxLxxxxxu",
+"xxxx}_______x",
+"xxxSxxxxxxzxx",
+"x__________{x",
+"xxzxxxxxxxxxx",
+"x}__________x",
+"x________S__x",
+"x___________x",
+"xxxxxxzxxxxxx",
+"________{____",
+"u_S___o___g_u"
+],
+"states": [],
+"cfg": {
+"valves": [
+[
+[
+6,
+8
+],
+[
+2,
+10
+]
+],
+[
+[
+2,
+4
+],
+[
+9,
+6
+]
+],
+[
+[
+10,
+2
+],
+[
+3,
+2
+]
+]
+]
+},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"143": {
+"theme": "ground",
+"rows": [
+"u_____L_____u",
+"xxxx}___{xxxx",
+"RR___O__RRROR",
+"R___R__ORO__R",
+"_____OOR____R",
+"R_RRRRR_R__RR",
+"_____________",
+"u_____o____gu"
+],
+"states": [],
+"cfg": {
+"R": "solid"
+},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"145": {
+"theme": "fairy",
+"rows": [
+"u_____L_____u",
+"xxxx}___{xxxx",
+"<<<_<_<<<<<_<",
+"_xx_Rxxxxxx_R",
+"_>>_>_>>>>>>>",
+"_xxxR_xxxxxx_",
+"<<<<_<<<<<<<<",
+"_xxxxxxxxxxxx",
+"__>>>_>>>>>>>",
+"_____________",
+"u_____o____gu"
+],
+"states": [],
+"cfg": {},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"147": {
+"theme": "steel",
+"rows": [
+"uxxxxxLxxxxxu",
+"xxxx}_______x",
+"xxxAxxxxxDxxx",
+"x_____x____1x",
+"xxCxxxxxBx`xx",
+"x___>>>>____x",
+"x___________x",
+"_____________",
+"u__g__o_____u"
+],
+"states": [
+[
+"12 o'clock",
+{
+"A": "x",
+"B": "_",
+"C": "_",
+"D": "x"
+}
+],
+[
+"4 o'clock",
+{
+"A": "_",
+"B": "x",
+"C": "_",
+"D": "x"
+}
+],
+[
+"8 o'clock",
+{
+"A": "_",
+"B": "_",
+"C": "x",
+"D": "_"
+}
+]
+],
+"cfg": {
+"era_by": "switch"
+},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"149": {
+"theme": "water",
+"rows": [
+"uxxxxxLxxxxxu",
+"xxxx}_______x",
+"xxxxxxxx%xxxx",
+"~~~~~~~~~~~~~",
+"~~~S~~~~~~~~~",
+"xxxxx;{xxxxxx",
+"~~~~~~~~~~~~~",
+"_____________",
+"u__g__o_____u"
+],
+"states": [
+[
+"The past",
+{
+"%": "r",
+";": "~"
+}
+],
+[
+"The present",
+{
+"~": "R",
+"%": "R",
+";": "r"
+}
+]
+],
+"cfg": {},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"155": {
+"theme": "rock",
+"rows": [
+"xxxxxxuLuxxxxxx",
+"x!xkkkkkkkxkkkx",
+"xkxkxkkkkkxkxkx",
+"xkxkxkkkkkxkxkx",
+"xkxkxxxxxxxkxxx",
+"xkkkx}kkkkxkkkx",
+"xkxxxxxkxkxxxkx",
+"xkkkxkkkxkkkxkx",
+"xxxkxkxxxxxkxkx",
+"x}kkkkxkkkkkkkx",
+"xxxxxxxkxxxxxxx",
+"ug_____o______u"
+],
+"states": [],
+"cfg": {},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"157": {
+"theme": "fighting",
+"rows": [
+"uxxxxxLxxxxxu",
+"x___________x",
+"xxxxxx!xxxxxx",
+"x___________x",
+"xxx!xxxxxxxxx",
+"x___________x",
+"xxxxxxxxx!xxx",
+"x___________x",
+"xxxxx!xxxxxxx",
+"_____________",
+"u__g__o_____u"
+],
+"states": [],
+"cfg": {
+"step_aside": true
+},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"159": {
+"theme": "fire",
+"rows": [
+"uxxxxxLxxxxxu",
+"xxxx}_______x",
+"xxYxxxSxxYxxx",
+"x__________{x",
+"xxxxYxxx;xxxx",
+"x___________x",
+"xxxxxx_xxxxxx",
+"_____________",
+"u__g__o_____u"
+],
+"states": [
+[
+"By sun",
+{
+";": "_"
+}
+],
+[
+"By shade",
+{
+"Y": "_",
+";": "Y"
+}
+]
+],
+"cfg": {},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"161": {
+"theme": "dragon",
+"rows": [
+"uxxxxxLxxxxxu",
+"ZZZZuD_{uZZZZ",
+"ZZZZZZZZZZZZZ",
+"ZD~~~~ZZZZZZZ",
+"ZZZZZ~ZZZZZZZ",
+"ZZ}~~~~~~ZZZZ",
+"ZZZZZZZZ~ZZZZ",
+"ZZZZZZZZ~~~ZZ",
+"ZZZZZZZZZZ~ZZ",
+"____________{",
+"u__g__o_____u"
+],
+"states": [],
+"cfg": {},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"165": {
+"theme": "ghost",
+"rows": [
+"xxxxxxuLuxxxx",
+"x___________x",
+"x_xxxx___xx_x",
+"x___________x",
+"x_xxxxxxxxxxx",
+"x_x}______x!x",
+"x_xxxxx_x_x_x",
+"x_x_____x___x",
+"x_x_xxxxxxx_x",
+"x___x_____x_x",
+"xxxxx_xxx_x_x",
+"x}______x___x",
+"xxxxxxx_xxxxx",
+"ug____o_____u"
+],
+"states": [],
+"cfg": {},
+"dark": false,
+"mirror": true,
+"raft": false
+},
+"167": {
+"theme": "normal",
+"rows": [
+"_____________",
+"_xxxxxxxxxx`_",
+"_x_________x_",
+"_x_xxxxxxx_x_",
+"_{_x__Lxxx_x_",
+"_x_x_xxxx!_x_",
+"_x_x_______x_",
+"_x_xxxxxxxxx_",
+"_____x_______",
+"xxxxxx_xxxxxx",
+"ug____o_____u"
+],
+"states": [],
+"cfg": {},
+"dark": "fog",
+"mirror": false,
+"raft": false
+},
+"169": {
+"theme": "ice",
+"rows": [
+"u_____L_____u",
+"xxxx}___{xxxx",
+"iiiiiiiiiiiii",
+"~~iiririi~~~i",
+"~~~~iiiri~~~~",
+"iiiiiriirriii",
+"iiii~~i~~irii",
+"iiii~~~~~iiir",
+"iiiiiiiiiiiii",
+"iiiiiiiiiiiir",
+"_____________",
+"u_____o____gu"
+],
+"states": [],
+"cfg": {},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"171": {
+"theme": "ghost",
+"rows": [
+"xxxxxxuLuxxxxxx",
+"x!x_________xJx",
+"x_x_x_____x_x_x",
+"x___x_x___x___x",
+"x_xxx_xxxxxxx_x",
+"x_x!x_______x_x",
+"x_x_xxxxxxx_x_x",
+"x___x___x___x_x",
+"xxx_x_x_x_xxx_x",
+"xJx___x_x___x_x",
+"x_xxxxx_xxx_x_x",
+"x________{x___x",
+"xxxxxxx_xxxxxxx",
+"ug_____o______u"
+],
+"states": [],
+"cfg": {
+"J": "step"
+},
+"dark": true,
+"mirror": false,
+"raft": false
+},
+"173": {
+"theme": "fire",
+"rows": [
+"uKKKKKLKKKKKu",
+"KKKK}kkkkkkKK",
+"KKKKKKKKKKkKK",
+"KkkkkkkkkkkkK",
+"KkKKKKK`KKKkK",
+"KkkkkkkkkKKkK",
+"KKKKKKKKk{KKK",
+"KkkkkkkkkkkkK",
+"KKKKKKkKKKKKK",
+"KKKKKKkKKKKKK",
+"ug____o_____u"
+],
+"states": [],
+"cfg": {},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"175": {
+"theme": "grass",
+"rows": [
+"xxxxxxuLuxxxxxx",
+"x_________x___x",
+"x_x_xx____x_xxx",
+"x_x_x_____x___x",
+"x_x_x_xxxxxxx_x",
+"x_x___x}______x",
+"x_xxxxxxIxxxx_x",
+"x_x}______x!x_x",
+"x_xxx_xxxxx_x_x",
+"x_____x_______x",
+"xxxxxxx_xxxxxxx",
+"ug_____o______u"
+],
+"states": [],
+"cfg": {},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"177": {
+"theme": "water",
+"rows": [
+"uxxxxxLxxxxxu",
+"xxxxx_____{xx",
+"~~~~~~xxxxxxx",
+"~~~~~~x~~~~~~",
+"xx~xxxx~~~~~~",
+"~D~~~~x~~~~D~",
+"xxxxxxx~{xxxx",
+"~~~~~~x~~~~~~",
+"~~D~~~x~~~D~~",
+"xx}~xxxxxxxxx",
+"_____________",
+"u__g__o_____u"
+],
+"states": [],
+"cfg": {},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"179": {
+"theme": "psychic",
+"rows": [
+"uxxxxxLxxxxxu",
+"xxxxx_____{xx",
+"______xxxxxxx",
+"______x______",
+"xx_xxxx______",
+"_c____x____c_",
+"xxxxxxx_{xxxx",
+"______x______",
+"__a___x___a__",
+"xx}_xxxxxxxxx",
+"_____________",
+"u__g__o_____u"
+],
+"states": [],
+"cfg": {},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"194": {
+"theme": "ice",
+"rows": [
+"u_____L_____u",
+"xxxx}___{xxxx",
+"iiiiiriidiiid",
+"iidiiirririii",
+"diiiiiiirdrii",
+"iiriiiiriiddd",
+"irririiiiiiri",
+"iiddiiiiridii",
+"iiriiiriiriii",
+"iiiididrididi",
+"_____________",
+"u_____o____gu"
+],
+"states": [],
+"cfg": {},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"196": {
+"theme": "steel",
+"rows": [
+"u_____L_____u",
+"xxxx}___{xxxx",
+"iiiiiiiiiiiei",
+"iiieieieiieii",
+"ii>>>>>ieirei",
+"iriirriiiiiii",
+"iiirii<<<<<ii",
+"ieiiiririeiii",
+"iiiiiiiriiiee",
+"ierieiiiiiiii",
+"_____________",
+"u_____o____gu"
+],
+"states": [],
+"cfg": {},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"199": {
+"theme": "electric",
+"rows": [
+"uxxxxxLxxxxxu",
+"xxxx}_______x",
+"xxxxxxxxxxx_x",
+"x__ff___FF__x",
+"x_xxxxxxxxxxx",
+"x__FF___ff__x",
+"xxxxxx`xxxx_x",
+"_____________",
+"_____________",
+"u__g__o_____u"
+],
+"states": [],
+"cfg": {
+"pulse": 3
+},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"201": {
+"theme": "flying",
+"rows": [
+"uxxxxxLxxxxxu",
+"xxxx}_______x",
+"xxxxxxxxxx_xx",
+"x__B__A__B_{x",
+"x1__B_A_B___x",
+"x_AA__W__AA_x",
+"x___B_A_B___x",
+"x__B__A__B__x",
+"xx_xxxxxxxxxx",
+"_____________",
+"u__g__o_____u"
+],
+"states": [
+[
+"Sails upright",
+{
+"A": "x",
+"B": "_"
+}
+],
+[
+"Sails turned",
+{
+"A": "_",
+"B": "x"
+}
+]
+],
+"cfg": {
+"era_by": "switch"
+},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"204": {
+"theme": "fire",
+"rows": [
+"uxxxxxLxxxxxu",
+"xxxx}RRRRRR_x",
+"KKKKKKKKKKkKK",
+"RRRRRRRRRRRRR",
+"R}RRRRRRRRRRR",
+"KKkKKKKKKKKKK",
+"RRRRRRRRR{KKK",
+"KKKKKKKkKKKKK",
+"_____________",
+"u__g__o_____u"
+],
+"states": [],
+"cfg": {},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"207": {
+"theme": "grass",
+"rows": [
+"XXXXXXuLuXXXXXX",
+"XRRRRRRRRRRRRRX",
+"XRXRXXRRRXXRXRX",
+"XRXRRRXRRRRRXRX",
+"XRXXXRXXXXXXXRX",
+"XRX!XRRRRRRRXRX",
+"XRXRXXXRXXXXXRX",
+"XRRRX!XRRRRRXRX",
+"XXXRXRXXXXXRXRX",
+"XRXRRRX!XRRRXRX",
+"XRXXXRXRXRXXXRX",
+"XRRRRRRRXRRRRRX",
+"XXXXXXXRXXXXXXX",
+"ug_____o______u"
+],
+"states": [],
+"cfg": {},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"209": {
+"theme": "fairy",
+"rows": [
+"uxxxxxLxxxxxu",
+"xxxx}_______x",
+"pppppppp^vppp",
+"pppppppp^vppp",
+"x_________{_x",
+"x__S________x",
+"xxxxx;xxxxxxx",
+"xxxxS_______x",
+"xxxxx`x_xxxxx",
+"_____________",
+"u__g__o_____u"
+],
+"states": [
+[
+"Spring (petal winds on)",
+{
+";": "x"
+}
+],
+[
+"Summer (winds off)",
+{
+";": "_",
+"^": "p",
+"v": "p"
+}
+]
+],
+"cfg": {
+"over": "p"
+},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"212": {
+"theme": "water",
+"rows": [
+"uxxxxxLxxxxxu",
+"xxxx}___xxxxx",
+"xxxxx~D~xxxxx",
+"xxxxxxxxxxxxx",
+"~~~~~~D~~~~~~",
+"~~~~~~~~~~xxx",
+"~~==~~~~~~xSx",
+"~~==~~~~~~~~{",
+"~~~~~~~~~~~~~",
+"_____________",
+"u__g__o_____u"
+],
+"states": [
+[
+"Low tide",
+{
+"~": "_",
+"D": "p"
+}
+],
+[
+"High tide",
+{}
+]
+],
+"cfg": {},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"216": {
+"theme": "normal",
+"rows": [
+"uxxxxxLxxxxxu",
+"xxxx}HHHHHHxx",
+"xxxxxxxxxxsxx",
+"iiiiiiiiiii{x",
+"iiiiiiiiiiiii",
+"=====i=======",
+"~~~~~=~~~~~~~",
+"~~~~~=~~~~~~~",
+"_____________",
+"u__g__o_____u"
+],
+"states": [],
+"cfg": {},
+"dark": true,
+"mirror": false,
+"raft": false
+},
+"218": {
+"theme": "fire",
+"rows": [
+"uKKKKKLKKKKKu",
+"KKKK}____KKKK",
+"pppppppv^pppp",
+"pppppppv^pppp",
+"K_________{_K",
+"K___________K",
+"KKKKKKpKKKKKK",
+"K___O_______K",
+"K______{____K",
+"KKKKK+KKKKKKK",
+"KNNN++NNNNNNK",
+"KNNN+NNNNNNNK",
+"KNNN++++NNNNK",
+"KNNNNNN+NNNNK",
+"_____________",
+"u__g__o_____u"
+],
+"states": [],
+"cfg": {
+"over": "p"
+},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"220": {
+"theme": "water",
+"rows": [
+"uxxxxxLxxxxxu",
+"xxxx}___xxxxx",
+"xxxxx~D~xxxxx",
+"xxxxxxxxxxxxx",
+"~~~~~xxxxx~~~",
+"~~~~~x~D~x~~~",
+"~~~~~xxIxx~~~",
+"~~_}~~~~~~_~~",
+"~~~~~~~~~~~~~",
+"xxxxx}~xxxxxx",
+"_____________",
+"u__g__o_____u"
+],
+"states": [],
+"cfg": {},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"222": {
+"theme": "flying",
+"rows": [
+"uxxxxxLxxxxxu",
+"xxxx}HHHHHHHH",
+"ppppppppp^ppl",
+"ppppppppp^ppl",
+"Hs________{__",
+"H____________",
+"lpp^ppppppppp",
+"lpp^ppppppppp",
+"_____________",
+"u__`__o____gu"
+],
+"states": [],
+"cfg": {
+"over": "p"
+},
+"dark": true,
+"mirror": false,
+"raft": false
+},
+"224": {
+"theme": "psychic",
+"rows": [
+"uxxxxxLxxxxxu",
+"xxxxxxFxxxxxx",
+"x____}____b_x",
+"x___________x",
+"xxxxxxxxxxxxx",
+"x_a__X___X_bx",
+"x_____1_____x",
+"xxxxxxxxxxxxx",
+"____a________",
+"_____________",
+"u__g__o_____u"
+],
+"states": [],
+"cfg": {},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"226": {
+"theme": "steel",
+"rows": [
+"uxxxxxLxxxxxu",
+"xxxx}_______x",
+"xxxxxxxxFxxxx",
+"x_____2_____x",
+"xxxfxSxx%xxxx",
+"x_______1___x",
+"xxx;xxxx`xxxx",
+"x___________x",
+"xxxxxx_xxxxxx",
+"_____________",
+"u__g__o_____u"
+],
+"states": [
+[
+"The past",
+{
+"%": "r",
+";": "~"
+}
+],
+[
+"The present",
+{
+"%": "R",
+";": "r"
+}
+]
+],
+"cfg": {},
+"dark": false,
+"mirror": false,
+"raft": false
+},
+"228": {
+"theme": "ghost",
+"rows": [
+"xxxxxxuLuxxxxxx",
+"x!x___________x",
+"x_x_x____xxxx_x",
+"x___x_____x___x",
+"x_xxxxx_x_x_xxx",
+"x___x___x_x_x!x",
+"xxx_x_xxxxx_x_x",
+"x___x_______x_x",
+"x_xxxxxxxxxxx_x",
+"x_x___________x",
+"x_x_xxxxxxxxx_x",
+"x___x}________x",
+"xxxxxxx_xxxxxxx",
+"ug_____o______u"
+],
+"states": [],
+"cfg": {},
+"dark": true,
+"mirror": true,
+"raft": false
+},
+"230": {
+"theme": "ice",
+"rows": [
+"uxxxxxLxxxxxu",
+"xxxx}_______x",
+"xxxxxxxxx%xxx",
+"iiiiiiiiiirii",
+"iiiiiiiiiiiii",
+"iiSiiiiiiiiii",
+"xxxx;xxxxxxxx",
+"xS___{_______",
+"u__g__o_____u"
+],
+"states": [
+[
+"Winter",
+{
+"%": "i",
+";": "x"
+}
+],
+[
+"Summer",
+{
+"i": "~",
+"%": "x",
+";": "~"
+}
+]
+],
+"cfg": {},
+"dark": false,
+"mirror": false,
+"raft": false
+}
+}

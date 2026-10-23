@@ -359,6 +359,39 @@ struct league_gate
     int8_t elite;
 };
 
+// 9.3.4: a gym's own challenge (tools/gym/solver.py is its spec and test; src/pr_gym.cpp plays it): the room's tile
+// letters in each of its states (era, tide, season...), each tile's metatile as drawn, switched (fence down, pit
+// filled, crack broken, gas gone, vines open, fans off) and with a boulder on it, and the room's rules.
+namespace puzzle_flag
+{
+    constexpr uint16_t SURF = 1;            // water ~ can be crossed
+    constexpr uint16_t DIVE = 2;            // dive spots D take you to their pair
+    constexpr uint16_t RAFT = 4;            // currents over water carry you without SURF
+    constexpr uint16_t R_SOLID = 8;         // tall wheat R can't be walked through
+    constexpr uint16_t J_STEP = 16;         // lanterns J are stepping stones
+    constexpr uint16_t Y_JET = 32;          // flame jets Y go out once their junior is beaten
+    constexpr uint16_t E_MAG = 64;          // plates e are magnets that slide you on (else they stop a slide)
+    constexpr uint16_t ERA_SWITCH = 128;    // switches 1-3 turn the room to its next state (else a pedestal S does)
+    constexpr uint16_t STEP_ASIDE = 256;    // juniors stand in the way until beaten
+    constexpr uint16_t S_FANS = 512;        // a pedestal S turns the fans on and off
+    constexpr uint16_t GATE_PLATES = 1024;  // the gate F opens once every plate q holds a boulder...
+    constexpr uint16_t GATE_PEARLS = 2048;  // ... every pearl Q is lit...
+    constexpr uint16_t GATE_JUNIORS = 4096; // ... or every junior is beaten
+}
+
+struct gym_puzzle
+{
+    const char* cells;              // states x h x w letters, frame included
+    const uint16_t* metas;          // per state: drawn, switched, with a boulder (w x h each)
+    const int16_t* aux;             // per tile: & 0x3fff a junior, valve, lane switch or linked tile (0x3fff none); 0x4000 high ground
+    int8_t states;
+    char over;                      // what arrows run over: '_' floor, 'p' pits (fans blow you across), '~' water
+    int8_t fans;                    // the switch that runs the fans, or -1 (always on)
+    int8_t pulse;                   // tesla coils: F is down for this many steps, then f (0: none)
+    uint16_t flags;
+    int8_t dark;                    // 0, 1 dark (a light around you that grows with each junior beaten), 2 fog
+};
+
 struct room_info
 {
     room_kind kind;
@@ -368,6 +401,7 @@ struct room_info
     int16_t gate_metatile;          // the floor shown in an open gate
     bool home;
     int8_t floor;                   // CHALLENGE TOWER floors: 0-4, else -1
+    const gym_puzzle* puzzle;       // 9.3.4: the gym's challenge, or nullptr
 };
 
 // An area or a room.

@@ -4,6 +4,7 @@
 //   p FILE.ppm     save the screen
 //   K KEYS         hold keys (or - for none) for the h lines after it
 //   h FRAMES FILE  run, writing a hash of each frame's screen to FILE (one per line; timing.py)
+//   m ADDR N       print N bytes of memory from ADDR (hex) as hex on one line (gymtest.py)
 #include <mgba/core/core.h>
 #include <mgba/core/log.h>
 #include <mgba-util/vfs.h>
@@ -32,6 +33,7 @@ int main(int argc, char** argv){
     else if(cmd[0]=='h'){ int f=atoi(a); char out[512]; sscanf(line,"%*s %*s %511s",out); FILE* o=fopen(out,"a"); core->setKeys(core,held);
       for(int i=0;i<f;i++){ core->runFrame(core); uint32_t hsh=2166136261u; for(unsigned j=0;j<w*h;j++){ hsh=(hsh^buf[j])*16777619u; } fprintf(o,"%08x\n",hsh); }
       fclose(o); }
+    else if(cmd[0]=='m'){ uint32_t ad=strtoul(a,0,16); for(int i=0;i<n;i++) printf("%02x", core->busRead8(core, ad+i)); printf("\n"); fflush(stdout); }
     else if(cmd[0]=='p'){ FILE* f=fopen(a,"wb"); fprintf(f,"P6 %u %u 255\n",w,h);
       for(unsigned i=0;i<w*h;i++){ uint32_t px=buf[i]; unsigned char rgb[3]={px&0xff,(px>>8)&0xff,(px>>16)&0xff}; fwrite(rgb,1,3,f);} fclose(f); }
   }
