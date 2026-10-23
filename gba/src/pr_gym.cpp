@@ -24,6 +24,7 @@ namespace
     {
         int map_plus_1;             // the gym it's for, + 1 (0: none)
         int sw;                     // the switch last stepped on (1-3), or the coils' step count
+        int pending;                // a step a junior's battle broke into (its direction + 1), to carry on after
         int var;                    // the room's state
         uint32_t act;               // bit 0 the gate's open, 1 + i valve i turned, 20 + i pearl i lit
         bn::bitset<max_tiles> holes;    // open pits (and broken floor)
@@ -283,6 +284,7 @@ void overworld::puzzle_enter()
     pzr.sw = 0;
     pzr.var = 0;
     pzr.act = 0;
+    pzr.pending = 0;
     reset_floor(*_map, *pz);
     g.x = int16_t(_map->spawn_x);
     g.y = int16_t(_map->spawn_y);
@@ -442,11 +444,23 @@ void overworld::puzzle_step(direction d)
         puzzle_warp(m.spawn_x, m.spawn_y);
         return;
     }
+    puzzle_carry(d);
+}
+
+// The rest of a step: a junior who sees you battles you first (and the step goes on after: you're still sliding,
+// still on the pad...), then ice, magnets, fans and currents carry you on, then the tile you end on does its thing.
+// (As solver.py: being seen never stops a slide, and nobody sees you arrive by warp.)
+void overworld::puzzle_carry(direction d)
+{
+    game_state& g = state();
+    const gym_puzzle& pz = *puzzle();
+    const map_def& m = *_map;
+    pzr.pending = 0;
     if(puzzle_sight())
     {
+        pzr.pending = int(d) + 1;
         return;
     }
-    // Carried on: ice and magnets slide you until something stops you, fans and currents blow you along.
     bool mag = pz.flags & puzzle_flag::E_MAG;
     for(int k = 0; k < 80; ++k)
     {
@@ -465,6 +479,7 @@ void overworld::puzzle_step(direction d)
             puzzle_glide(d, run_frames, false, true);
             if(puzzle_sight())
             {
+                pzr.pending = int(d) + 1;
                 return;
             }
             if((has("de", cn) && ! mag) || cn == 'd')
@@ -484,6 +499,7 @@ void overworld::puzzle_step(direction d)
             puzzle_glide(d, run_frames, false, true);
             if(puzzle_sight())
             {
+                pzr.pending = int(d) + 1;
                 return;
             }
             continue;
@@ -528,7 +544,22 @@ void overworld::puzzle_step(direction d)
             puzzle_redraw();
         }
     }
-    arrive();
+    // Out by the mat (arrive()), or a step for REPEL, the DAY CARE and EGGS.
+    if(c == 'M')
+    {
+        arrive();
+        return;
+    }
+    step_counters();
+}
+
+// Back from a junior's battle in the middle of a step: carry on with it.
+void overworld::puzzle_resume()
+{
+    if(puzzle() && pzr.pending && pzr.map_plus_1 == _map_index + 1)
+    {
+        puzzle_carry(direction(pzr.pending - 1));
+    }
 }
 
 bool overworld::puzzle_interact()

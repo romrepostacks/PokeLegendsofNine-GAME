@@ -167,6 +167,8 @@ public:
     [[nodiscard]] bool puzzle_skips(const trainer& t) const;     // a gate junior, gone once beaten
     void puzzle_enter();
     void puzzle_step(direction d);
+    void puzzle_carry(direction d);
+    void puzzle_resume();
     bool puzzle_interact();
     bool puzzle_sight();
     void puzzle_redraw();

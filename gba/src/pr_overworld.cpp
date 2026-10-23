@@ -1991,6 +1991,10 @@ bool overworld::run(encounter& battle, const battle_report* last)
     {
         story_enter();
     }
+    if(! _start_battle && ! _quit)
+    {
+        puzzle_resume();
+    }
     while(! _quit && ! _start_battle)
     {
         // A + B + START + SELECT: back to the title (a soft reset).
