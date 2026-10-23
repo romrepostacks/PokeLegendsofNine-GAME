@@ -53,9 +53,18 @@ function svgPixels(svg){
   if(/scaleX\(-1\)/.test(svg)) px.forEach(r=>r.reverse());
   return {w, h, px};
 }
+// 9.3.5: ART_OVERRIDE=<dir> draws <dir>/<name>.png in place of a tile (the overworld art rounds' previews).
+const OVERRIDE = process.env.ART_OVERRIDE, overridden = new Map();
+function override(name){
+  if(!OVERRIDE) return null;
+  if(!overridden.has(name)) overridden.set(name, fs.existsSync(path.join(OVERRIDE, name + '.png')) ? readPng(name + '.png', OVERRIDE) : null);
+  return overridden.get(name);
+}
+const RECOLOUR = OVERRIDE && fs.existsSync(path.join(OVERRIDE, 'ground_map.json')) ? JSON.parse(fs.readFileSync(path.join(OVERRIDE, 'ground_map.json'), 'utf8')) : {};
 function artPixels(name, pal){
+  if(!pal && override(name)) return override(name);
   const a = G.TILE_ART[name], p = pal || a.pal;
-  return {w:a.w, h:a.h, px:a.rows.map(r=>[...r].map(ch=>ch==='.' ? null : hex(p[ch])))};
+  return {w:a.w, h:a.h, px:a.rows.map(r=>[...r].map(ch=>ch==='.' ? null : hex(RECOLOUR[p[ch].toLowerCase()] || p[ch])))};
 }
 class Canvas {
   constructor(w, h, fill){ this.w = w; this.h = h; this.d = Buffer.alloc(w*h*3); if(fill) this.rect(0, 0, w, h, fill); }
@@ -84,8 +93,8 @@ function writePng(file, w, h, rgb){
 function crop(c, x0, y0, w, h){ const out = new Canvas(w, h); for(let y=0; y<h; y++) c.d.copy(out.d, y*w*3, ((y0+y)*c.w + x0)*3, ((y0+y)*c.w + x0 + w)*3); return out; }
 const savePng = (name, c)=>writePng(path.join(OUT, name), c.w, c.h, c.d);
 // 9.3.4: hand-drawn art in gba/data (tools/art/*.py), 8-bit RGB or RGBA, as {w, h, px} (null = transparent).
-function readPng(name){
-  const b = fs.readFileSync(path.join(__dirname, '..', 'data', name)), w = b.readUInt32BE(16), h = b.readUInt32BE(20), n = b[25]===6 ? 4 : 3;
+function readPng(name, dir=path.join(__dirname, '..', 'data')){
+  const b = fs.readFileSync(path.join(dir, name)), w = b.readUInt32BE(16), h = b.readUInt32BE(20), n = b[25]===6 ? 4 : 3;
   if(b[24]!==8 || ![2,6].includes(b[25]) || b[28]) throw new Error(name + ': only 8-bit RGB(A) PNGs');
   const idat = [];
   for(let i=8; i<b.length; i += 12 + b.readUInt32BE(i)) if(b.toString('ascii', i+4, i+8)==='IDAT') idat.push(b.subarray(i+8, i+8+b.readUInt32BE(i)));
@@ -134,8 +143,8 @@ function puzzleRoom(room, loc, li){
 }
 
 // ---------- Tile behaviours (what the GBA needs to know about each tile) ----------
-const GRASS = hex(G.GROUND.base);
-const tallGrass = svgPixels(G.tallGrassSvg());
+const GRASS = override('grass_v0') ? override('grass_v0').px[0][0] : hex(G.GROUND.base);
+const tallGrass = override('tall') || svgPixels(G.tallGrassSvg());
 const BEHAVIOUR = {walk:0, solid:1, tall:2, water:3, ledgeDown:4, ledgeRight:5, ledgeLeft:6, sign:7, door:8, item:9,
   counter:10, pc:11, mat:12, statue:13, windUp:14, windDown:15, windLeft:16, windRight:17};
 function behaviour(ch){
@@ -195,7 +204,10 @@ function drawArea(map, view, opts={}){
       const kind = cls==='water' ? 'water' : 'path';
       c.draw(artPixels(kind==='water' && opts.frameB ? 'water_b' : kind), X, Y);
       const ov = G.edgeOverlay(map, x, y, G.EDGE_GROUPS[kind], kind);
-      for(const m of ov.matchAll(/--art-([a-z_]+)\)/g)) c.draw(artPixels(m[1]), X, Y);
+      const names = [...ov.matchAll(/--art-([a-z_]+)\)/g)].map(m=>m[1]);
+      // An overridden path rounds its corners over its edges.
+      if(OVERRIDE && kind==='path') names.sort((a, b)=>/corner|inner/.test(a) - /corner|inner/.test(b));
+      for(const n of names) c.draw(artPixels(n), X, Y);
       // Dive spots (.divespot): brightness .55, saturate 1.25.
       if(kind==='water' && map.diveSpots && map.diveSpots.has(x+','+y)) c.filter(X, Y, 16, 16, p=>saturate(p.map(q=>q*0.55), 1.25));
     }
