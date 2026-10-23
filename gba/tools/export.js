@@ -244,6 +244,9 @@ function drawArea(map, view, opts={}){
     }
     const roof = b.kind==='center' ? 'red' : b.kind==='mart' ? 'blue' : b.kind==='gym' || b.kind==='league' || b.kind==='tower' ? 'slate'
       : G.HOUSE_ROOF_NAMES[G.HOUSE_ROOFS.indexOf(b.roof)] || 'green';
+    // An overridden MART or house front replaces the pieces below.
+    const front = OVERRIDE && b.w===4 && b.h===3 && override(b.kind==='mart' ? 'mart_d'+(b.door.x-b.x) : 'house_'+roof);
+    if(front){ c.draw(front, b.x*16, b.y*16 - 8); continue; }
     const wall = b.kind==='gym' || b.kind==='league' || b.kind==='tower' ? 'grey' : 'cream';
     const piece = name=>{ const a = G.TILE_ART[name], r = G.ROOF_SWAP[roof], w = G.WALL_SWAP[wall];
       return artPixels(name, {...a.pal, 1:r[0], 2:r[1], 3:r[2], 4:r[3], A:w[0], B:w[1], C:w[2]}); };
