@@ -220,9 +220,12 @@ function drawArea(map, view, opts={}){
     if(map.shafts && map.shafts.has(x+','+y)) c.wash(X, Y, 16, 16, hex('#d8f8ff'), 0x50/255);
     // Weather on the ground (tileHtml): puddles in the rain, drifts in the snow, ash on the grass.
     const h = v % 11;
-    if(wx==='rain' && cls==='grass' && h<2) ellipse(c, X+8, Y+8.25, 5, 2.25, hex('#6f9ed0'), 0xaa/255);
-    if(wx==='snow' && cls==='grass' && h<4){ ellipse(c, X+4.8, Y+9.6, 4.5*0.7, 2.5*0.7, hex('#fbfdff'), 0xee/255); ellipse(c, X+11.5, Y+5.6, 3.5*0.7, 2*0.7, hex('#f4f8ff'), 0xdd/255); }
-    if(wx==='ash' && !opts.noAsh && (cls==='grass' && h<6 || cls==='tall')){
+    const wxArt = n=>OVERRIDE ? override(n) : null;   // overridden weather art replaces the drawn shapes
+    if(wx==='rain' && cls==='grass' && h<2){ if(wxArt('puddle')) c.draw(wxArt('puddle'), X, Y); else ellipse(c, X+8, Y+8.25, 5, 2.25, hex('#6f9ed0'), 0xaa/255); }
+    if(wx==='snow' && cls==='grass' && h<4 && wxArt('drift')) c.draw(wxArt('drift'), X, Y);
+    else if(wx==='snow' && cls==='grass' && h<4){ ellipse(c, X+4.8, Y+9.6, 4.5*0.7, 2.5*0.7, hex('#fbfdff'), 0xee/255); ellipse(c, X+11.5, Y+5.6, 3.5*0.7, 2*0.7, hex('#f4f8ff'), 0xdd/255); }
+    if(wx==='ash' && wxArt('ash')){ if(!opts.noAsh && cls==='grass') c.draw(wxArt('ash' + (v%4 ? '' : '_b')), X, Y); }   // every lawn tile ashen
+    else if(wx==='ash' && !opts.noAsh && (cls==='grass' && h<6 || cls==='tall')){
       c.wash(X, Y, 16, 16, hex('#8a8a90'), 0x40/255);
       for(const [fx,fy,col] of [[0.2,0.3,'#6a6a70'],[0.6,0.7,'#707078'],[0.8,0.2,'#5c5c64'],[0.4,0.85,'#66666e']]){
         const px = X + Math.floor(fx*16), py = Y + Math.floor(fy*16);
@@ -277,7 +280,9 @@ function drawArea(map, view, opts={}){
   // settle on the treetops.
   for(let y=0; y<map.h; y++) for(let x=0; x<map.w; x++){
     if(at(x,y)==='T' && !cave && !deep){
-      c.draw(artPixels((x+y)%2 ? 'tree2' : 'tree'), x*16, y*16 - 8);
+      const tv = (x+y)%2 ? 'tree2' : 'tree', wt = OVERRIDE && (view==='snow' || view==='ash') ? override(tv + '_' + view) : null;
+      c.draw(wt || artPixels(tv), x*16, y*16 - 8);
+      if(wt) continue;
       if(view==='snow'){ const X = x*16+1.5, Y = y*16-7.5; ellipse(c, X+6.5, Y+2.5, 6.5, 3, hex('#ffffff'), 1); ellipse(c, X+6.5, Y+3.2, 6, 2.2, hex('#e4eef8'), 0.6); }
       if(view==='ash') ellipse(c, x*16+2+6, y*16-7+2, 5, 2.2, hex('#9a9aa2'), 0xcc/255);
     }
