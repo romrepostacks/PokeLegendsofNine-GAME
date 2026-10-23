@@ -205,8 +205,8 @@ function drawArea(map, view, opts={}){
       c.draw(artPixels(kind==='water' && opts.frameB ? 'water_b' : kind), X, Y);
       const ov = G.edgeOverlay(map, x, y, G.EDGE_GROUPS[kind], kind);
       const names = [...ov.matchAll(/--art-([a-z_]+)\)/g)].map(m=>m[1]);
-      // An overridden path rounds its corners over its edges.
-      if(OVERRIDE && kind==='path') names.sort((a, b)=>/corner|inner/.test(a) - /corner|inner/.test(b));
+      // Overridden shorelines round their corners over their edges.
+      if(OVERRIDE) names.sort((a, b)=>/corner|inner/.test(a) - /corner|inner/.test(b));
       for(const n of names) c.draw(artPixels(n), X, Y);
       // Dive spots (.divespot): brightness .55, saturate 1.25.
       if(kind==='water' && map.diveSpots && map.diveSpots.has(x+','+y)) c.filter(X, Y, 16, 16, p=>saturate(p.map(q=>q*0.55), 1.25));
