@@ -230,6 +230,9 @@ function drawArea(map, view, opts={}){
     const swapTrees = treeKey(n.map)!==treeKey(map), d = n.exit.dir, vert = d==='up' || d==='down';
     // A cave draws rocks, signs and grass as its floor: only the ground itself can blend with the outside.
     const caveEdge = !!n.map.cave!==!!map.cave || !!n.map.deep!==!!map.deep;
+    // Blended colours cost the tileset palette room, so only a tint changes them all; another ground set only swaps
+    // trees, and a cave blends just the path into its floor.
+    const tinted = (n.map.tint || '')!==(map.tint || '') || !!n.map.volcano!==!!map.volcano;
     const lo = vert ? Math.max(0, n.ox) : Math.max(0, n.oy), hi = vert ? Math.min(map.w, n.ox + n.map.w) : Math.min(map.h, n.oy + n.map.h);
     const band = (x, y)=>{   // how far (x, y) is from this edge, if it's on it
       const i = vert ? x : y, k = d==='up' ? y : d==='down' ? map.h-1-y : d==='left' ? x : map.w-1-x;
@@ -241,7 +244,7 @@ function drawArea(map, view, opts={}){
       if(k<0) continue;
       if(swapTrees && map.tiles[y][x]==='T'){
         if((((x*2654435761) ^ (y*40503) ^ (li*97)) >>> 8) % 100 < SWAP[k]) c.set(px, py, alt.get(px, py));
-      } else if(!caveEdge || ['grass', 'path', 'exit'].includes(G.TILE_CLS[map.tiles[y][x]])){
+      } else if(tinted ? !caveEdge || ['grass', 'path', 'exit'].includes(G.TILE_CLS[map.tiles[y][x]]) : caveEdge && ['path', 'exit'].includes(G.TILE_CLS[map.tiles[y][x]])){
         c.set(px, py, blend(c.get(px, py), alt.get(px, py), BLEND[k]));
       }
     }
