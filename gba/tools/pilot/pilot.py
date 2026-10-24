@@ -700,10 +700,82 @@ class Pilot:
                 return False
             self.talk()
             return True
+        if self.gym_of(mi) is not None:
+            # 9.6.0: a puzzle gym (9.4.0): in at the door, then the solver's way to the leader, fighting the juniors.
+            if self.pos()[0] != mi and not self.goto_tile(mi, *self.w.maps[mi]['spawn'], adjacent=False, tries=8):
+                return False
+            if not self.gym_run(mi):
+                return False
         if not self.goto_tile(mi, x, y):
             return False
         before = self.progress_key()
         self.talk()
+        return True
+
+    def gym_of(self, mi):
+        """The solver's Gym for a puzzle gym room (tools/gym/solver.py, data/gym_layouts.json), else None."""
+        m = self.w.maps[mi]
+        lead = [t for t in m['trainers'] if t['role'] == 'LEADER']
+        if not m.get('room') or not lead:
+            return None
+        if not hasattr(self, '_gyms'):
+            sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'gym'))
+            from solver import Gym
+            L = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'data', 'gym_layouts.json')))
+            self._gyms = {int(a): Gym(int(a), dict(g, states=[tuple(x) for x in g['states']])) for a, g in L.items()}
+        return self._gyms.get(lead[0]['area'])
+
+    def gym_run(self, mi):
+        """From the rug, plays the solver's shortest way to the leader with the juniors as they are now."""
+        from collections import deque
+        from solver import D4
+        gm = self.gym_of(mi)
+        m = self.w.maps[mi]
+        ids = []
+        for jx, jy in gm.juniors:
+            t = next((t for t in m['trainers'] if t['role'] == 'JUNIOR' and (t['x'], t['y']) == (jx, jy)), None)
+            ids.append(t['id'] if t else -1)
+        beaten = lambda: sum(1 << i for i, t in enumerate(ids) if t < 0 or self.beaten(t))
+        # (Off the rug, after a loss or a reload, it starts from where we stand with the room as it began.)
+        b0 = beaten()
+        st0 = (tuple(self.pos()[1:]), 0, b0, gm.boulders0, gm.pits0, 1 if gm.cfg['gate'] == 'juniors' and b0 == (1 << len(ids)) - 1 else 0, 0)
+        prev, q, path = {st0: None}, deque([st0]), None
+        while q:
+            st = q.popleft()
+            if gm.at_goal(st):
+                path = []
+                while prev[st]:
+                    st, keys, after = prev[st][0], prev[st][1], st
+                    path.append((keys, after))
+                path.reverse()
+                break
+            for keys, n in [(k, gm.step(st, d)) for k, d in zip('UDLR', D4)] + gm.labeled_actions(st):
+                if n and n not in prev:
+                    prev[n] = (st, keys)
+                    q.append(n)
+        if path is None:
+            self.log('gym_no_route', area=gm.area)
+            return False
+        for n, (keys, after) in enumerate(path):
+            way = keys[-1] if keys != 'A' else None
+            if way and FACE[self.facing()] != way:
+                self.e.press(way, 1); self.e.wait(16)
+            self.e.press('A' if keys[0] == 'A' else way, 1); self.e.wait(120)
+            want = after[2]
+            for _ in range(600):
+                if beaten() & want == want or self.pos()[0] != mi:
+                    break
+                self.e.press('A'); self.e.wait(20)
+            if beaten() != b0:
+                self.settle()       # the battle's end: EXP, new moves, the junior's last words
+                b0 = beaten()
+            if self.pos()[0] != mi:
+                self.log('gym_out', area=gm.area, step=n)      # lost a battle (or the floor gave way)
+                return False
+            if tuple(self.pos()[1:]) != after[0]:
+                self.log('gym_off_route', area=gm.area, step=n, at=self.pos()[1:], want=after[0]); self.shot('gym_off')
+                return False
+        self.log('gym_route', area=gm.area, steps=len(path))
         return True
 
     def play(self, max_frames, checkpoint=None):

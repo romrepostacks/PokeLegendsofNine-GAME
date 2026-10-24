@@ -24,9 +24,12 @@ for n in names:
     if i is not None:
         picks.append((n, i))
 print(len(picks), 'abilities', flush=True)
-allen = next((t['x'], t['y']) for m in w.maps for t in m['trainers'] if (t['area'], t['x'], t['y']) == (395, 83, 33))
+allen = next((i, t['x'], t['y']) for i, m in enumerate(w.maps) for t in m['trainers'] if (t['area'], t['x'], t['y']) == (395, 83, 33))
 bad = 0
+only = os.environ.get('ONLY')
 for b in range(0, len(picks), 6):
+    if only and str(b // 6) != only:
+        continue
     group = picks[b:b + 6]
     d = os.path.join(out, 'b%02d' % (b // 6)); os.makedirs(d, exist_ok=True)
     sav = bytearray(b'\xff' * 0x8000)
@@ -42,6 +45,8 @@ for b in range(0, len(picks), 6):
     for i in range(3000):
         if e.crashed():
             res = 'CRASH'; P.shot('crash'); break
+        if i in (40, 200):
+            P.shot('battle%d' % i)
         if i > 20 and P.idle():
             res = 'ok'; break
         e.press('A'); e.wait(16)
