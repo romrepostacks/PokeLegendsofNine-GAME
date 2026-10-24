@@ -651,10 +651,12 @@ def build_world(exp, data, out_inc):
                                 'lines': ['PILOT: "My airship flies between the SUNDERED ISLES and the SKYREACH."']})
             if a['region'] == 4:
                 # ...and WINDWARD's carving at the foot of the SKY PILLAR: the Emerald trio.
-                x, y = place_statue(a, 'statue_emerald_carving', a['spawn']['x'] - 3, a['spawn']['y'] - 3, hid)
-                a['people'].append({'kind': 'statue_emerald_carving', 'x': x, 'y': y, 'facing': 'down', 'role': '', 'wander': False, 'lines': [
-                    'An old carving on a fallen block of the SKY PILLAR: GROUDON and KYOGRE, and RAYQUAZA between them.',
-                    'Underneath: "THE ONE WHO STOPPED THE SUNDERING SLEEPS ABOVE THE CLOUDS."']})
+                # 9.4.1: 128 wide, so two landmarks side by side, out in the open north-east of the road.
+                x, y = free_spot(a, 24, 6, hid, True, (8, 2))
+                for k, side in enumerate('lr'):
+                    a['people'].append({'kind': 'statue_emerald_carving_' + side, 'x': x + 4 * k, 'y': y, 'facing': 'down', 'role': '',
+                                        'wander': False, 'lines': ['An old carving on a fallen block of the SKY PILLAR: GROUDON and KYOGRE, and RAYQUAZA between them.',
+                                                  'Underneath: "THE ONE WHO STOPPED THE SUNDERING SLEEPS ABOVE THE CLOUDS."']})
                 # ...and the SPACE CENTER's launch board, brought down to the airship dock.
                 x, y = place_statue(a, 'statue_launch_board', a['spawn']['x'] + 4, a['spawn']['y'] - 2, hid)
                 a['people'].append({'kind': 'statue_launch_board', 'x': x, 'y': y, 'facing': 'down', 'role': '', 'wander': False, 'lines': [

@@ -1419,6 +1419,8 @@ function buildTown(loc){
     for(let y=8; y<=12; y++) for(let x=10; x<=15; x++) tiles[y+OY][P(x)] = ':';
     plaza = {x:R(11,4), y:OY+11};
   }
+  // 9.4.1: open ground for a landmark (map tiles x0,y0 to x1,y1): its trees cleared.
+  if(loc.yard){ const [x0,y0,x1,y1] = loc.yard; for(let y=y0; y<=y1; y++) for(let x=x0; x<=x1; x++) if(tiles[y][x]==='T') tiles[y][x] = '.'; }
   // Roads: west/east on the centre's road rows, a 3-wide lane north/south; openings in the border.
   // Side openings span the 2 rows above the road and the road (rows 3-4 of the opening), the same as a
   // route's entrance, so the roads meet in a straight line at the border.
@@ -6689,7 +6691,7 @@ const ELITES_SKYREACH = [
    intro:"Dragons ride the winds around the pillar. Can you ride them too?", after:"You've earned the crown's door. The CHAMPION waits."}];
 const SKYREACH = [
   // 0-8: the CANYON FLOOR, west to east
-  {type:'town', name:"Windward", plaza:'launch_board', at:[4,3], center:true, tint:'mesa', desc:"A trading town at the foot of the SKY PILLAR, where the airship docks. Wind sings through the canyon all day."},
+  {type:'town', name:"Windward", plaza:'launch_board', yard:[22,2,32,8], at:[4,3], center:true, tint:'mesa', desc:"A trading town at the foot of the SKY PILLAR, where the airship docks. Wind sings through the canyon all day."},
   {type:'route', name:"Canyon Route 1", at:[3,3], theme:'rocky', tint:'mesa', wind:true, desc:"A dry canyon west of WINDWARD. Gusts race along the riverbed.", pool:['Sandile','Trapinch','Geodude-Sky','Rhyhorn-Sky','Diglett','Mudbray']},
   {type:'gym', name:"Cascade Gorge", at:[2,3], center:true, tint:'mesa', desc:"Waterfalls pour down the canyon walls into a green gorge. Leader Rill's gym is a raft dock.", leaderName:"Rill", leaderTeam:['Ludicolo','Swampert','Tangrowth','Kingler']},
   {type:'route', name:"Canyon Route 2", at:[1,3], theme:'rocky', tint:'mesa', wind:true, treasure:['stoneplate'], desc:"Old mine carts rust beside the trail to OCHRE GULCH. Something hums deep in a side tunnel.", pool:['Geodude-Sky','Rolycoly','Onix','Drilbur','Sandile','Roggenrola']},

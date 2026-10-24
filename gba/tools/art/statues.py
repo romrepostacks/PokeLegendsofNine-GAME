@@ -378,20 +378,25 @@ def church_clock():
 
 # ---------------------------------------------------------------- the big ones elsewhere (64x64)
 def emerald_carving():
-    s = S(64, 64)
-    s.poly([(1, 24), (58, 14), (63, 62), (3, 62)], STONE[2])               # a fallen block of the SKY PILLAR, tilted
-    s.line(1, 24, 58, 14, STONE[4]); s.line(1, 24, 3, 61, STONE[3]); s.line(58, 14, 63, 62, STONE[1])
-    s.poly([(58, 14), (62, 12), (63, 62)], STONE[1])
-    s.rect(4, 60, 62, 62, STONE[1])
-    for x0, y0, x1, y1 in ((6, 30, 12, 26), (50, 44, 56, 54), (20, 58, 26, 52)): s.line(x0, y0, x1, y1, STONE[0])   # cracks
+    """WINDWARD's carving, 128x64: too big for one sprite, so the game shows it as two (_l and _r, see SPLIT)."""
+    s = S(128, 64)
+    s.poly([(2, 22), (118, 8), (127, 62), (4, 62)], STONE[2])              # a fallen block of the SKY PILLAR, tilted
+    s.line(2, 22, 118, 8, STONE[4]); s.line(2, 22, 4, 61, STONE[3]); s.line(118, 8, 127, 62, STONE[1])
+    s.poly([(118, 8), (124, 6), (127, 62)], STONE[1])
+    s.rect(5, 59, 126, 62, STONE[1]); s.rect(5, 59, 126, 59, STONE[3])
+    for x0, y0, x1, y1 in ((8, 30, 15, 25), (122, 46, 117, 56), (60, 60, 66, 54), (120, 14, 116, 20)): s.line(x0, y0, x1, y1, STONE[0])
     RED = [(96, 40, 40), (156, 72, 64), (200, 112, 96), (232, 160, 136)]
     BLUE = [(40, 56, 104), (64, 96, 160), (104, 144, 200), (160, 192, 232)]
     GREEN = [(32, 80, 56), (56, 128, 88), (96, 176, 120), (152, 216, 160)]
-    paste(s, mon(384, 46), 9, 20, GREEN)                                   # RAYQUAZA coiled across the top
-    paste(s, mon(383, 24), 4, 34, RED)                                     # GROUDON
-    paste(s, mon(382, 24), 34, 36, BLUE, flip=True)                        # KYOGRE
-    for x, y in ((8, 59), (30, 61), (44, 58), (56, 60), (60, 40)): s.set(x, y, MOSS[1]); s.set(x + 1, y, MOSS[2]); s.set(x, y - 1, MOSS[2])
+    im = mon(384, 50); paste(s, im, 64 - im.width // 2, 12, GREEN)                                  # RAYQUAZA between them
+    paste(s, mon(383, 34), 8, 24, RED)                                     # GROUDON
+    paste(s, mon(382, 34), 88, 24, BLUE, flip=True)                        # KYOGRE
+    for x in (14, 40, 70, 96, 116): s.set(x, 60, GOLD[2])                  # old offerings along the foot
+    for x, y in ((10, 58), (34, 61), (52, 58), (88, 60), (110, 58), (122, 40), (6, 40)):
+        s.set(x, y, MOSS[1]); s.set(x + 1, y, MOSS[2]); s.set(x, y - 1, MOSS[2])
     return s
+
+SPLIT = {'emerald_carving': emerald_carving}    # looks wider than a sprite: saved as <look>_l and <look>_r, 64 wide each
 
 def ancient_tree():
     s = S(64, 64)
@@ -491,7 +496,7 @@ def gym_statue(t):
 GYM_LOOKS = {t: gym_statue(t) for t in GYM_MON}
 
 LOOKS = {
-    'wren': wren, 'hooh_figurehead': hooh_figurehead, 'emerald_carving': emerald_carving, 'launch_board': launch_board,
+    'wren': wren, 'hooh_figurehead': hooh_figurehead, 'launch_board': launch_board,
     'meteor_shard': meteor_shard, 'arden': arden, 'lab_terminal': lab_terminal, 'pickup_truck': pickup_truck,
     'clone_tank': clone_tank, 'church_clock': church_clock, 'wooden_shrine': wooden_shrine, 'ancient_tree': ancient_tree,
     'altar_diamond': altar('diamond'), 'altar_pearl': altar('pearl'), 'town_clock': town_clock,
@@ -507,6 +512,10 @@ if __name__ == '__main__':
     for name, fn in LOOKS.items():
         ims[name] = fn().outline().image()
         ims[name].save(os.path.join(OUT, name + '.png'))
+    for name, fn in SPLIT.items():
+        im = fn().outline().image()
+        for k, side in enumerate('lr'):
+            im.crop((k * 64, 0, k * 64 + 64, 64)).save(os.path.join(OUT, '%s_%s.png' % (name, side)))
     os.makedirs(os.path.join(OUT, 'gym'), exist_ok=True)
     for name, fn in GYM_LOOKS.items():
         ims['gym_' + name] = fn().outline().image()
