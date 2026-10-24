@@ -218,7 +218,7 @@ function ellipse(c, cx, cy, rx, ry, col, a){
 // neighbour's instead. Both sides do it, so nothing changes as you cross.
 const styleKey = m=>JSON.stringify([m.look.layers.filter(l=>!l.startsWith('buildings_')), m.tint || '', !!m.cave, !!m.deep, !!m.volcano]);
 const treeKey = m=>JSON.stringify([m.look.layers.filter(l=>/^(trees|weather|caves)_/.test(l)), !!m.cave, !!m.deep]);
-const BLEND = [0.46, 0.38, 0.3, 0.22, 0.14, 0.06], SWAP = [70, 40, 15];   // blend by half tile, swap by tile
+const BLEND = [0.42, 0.26, 0.1], SWAP = [70, 40, 15];   // by tile: each step costs the tileset another set of colours
 function drawArea(map, view, opts={}){
   const c = drawPlain(map, view, opts), li = liOfMap.get(map);
   if(li===undefined) return c;
@@ -242,8 +242,7 @@ function drawArea(map, view, opts={}){
       if(swapTrees && map.tiles[y][x]==='T'){
         if((((x*2654435761) ^ (y*40503) ^ (li*97)) >>> 8) % 100 < SWAP[k]) c.set(px, py, alt.get(px, py));
       } else if(!caveEdge || ['grass', 'path', 'exit'].includes(G.TILE_CLS[map.tiles[y][x]])){
-        const j = (d==='up' ? py : d==='down' ? c.h-1-py : d==='left' ? px : c.w-1-px) >> 3;
-        if(j<6) c.set(px, py, blend(c.get(px, py), alt.get(px, py), BLEND[j]));
+        c.set(px, py, blend(c.get(px, py), alt.get(px, py), BLEND[k]));
       }
     }
     useLayers(map.look.layers);
