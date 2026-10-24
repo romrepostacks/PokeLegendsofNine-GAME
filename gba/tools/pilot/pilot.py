@@ -95,7 +95,7 @@ class Pilot:
         self.e.wait(10)
         return self.facing() != f
 
-    def settle(self, limit=600):
+    def settle(self, limit=2400):       # a legend at the cap can take ~1500 presses (Deoxys recovers)
         """Presses A (and now and then B) until we're walking again. Returns how many presses it took."""
         n = 0
         while not self.idle():
@@ -780,6 +780,10 @@ class Pilot:
             if beaten() != b0:
                 self.settle()       # the battle's end: EXP, new moves, the junior's last words
                 b0 = beaten()
+            for _ in range(10):     # a device's text ("You turned the pedestal's dial."), as gymtest does
+                if self.idle():
+                    break
+                self.e.press('B'); self.e.wait(30)
             if self.pos()[0] != mi:
                 self.log('gym_out', area=gm.area, step=n)      # lost a battle (or the floor gave way)
                 return False
