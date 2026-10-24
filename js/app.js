@@ -6865,15 +6865,15 @@ Object.assign(WEATHER, {"Sewer Run":'cave', "Arcology Spire":'cave', "Sealed Cav
   Object.assign(GENOVA[0], {storyNpc:{kind:'rivalKai', lines:["KAI: \"CHAMPION! This city's something else. Everything's made in a lab. Even the trees.\"", "KAI: \"See that statue? FOUNDER ARDEN. Everyone loves him. I read the plaque... he was a geneticist.\"", "KAI: \"People say MEWTWO was made here. If that's true, I bet it's still around somewhere.\""]},
     extras:[
       {kind:'pilot', role:'guide_back', dx:2, dy:1, lines:[]},
-      {kind:'statue', dx:-3, dy:-3, lines:["A bronze statue of FOUNDER ARDEN. The plaque reads: \"He built GENOVA from a single lab. SCIENCE WITHOUT LIMITS.\"", "Someone has scratched underneath: \"HE MADE MEWTWO. ASK HIM WHY IT CRIED.\""]},
+      {kind:'statue', look:'arden', dx:-3, dy:-3, lines:["A bronze statue of FOUNDER ARDEN. The plaque reads: \"He built GENOVA from a single lab. SCIENCE WITHOUT LIMITS.\"", "Someone has scratched underneath: \"HE MADE MEWTWO. ASK HIM WHY IT CRIED.\""]},
       {kind:'prof', dx:4, dy:1, lines:["PROF. LINNEA: \"Welcome to GENOVA. I study the escaped experiments: CHIMURR, VOLTADPOLE, GRAFTLING...\"", "PROF. LINNEA: \"The Corp. spliced them from two POKéMON each. They're nothing like anything else, and they're happy out there.\"", "PROF. LINNEA: \"There's a rumour of a pink POKéMON, too. People keep seeing it for a second, then it's gone.\""]},
       {kind:'sparkle', role:'mew', dx:-6, dy:4}]});
   Object.assign(GENOVA[8], {rivalAfter:["The new clone's DNA is gone? Chairman VOSS took it to the SEALED CAVE!", "He's going to find MEWTWO and make it obey. Or make a copy that will."],
-    extras:[{kind:'statue', at:'mid', dx:-3, dy:2, lines:["A lab terminal, still on. LOG 1: \"CINNABAR ISLAND. July 5. A new POKéMON was discovered deep in a jungle.\"", "LOG 2: \"Feb. 6. MEW gave birth. We named the newborn MEWTWO.\" The rest of the file is corrupted."]}]});
+    extras:[{kind:'statue', look:'lab_terminal', at:'mid', dx:-3, dy:2, lines:["A lab terminal, still on. LOG 1: \"CINNABAR ISLAND. July 5. A new POKéMON was discovered deep in a jungle.\"", "LOG 2: \"Feb. 6. MEW gave birth. We named the newborn MEWTWO.\" The rest of the file is corrupted."]}]});
   Object.assign(GENOVA[15], {rivalAfter:["MEWTWO... it looked at me like I was nothing. Like we made it, and it owes us nothing.", "...Maybe it's right. Take it, then. If it'll go with anyone, it's you."]});
   Object.assign(GENOVA[18], {rivalAfter:["Fine! Keep your pink rumour. The Corp. has bigger problems now."],
-    extras:[{kind:'statue', at:'mid', dx:3, dy:1, lines:["An old pickup truck, parked at the very end of the pier. Nobody knows how it got here, or why it never left.", "Kids in GENOVA say if you push it, something pink is underneath. Nobody's ever managed to push it."]}]});
-  Object.assign(GENOVA[9], {extras:[{kind:'statue', dx:3, dy:-2, lines:["A tank of green fluid. Inside floats a copy of the very first POKéMON you were ever given. It opens one eye.", "A label: \"SUBJECT 001-B. DO NOT WAKE.\" You tap the glass. It taps back."]}]});
+    extras:[{kind:'statue', look:'pickup_truck', at:'mid', dx:3, dy:1, lines:["An old pickup truck, parked at the very end of the pier. Nobody knows how it got here, or why it never left.", "Kids in GENOVA say if you push it, something pink is underneath. Nobody's ever managed to push it."]}]});
+  Object.assign(GENOVA[9], {extras:[{kind:'statue', look:'clone_tank', dx:3, dy:-2, lines:["A tank of green fluid. Inside floats a copy of the very first POKéMON you were ever given. It opens one eye.", "A label: \"SUBJECT 001-B. DO NOT WAKE.\" You tap the glass. It taps back."]}]});
   // MEW, seen in ten places (CENTRAL's is above).
   for(const i of [1, 3, 5, 7, 10, 12, 13, 16, 19]) (GENOVA[i].extras ||= []).push({kind:'sparkle', role:'mew', at:'mid', dx:(i % 3) * 2 - 2, dy:(i % 2) * 2 - 1});
   // The way down from the SKYREACH: the shuttle at WINDWARD.
@@ -6983,18 +6983,18 @@ Object.assign(WEATHER, {"Wildwood Path":'fog', "Old Lakeshore":'fog', "Mirelake"
     extras:[
       {kind:'gentleman', role:'guide_back', dx:2, dy:1, lines:[]},
       {kind:'rift', role:'twin', dx:-3, dy:2},
-      {kind:'statue', dx:-3, dy:-3, lines:["The church clock. Its two faces show different times, and both hands move.", "A plaque: \"TIME IS A RIVER. THE VALLEY IS ITS BED.\""]},
+      {kind:'statue', look:'church_clock', dx:-3, dy:-3, lines:["The church clock. Its two faces show different times, and both hands move.", "A plaque: \"TIME IS A RIVER. THE VALLEY IS ITS BED.\""]},
       {kind:'oldwoman', dx:4, dy:2, lines:["Tomorrow I'll tell you about yesterday. Or did I tell you tomorrow already?", "Every day here is the same day, you know. I've said that before. I'll say it again."]}]});
   Object.assign(AETERNA[12], {extras:[{kind:'boy', dx:4, dy:2, lines:["A rift opened by the well and a stranger came out! He bought an apple. He said he was a CHAMPION.", "I'm going to plant the core. Maybe it'll be a whole orchard someday."]}]});
   for(const i of [3, 5, 8]) (AETERNA[i].extras ||= []).push({kind:'rift', role:'twin', at:'mid', dx:-2, dy:1});
-  Object.assign(AETERNA[15], {extras:[{kind:'statue', at:'mid', dx:3, dy:-1, lines:["A tiny wooden shrine, freshly carved. Leaves swirl around it with no wind.", "For a moment you see a small green POKéMON peek out... then it's gone. Back to its own time, maybe."]}]});
+  Object.assign(AETERNA[15], {extras:[{kind:'statue', look:'wooden_shrine', at:'mid', dx:3, dy:-1, lines:["A tiny wooden shrine, freshly carved. Leaves swirl around it with no wind.", "For a moment you see a small green POKéMON peek out... then it's gone. Back to its own time, maybe."]}]});
   Object.assign(AETERNA[17], {extras:[{kind:'sparkle', role:'seed', at:'mid', dx:2, dy:0, lines:[]}]});
-  Object.assign(AETERNA[5], {extras:[...AETERNA[5].extras, {kind:'statue', role:'tree', at:'mid', dx:2, dy:0, lines:[]}]});
+  Object.assign(AETERNA[5], {extras:[...AETERNA[5].extras, {kind:'statue', look:'ancient_tree', role:'tree', at:'mid', dx:2, dy:0, lines:[]}]});
   Object.assign(AETERNA[9], {rivalAfter:["DIALGA... it's furious. The clock's not ours to stop.", "CHRONARCH VEX went back. Way back, to the SPATIAL TEMPLE, before this spire was even built."],
-    extras:[{kind:'statue', role:'form', at:'mid', dx:-3, dy:1, lines:["An altar of blue stone, carved with a diamond. It glows faintly."]}]});
+    extras:[{kind:'statue', look:'altar_diamond', role:'form', at:'mid', dx:-3, dy:1, lines:["An altar of blue stone, carved with a diamond. It glows faintly."]}]});
   Object.assign(AETERNA[21], {rivalAfter:["PALKIA... broke the moment. It's moving again. Everything's moving again.", "I only wanted to stay. Just once, to stay. Go on. The future's yours."],
-    extras:[{kind:'statue', role:'form', at:'mid', dx:3, dy:1, lines:["An altar of pink stone, carved with a pearl. It glows faintly."]}]});
-  Object.assign(AETERNA[6], {extras:[{kind:'statue', dx:-4, dy:3, lines:["The town clock, running backwards. A note pinned to it: \"BRASS TOWER, 2 MILES. ASHEN TOWER, BURNED. ASK THE THREE BEASTS.\"", "Huge paw prints in the dust under the clock. Three different kinds."]}]});
+    extras:[{kind:'statue', look:'altar_pearl', role:'form', at:'mid', dx:3, dy:1, lines:["An altar of pink stone, carved with a pearl. It glows faintly."]}]});
+  Object.assign(AETERNA[6], {extras:[{kind:'statue', look:'town_clock', dx:-4, dy:3, lines:["The town clock, running backwards. A note pinned to it: \"BRASS TOWER, 2 MILES. ASHEN TOWER, BURNED. ASK THE THREE BEASTS.\"", "Huge paw prints in the dust under the clock. Three different kinds."]}]});
   // The way on from GENOVA: the conductor at GENOVA CENTRAL.
   (LOCATIONS.find(l=>l.name==='Genova Central').extras ||= []).push({kind:'gentleman', role:'guide_on', dx:-2, dy:2, lines:[]});
   for(const loc of AETERNA) getMap(loc);
@@ -7113,12 +7113,12 @@ Object.assign(WEATHER, {"Pale Way":'fog', "Hushed Road":'fog', "Lost Road":'fog'
   Object.assign(HOLLOW[0], {storyNpc:{kind:'rivalKai', lines:["KAI: \"CHAMPION... it's so quiet here. Even my footsteps sound sad.\"", "KAI: \"I stepped on a shadow by the road and everything went backwards. Left was right. My own reflection waved first.\"", "KAI: \"There's a grave in the churchyard with no name. Just a bunch of question marks. Creepy.\""]},
     extras:[
       {kind:'gentleman', role:'guide_back', dx:2, dy:1, lines:[]},
-      {kind:'statue', dx:-4, dy:-3, lines:["A grave with no name. The stone just says: \"?????????\" The date is \"MISSING\".", "Someone has left a RARE CANDY on it. And another. And another. Hundreds of them."]},
+      {kind:'statue', look:'nameless_grave', dx:-4, dy:-3, lines:["A grave with no name. The stone just says: \"?????????\" The date is \"MISSING\".", "Someone has left a RARE CANDY on it. And another. And another. Hundreds of them."]},
       {kind:'oldwoman', dx:4, dy:2, lines:["Lost someone? Everyone here has. That's why we came.", "They say the HOLLOW LANDS are as close as you can get without going over."]}]});
   Object.assign(HOLLOW[19], {rivalAfter:["The tower didn't open. The reverse side is too strong here.", "Dr. LORNE has gone through himself. Past DUSKFALL, the far side. The DISTORTION WORLD."],
-    extras:[{kind:'statue', at:'mid', dx:-3, dy:2, lines:["A grave with fresh flowers. \"CUBONE'S MOTHER. SHE PROTECTED HER CHILD.\"", "A faint tune is playing from somewhere. It sounds like an old town you've never been to."]}]});
+    extras:[{kind:'statue', look:'flower_grave', at:'mid', dx:-3, dy:2, lines:["A grave with fresh flowers. \"CUBONE'S MOTHER. SHE PROTECTED HER CHILD.\"", "A faint tune is playing from somewhere. It sounds like an old town you've never been to."]}]});
   Object.assign(HOLLOW[28], {rivalAfter:["She's not here. She was never here. I see it now.", "GIRATINA only keeps the balance. It doesn't keep people. I'm... I'm going home."],
-    extras:[{kind:'statue', role:'form', at:'mid', dx:3, dy:1, lines:["A shard of the reverse side, floating in the air. Your reflection in it has wings."]}]});
+    extras:[{kind:'statue', look:'reverse_shard', role:'form', at:'mid', dx:3, dy:1, lines:["A shard of the reverse side, floating in the air. Your reflection in it has wings."]}]});
   // The one who only lives on the reverse side: you.
   (HOLLOW[23].extras ||= []).push({kind:'player', at:'mid', dx:-4, dy:-1, lines:["...", "Your reflection just looks at you. Then it smiles, and waves goodbye."]});
   HOLLOW[26].treasure = ['toxicplate'];
@@ -7233,9 +7233,9 @@ Object.assign(WEATHER, {"Frost Peak":'snow', "Thunder Peak":'rain', "Ember Peak"
       {kind:'gentleman', role:'guide_back', dx:2, dy:1, lines:[]},
       {kind:'oldwoman', role:'season', dx:-3, dy:2, lines:[]},
       {kind:'clerk', role:'post', dx:4, dy:2, lines:[]},
-      {kind:'statue', dx:-4, dy:-3, lines:["A statue of three birds around a fourth, much larger one, rising from the sea.", "The plaque: \"THE WORLD SHALL TURN TO RUIN IF THE BALANCE OF FIRE, ICE AND LIGHTNING IS DISTURBED.\""]}]});
+      {kind:'statue', look:'three_birds', dx:-4, dy:-3, lines:["A statue of three birds around a fourth, much larger one, rising from the sea.", "The plaque: \"THE WORLD SHALL TURN TO RUIN IF THE BALANCE OF FIRE, ICE AND LIGHTNING IS DISTURBED.\""]}]});
   // The three peaks' orbs, and the old man who saw MOLTRES.
-  for(const [i, orb] of [[5, 'ICE'], [10, 'LIGHTNING'], [14, 'FIRE']]) (TEMPESTA[i].extras ||= []).push({kind:'statue', at:'mid', dx:-3, dy:2,
+  for(const [i, orb] of [[5, 'ICE'], [10, 'LIGHTNING'], [14, 'FIRE']]) (TEMPESTA[i].extras ||= []).push({kind:'statue', look:'orb_'+orb.toLowerCase(), at:'mid', dx:-3, dy:2,
     lines:[`A glass orb on a stone stand: the ${orb} ORB. It's dim.`, "Words carved on the stand: \"GATHER THE THREE TREASURES, AND THE BEAST OF THE SEA SHALL SING.\""]});
   (TEMPESTA[13].extras ||= []).push({kind:'gentleman', at:'spawn', dx:2, dy:-2, lines:["I saw MOLTRES once, as a boy. It flew so close, a feather fell right in my hand.", "I've kept it all these years. It's still warm. See?"]});
   Object.assign(TEMPESTA[5], {rivalAfter:["The lamp's off... ARTICUNO's free. Feel that? Snow.", "HELIOS says the cold killed his crops. I just wanted to help him."]});
@@ -7243,7 +7243,7 @@ Object.assign(WEATHER, {"Frost Peak":'snow', "Thunder Peak":'rain', "Ember Peak"
   Object.assign(TEMPESTA[14], {rivalAfter:["My village burned every autumn. I thought if I stopped autumn...", "But the fields need the fire. The seed needs the winter. I see that now. Go on. Let the year turn."]});
   Object.assign(TEMPESTA[21], {rivalAfter:["My fortress! My collection! Bah. The beast doesn't even want me.", "It only rises for TEMPESTA's CHAMPION, they say. Hmph."]});
   // The mirror at the festival: the three birds' Galarian forms, once you're CHAMPION.
-  (TEMPESTA[19].extras ||= []).push({kind:'statue', role:'form', at:'spawn', dx:3, dy:-2, lines:["A tall festival mirror. In it, the three birds look different: darker, stranger."]});
+  (TEMPESTA[19].extras ||= []).push({kind:'statue', look:'festival_mirror', role:'form', at:'spawn', dx:3, dy:-2, lines:["A tall festival mirror. In it, the three birds look different: darker, stranger."]});
   TEMPESTA[13].treasure = ['insectplate'];
   TEMPESTA[8].treasure = ['fistplate'];
   // The way on from the HOLLOW LANDS: the balloonist at GLOAMING.
@@ -7326,15 +7326,15 @@ const ORIGIN = [
   Object.assign(ORIGIN[0], {storyNpc:{kind:'rivalKai', lines:["KAI: \"CHAMPION. We made it. Look down there... you can see every land we've been to.\"", "KAI: \"The pilgrims say every CHAMPION we beat is waiting up the mountain. All eight of them. Again.\"", "KAI: \"I'm going on ahead. Meet me at the top. I mean it this time.\""]},
     extras:[
       {kind:'gentleman', role:'guide_back', dx:2, dy:1, lines:[]},
-      {kind:'statue', dx:-4, dy:-3, lines:["A great stone ring with eighteen empty sockets, one for each plate.", "Carved under it: \"FROM THE ORIGINAL ONE CAME ALL THINGS. RETURN WHAT WAS SCATTERED.\""]},
+      {kind:'statue', look:'plate_ring', dx:-4, dy:-3, lines:["A great stone ring with eighteen empty sockets, one for each plate.", "Carved under it: \"FROM THE ORIGINAL ONE CAME ALL THINGS. RETURN WHAT WAS SCATTERED.\""]},
       {kind:'monkOrigin', dx:4, dy:2, lines:["Eighteen plates, scattered over eight lands. Two in each.", "The first three lands' plates were never found. Look for the plate shrines in their oldest towns."]}]});
   Object.assign(ORIGIN[17], {rivalAfter:["You've earned it. All eight lands, and every one of their CHAMPIONS.", "If you hold every plate, ARCEUS will answer you. If not... it will wait. It's very patient."],
-    extras:[{kind:'statue', role:'altar', at:'mid', dx:3, dy:1, lines:["The altar of origin. Eighteen grooves, each the shape of a plate."]}]});
+    extras:[{kind:'statue', look:'origin_altar', role:'altar', at:'mid', dx:3, dy:1, lines:["The altar of origin. Eighteen grooves, each the shape of a plate."]}]});
   ORIGIN[11].treasure = ['pixieplate'];
   ORIGIN[15].treasure = ['blankplate'];
   // VELLORIN's, CALDERRA's and the ISLES' plates, at shrines in their first towns.
   for(const [town, a, b] of [["Duskmere Hollow", 'FLAME', 'SPLASH'], ["Port Calder", 'MEADOW', 'ICICLE'], ["Port Keel", 'EARTH', 'DREAD']])
-    (LOCATIONS.find(l=>l.name===town).extras ||= []).push({kind:'statue', role:'plate', dx:-2, dy:4, lines:[`A small, very old shrine. Two hollows in its stone are shaped like plates: the ${a} PLATE and the ${b} PLATE.`]});
+    (LOCATIONS.find(l=>l.name===town).extras ||= []).push({kind:'statue', look:'plate_shrine', role:'plate', dx:-2, dy:4, lines:[`A small, very old shrine. Two hollows in its stone are shaped like plates: the ${a} PLATE and the ${b} PLATE.`]});
   // The way up from TEMPESTA: the mountain guide at FAIRHAVEN.
   (LOCATIONS.find(l=>l.name==='Fairhaven').extras ||= []).push({kind:'hiker', role:'guide_on', dx:-2, dy:3, lines:[]});
   for(const loc of ORIGIN) getMap(loc);

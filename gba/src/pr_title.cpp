@@ -35,7 +35,7 @@ namespace pr
 namespace
 {
     constexpr int start_poke_balls = 10;     // introFinish(): items {pokeball: 10}
-    constexpr const char* build_version = "9.3.2";
+    constexpr const char* build_version = "9.4.1";
 
     BN_DATA_EWRAM game_state saved_preview;
 
@@ -412,24 +412,25 @@ bool title_scene()
         sky.set_priority(3);
         bn::regular_bg_ptr logo = bn::regular_bg_items::title_logo.create_bg(0, -80);
         logo.set_priority(2);
-        // Nine twinkles, one for each land, and HO-OH crossing the dusk now and then.
-        constexpr int spark_xy[9][2] = { { -100, -66 }, { -62, -74 }, { -24, -70 }, { 30, -76 }, { 70, -68 },
-                                         { 104, -60 }, { -84, 0 }, { 0, -4 }, { 88, 2 } };
+        // Nine twinkles, one on each land's gem in the logo (tools/art/title_art.py GEM_X, GEM_Y), and HO-OH
+        // crossing the dawn now and then.
+        constexpr int spark_xy[9][2] = { { -72, -35 }, { -54, -35 }, { -36, -35 }, { -18, -35 }, { 0, -35 },
+                                         { 18, -35 }, { 36, -35 }, { 54, -35 }, { 72, -35 } };
         bn::vector<bn::sprite_ptr, 9> sparks;
         int spark_t[9];
         for(int i = 0; i < 9; ++i)
         {
             sparks.push_back(bn::sprite_items::title_spark.create_sprite(spark_xy[i][0], spark_xy[i][1]));
-            sparks.back().set_bg_priority(3);
+            sparks.back().set_bg_priority(2);
             sparks.back().set_visible(false);
-            spark_t[i] = -i * 23;
+            spark_t[i] = -60 - i * 23;     // after the logo has landed
         }
         bn::sprite_ptr hooh = bn::sprite_items::title_hooh.create_sprite(-200, -40);
         hooh.set_bg_priority(3);
         hooh.set_horizontal_flip(true);
         bn::vector<bn::sprite_ptr, 32> title;
         bn::vector<bn::sprite_ptr, 16> press;
-        u.print(120, 100, "PRESS START", text_color::WHITE, press);
+        u.print(120, 120, "PRESS START", text_color::WHITE, press);
         u.text().set_left_alignment();
         // The message of the day (news.json motd): centred, or scrolling by if it's too wide.
         bn::vector<bn::sprite_ptr, 40> motd;

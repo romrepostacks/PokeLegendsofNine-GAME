@@ -88,6 +88,12 @@ namespace
     walk_back pending_walk;
     int shown_place = -1;       // owShownLoc: the plank shows each time you arrive somewhere new
 
+    // 9.4.1: a landmark (a statue_<look> kind) is 32x32 and stands on its tile and the one to its right.
+    bool wide(const actor& a)
+    {
+        return ! a.legend && person_sprites[int(a.kind)]->shape_size().width() == 32;
+    }
+
     // Sprite sheet frames: down 0-2, up 3-5, left 6-8 (right is left mirrored); 0 stands, 1 and 2 step.
     void set_frame(bn::sprite_ptr& sprite, person_kind kind, direction d, int step)
     {
@@ -268,8 +274,8 @@ int overworld::actor_at(int tx, int ty) const
     for(int i = 0; i < _actors.size(); ++i)
     {
         const actor& a = _actors[i];
-        // A stepping actor already holds the tile it's moving to.
-        if(a.x == tx && a.y == ty)
+        // A stepping actor already holds the tile it's moving to; a landmark (wide) holds the tile to its right too.
+        if((a.x == tx || (a.x + 1 == tx && wide(a))) && a.y == ty)
         {
             return i;
         }
@@ -791,7 +797,7 @@ void overworld::refresh(bool force)
             a.sprite->set_z_order(-bn::clamp((a.y * 16 - _cam_y + 8 + 32) >> 4, 0, 16) - 2);
             continue;
         }
-        place_actor(*a.sprite, a.x * 16 + ox, a.y * 16 + oy);
+        place_actor(*a.sprite, a.x * 16 + ox + (wide(a) ? 8 : 0), a.y * 16 + oy);
     }
     auto place_grass = [&](bn::sprite_ptr& s, int tx, int ty)
     {
