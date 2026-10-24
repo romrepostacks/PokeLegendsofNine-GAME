@@ -129,6 +129,7 @@ public:
     void load_actors();
     void make_sprite(actor& a);
     void place_actor(bn::sprite_ptr& sprite, int wx, int wy, int lift = 0);
+    [[nodiscard]] int perch(const actor& a) const;
     void set_player_frame(int step, bool run = false);
     void update_weather(bool smooth = false);
     void set_weather(int key, bool fade);

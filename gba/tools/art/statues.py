@@ -1,6 +1,7 @@
 """The landmarks (9.4.1): every statue, clock, altar, grave, orb and shrine a region's data places as kind 'statue'
-gets its own 32x32 look, hand pixelled in the overworld's style (flat colours, light from the top left, the shared
-#262638 outline). Each stands on two tiles side by side; the top half rises into the row above.
+gets its own look, hand pixelled in the overworld's style (flat colours, light from the top left, the shared #262638
+outline); statues of people and Pokémon are cast from their game sprites. A 32x32 look stands on two tiles side by
+side, a 64x64 one (a town square's centre piece) on four by two; the rest rises into the rows above.
     python3 statues.py [OUT]       -> OUT/<look>.png (default gba/data/statues/) and OUT/../statues_sheet.png"""
 import math, os, sys
 from PIL import Image
@@ -22,12 +23,13 @@ RUNE = (58, 176, 168)
 WHITE = (248, 248, 248)
 
 class S:
-    def __init__(s):
-        s.px = [[None] * 32 for _ in range(32)]
+    def __init__(s, w=32, h=32):
+        s.w, s.h = w, h
+        s.px = [[None] * w for _ in range(h)]
     def set(s, x, y, c):
-        if 0 <= x < 32 and 0 <= y < 32 and c: s.px[y][x] = c
+        if 0 <= x < s.w and 0 <= y < s.h and c: s.px[y][x] = c
     def get(s, x, y):
-        return s.px[y][x] if 0 <= x < 32 and 0 <= y < 32 else None
+        return s.px[y][x] if 0 <= x < s.w and 0 <= y < s.h else None
     def rect(s, x0, y0, x1, y1, c):
         for y in range(y0, y1 + 1):
             for x in range(x0, x1 + 1): s.set(x, y, c)
@@ -60,56 +62,16 @@ class S:
             for a, b in zip(xs[::2], xs[1::2]):
                 for x in range(round(a), round(b)): s.set(x, y, c)
     def outline(s):
-        add = [(x, y) for y in range(32) for x in range(32) if s.px[y][x] is None and any(
+        add = [(x, y) for y in range(s.h) for x in range(s.w) if s.px[y][x] is None and any(
             s.get(x + dx, y + dy) not in (None, O) for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)))]
         for x, y in add: s.px[y][x] = O
         return s
     def image(s):
-        im = Image.new('RGBA', (32, 32), (0, 0, 0, 0))
-        for y in range(32):
-            for x in range(32):
+        im = Image.new('RGBA', (s.w, s.h), (0, 0, 0, 0))
+        for y in range(s.h):
+            for x in range(s.w):
                 if s.px[y][x]: im.putpixel((x, y), s.px[y][x] + (255,))
         return im
-
-def plinth(s, x0, x1, top, R=STONE):
-    """A two-step stone plinth from row `top` to the ground (row 30)."""
-    s.box(x0 + 2, top, x1 - 2, top + 4, R)
-    s.box(x0, top + 5, x1, 30, R)
-    s.rect(x0 + 1, top + 6, x1 - 1, top + 6, R[3])
-
-def figure(s, cx, top, R, coat=False):
-    """A person carved or cast: head, shoulders, arms at the sides, legs, lit from the top left."""
-    s.disc(cx, top + 3, 3, 3.2, R)
-    s.rect(cx - 1, top + 6, cx + 1, top + 6, R[1])                     # neck
-    s.poly([(cx - 5, top + 8), (cx + 5, top + 8), (cx + 4, top + 16), (cx - 4, top + 16)], R[2])   # body
-    s.rect(cx - 5, top + 7, cx + 5, top + 7, R[3])                     # shoulders catch the light
-    s.rect(cx - 6, top + 8, cx - 6, top + 14, R[3]); s.rect(cx + 6, top + 8, cx + 6, top + 14, R[1])  # arms
-    if coat:
-        s.poly([(cx - 5, top + 15), (cx + 5, top + 15), (cx + 6, top + 20), (cx - 6, top + 20)], R[2])
-        s.line(cx, top + 9, cx, top + 20, R[1])
-    s.rect(cx - 3, top + 17, cx - 1, top + 21, R[2]); s.rect(cx + 1, top + 17, cx + 3, top + 21, R[1])  # legs
-    s.rect(cx + 1, top + 8, cx + 4, top + 16, R[1]) if not coat else None   # the shaded side
-
-def stone_figure(s, people_frame):
-    """WREN: the rival's standing frame (16x21, from the game's people), turned to stone, on the plinth."""
-    for y, row in enumerate(people_frame):
-        for x, c in enumerate(row):
-            if c:
-                l = (c[0] * 3 + c[1] * 6 + c[2]) // 10
-                s.set(8 + x, 1 + y, STONE[min(4, 1 + l * 4 // 256)] if sum(c) > 90 else STONE[0])
-
-# ---------------------------------------------------------------- the looks
-def wren(rival=None):
-    s = S()
-    plinth(s, 3, 28, 21)
-    if rival:
-        stone_figure(s, rival)
-    else:
-        figure(s, 16, 0, STONE)
-    for k in range(8):                                  # the eight GYM LEADERS carved round the base
-        x = 6 + k * 3
-        s.set(x, 28, STONE[1]); s.set(x, 27, STONE[1]); s.set(x, 26, STONE[3])
-    return s
 
 def hooh_figurehead():
     s = S()
@@ -123,61 +85,6 @@ def hooh_figurehead():
     s.rect(14, 3, 17, 3, (200, 64, 48)); s.set(13, 2, (200, 64, 48)); s.set(15, 1, GOLD[2])   # crest
     s.rect(12, 20, 19, 21, GOLD[1]); s.rect(12, 20, 19, 20, GOLD[2])                   # the brass band
     s.rect(13, 25, 18, 27, GOLD[1]); s.rect(14, 26, 17, 26, GOLD[3])                   # the plaque
-    return s
-
-def emerald_carving():
-    s = S()
-    s.poly([(1, 14), (29, 10), (31, 30), (2, 30)], STONE[2])                # a fallen block, tilted
-    s.line(1, 14, 29, 10, STONE[4]); s.line(1, 14, 2, 30, STONE[3]); s.line(29, 10, 31, 30, STONE[1])
-    s.rect(3, 29, 30, 30, STONE[1])
-    for x, y in ((6, 27), (20, 28), (27, 25)): s.set(x, y, MOSS[1]); s.set(x + 1, y, MOSS[2])
-    s.disc(8, 21, 4, 4, [(152, 48, 40), (200, 72, 56), (232, 112, 80)])     # GROUDON's sign
-    s.disc(24, 20, 4, 4, [(40, 72, 152), (64, 112, 200), (112, 160, 232)])  # KYOGRE's
-    for i in range(13):                                                     # RAYQUAZA between, coiling
-        x = 10 + i; y = 17 + round(2.4 * math.sin(i / 2.0))
-        s.set(x, y, (48, 160, 96)); s.set(x, y + 1, (32, 112, 72))
-    s.set(23, 15, GOLD[2])
-    return s
-
-def launch_board():
-    s = S()
-    for lx in (5, 24): s.box(lx, 20, lx + 2, 30, STEEL)
-    s.box(1, 3, 30, 21, STEEL)
-    s.rect(3, 5, 28, 19, (24, 28, 40))                  # the screen
-    for x, y in ((6, 8), (6, 9)): pass
-    digits = {'4': ['1.1', '1.1', '111', '..1', '..1'], '3': ['111', '..1', '.11', '..1', '111'],
-              '2': ['111', '..1', '111', '1..', '111'], '1': ['.1.', '11.', '.1.', '.1.', '111']}
-    for k, ch in enumerate('4321'):
-        for y, row in enumerate(digits[ch]):
-            for x, c in enumerate(row):
-                if c == '1': s.set(5 + k * 4 + x, 7 + y, (248, 168, 64) if k == 0 else (96, 224, 120))
-    # a little rocket, going up
-    s.rect(24, 8, 25, 13, WHITE); s.set(24, 7, WHITE); s.set(25, 7, (200, 64, 48))
-    s.set(23, 13, (200, 64, 48)); s.set(26, 13, (200, 64, 48)); s.set(24, 14, (248, 168, 64)); s.set(25, 15, (248, 216, 96))
-    s.rect(5, 15, 21, 16, (64, 112, 200)); s.rect(5, 15, 15, 16, (112, 160, 232))  # the countdown bar
-    return s
-
-def meteor_shard():
-    s = S()
-    V = [(56, 40, 80), (88, 64, 120), (128, 96, 168), (176, 144, 216)]
-    s.poly([(12, 30), (14, 6), (19, 2), (21, 30)], V[1])                     # the big shard
-    s.poly([(14, 30), (15, 7), (17, 5), (17, 30)], V[2])
-    s.line(15, 6, 15, 29, V[3])
-    s.poly([(5, 30), (6, 18), (10, 15), (12, 30)], V[1]); s.line(7, 18, 7, 29, V[2])
-    s.poly([(21, 30), (23, 14), (27, 18), (28, 30)], V[0]); s.line(23, 15, 23, 29, V[2])
-    for x, y in ((16, 12), (17, 18), (8, 22), (24, 21), (16, 24)):
-        s.set(x, y, (120, 232, 232)); s.set(x, y + 1, (64, 176, 200))       # the glowing core
-    s.rect(3, 30, 29, 30, STONE[1])                                         # the scorched ground it stands in
-    return s
-
-def arden():
-    s = S()
-    plinth(s, 4, 27, 21)
-    figure(s, 16, 0, BRONZE, coat=True)
-    s.rect(11, 25, 20, 28, GOLD[1]); s.rect(12, 26, 19, 26, GOLD[3]); s.rect(12, 27, 17, 27, GOLD[0])   # the plaque
-    s.set(9, 29, STONE[0]); s.set(10, 30, STONE[0]); s.set(22, 29, STONE[0])                          # the scratches
-    s.set(13, 3, O); s.set(18, 3, O)                     # spectacles glint
-    s.rect(13, 2, 18, 2, BRONZE[0])
     return s
 
 def lab_terminal():
@@ -221,21 +128,6 @@ def clone_tank():
     s.rect(11, 28, 20, 28, (248, 168, 64))                        # the warning label
     return s
 
-def church_clock():
-    s = S()
-    s.box(2, 25, 29, 30, STONE)                           # the steps
-    s.box(9, 8, 22, 25, STONE)                            # the tower, front
-    s.poly([(22, 9), (27, 12), (27, 26), (22, 26)], STONE[1])   # its side, in shade
-    s.poly([(8, 9), (15, 0), (23, 9)], (160, 72, 64)); s.line(8, 9, 15, 0, (200, 104, 88))
-    s.poly([(23, 9), (15, 0), (28, 12)], (120, 52, 48))
-    s.disc(15.5, 14.5, 4.5, 4.5, [(208, 200, 184), (236, 232, 216), (248, 248, 240)], lit=False)   # the front face
-    s.set(15, 14, O); s.line(15, 14, 15, 11, O); s.line(15, 14, 17, 14, O)
-    s.disc(24.5, 16, 1.6, 3.5, [(176, 168, 152), (208, 200, 184)], lit=False)                       # the side face
-    s.set(24, 15, O); s.set(25, 17, O)
-    s.box(13, 20, 18, 25, WOOD)                           # the door
-    s.set(15, 4, GOLD[2]); s.set(16, 4, GOLD[1])          # a bell
-    return s
-
 def wooden_shrine():
     s = S()
     W = [(140, 96, 56), (184, 136, 84), (220, 180, 120), (240, 212, 160)]     # fresh wood, paler than old
@@ -248,71 +140,8 @@ def wooden_shrine():
     s.set(15, 23, (152, 232, 120)); s.set(16, 22, (200, 255, 176))           # a small green glint inside
     return s
 
-def ancient_tree():
-    s = S()
-    s.disc(16, 9, 15, 9, LEAF)                            # the crown
-    for x, y in ((8, 5), (20, 4), (13, 10), (24, 11), (5, 12)): s.set(x, y, LEAF[3]); s.set(x + 1, y, LEAF[3])
-    s.poly([(11, 16), (21, 16), (22, 27), (10, 27)], WOOD[1])                 # the trunk
-    s.rect(11, 16, 13, 27, WOOD[2]); s.line(17, 18, 18, 26, WOOD[0])
-    for pts in (((10, 25), (3, 30)), ((12, 27), (8, 30)), ((21, 25), (29, 30)), ((19, 27), (23, 30))):   # roots
-        s.line(*pts[0], *pts[1], WOOD[1]); s.line(pts[0][0], pts[0][1] - 1, pts[1][0], pts[1][1] - 1, WOOD[2])
-    s.set(16, 29, (232, 160, 232)); s.set(15, 29, WHITE)  # the plate's glint in its roots
-    return s
-
-def altar(gem):
-    def make():
-        s = S()
-        R = [(40, 56, 112), (64, 88, 160), (104, 136, 208), (160, 188, 236)] if gem == 'diamond' else \
-            [(120, 56, 96), (176, 88, 136), (220, 136, 176), (244, 192, 216)]
-        s.box(3, 22, 28, 30, R)
-        s.box(6, 8, 25, 22, R)
-        s.box(4, 5, 27, 9, R)
-        if gem == 'diamond':
-            s.poly([(16, 11), (21, 16), (16, 21), (11, 16)], (176, 232, 255)); s.line(16, 11, 11, 16, WHITE)
-        else:
-            s.disc(16, 16, 4.5, 4.5, [(232, 168, 216), (248, 208, 232), (255, 240, 248)])
-        for x in (9, 23): s.set(x, 26, R[3]); s.set(x, 27, R[3])
-        return s
-    return make
-
-def town_clock():
-    s = S()
-    s.box(8, 24, 23, 30, [(120, 64, 52), (164, 92, 72), (200, 128, 100)])   # the brick base
-    for x in range(10, 22, 4): s.set(x, 27, (120, 64, 52))
-    s.box(14, 13, 17, 24, STEEL)                          # the post
-    s.disc(15.5, 7.5, 7, 7, [(32, 56, 64), (48, 88, 96), (72, 120, 128)])  # the iron case
-    s.disc(15.5, 7.5, 5, 5, [(220, 214, 196), (240, 236, 220), (252, 252, 244)], lit=False)
-    s.set(15, 7, O); s.line(15, 7, 15, 4, O); s.line(15, 7, 13, 9, O)     # hands, running backwards
-    s.set(9, 3, (152, 232, 255)); s.set(22, 12, (152, 232, 255))          # a shimmer of time
-    for x in (5, 26): s.set(x, 29, (184, 152, 104)); s.set(x, 30, (184, 152, 104))   # paw prints in the dust
-    return s
-
 def candy(s, x, y):
     s.set(x, y, (152, 104, 200)); s.set(x + 1, y, WHITE); s.set(x - 1, y, (120, 80, 168)); s.set(x + 2, y, (120, 80, 168))
-
-def nameless_grave():
-    s = S()
-    s.poly([(9, 30), (9, 8), (12, 4), (19, 4), (22, 8), (22, 30)], STONE[2])
-    s.line(9, 8, 12, 4, STONE[4]); s.line(12, 4, 19, 4, STONE[4]); s.line(9, 8, 9, 29, STONE[3]); s.line(22, 8, 22, 29, STONE[1])
-    q = ['.111.', '1...1', '...1.', '..1..', '.....', '..1..']                 # "?????????"
-    for y, row in enumerate(q):
-        for x, c in enumerate(row):
-            if c == '1': s.set(14 + x, 9 + y, STONE[0])
-    s.rect(11, 18, 20, 18, STONE[1])
-    for x, y in ((4, 28), (7, 30), (24, 29), (27, 27), (3, 30), (26, 30), (13, 29), (18, 30), (25, 24)):   # RARE CANDY
-        candy(s, x, y)
-    return s
-
-def flower_grave():
-    s = S()
-    s.poly([(10, 28), (10, 10), (13, 6), (18, 6), (21, 10), (21, 28)], STONE[2])
-    s.line(10, 10, 13, 6, STONE[4]); s.line(13, 6, 18, 6, STONE[4]); s.line(10, 10, 10, 27, STONE[3]); s.line(21, 10, 21, 27, STONE[1])
-    s.rect(12, 13, 19, 13, STONE[1]); s.rect(12, 16, 17, 16, STONE[1]); s.rect(12, 19, 18, 19, STONE[1])
-    s.box(8, 27, 23, 30, STONE)
-    for x, c in ((4, (248, 120, 152)), (7, (255, 232, 96)), (24, (248, 120, 152)), (27, (176, 136, 248))):  # fresh flowers
-        s.line(x, 30, x, 26, LEAF[1]); s.set(x - 1, 27, LEAF[2])
-        s.set(x, 24, c); s.set(x - 1, 25, c); s.set(x + 1, 25, c); s.set(x, 26, c); s.set(x, 25, (255, 248, 200))
-    return s
 
 def reverse_shard():
     s = S()
@@ -324,20 +153,6 @@ def reverse_shard():
     for (x, y) in ((14, 12), (18, 12), (16, 11)): s.set(x, y, (160, 120, 220))   # your reflection, with wings
     s.rect(11, 29, 21, 30, (56, 40, 72)); s.rect(13, 28, 19, 28, (56, 40, 72))   # its shadow on the ground
     for x, y in ((6, 5), (27, 16), (7, 18), (25, 4)): s.set(x, y, V[3])
-    return s
-
-def three_birds():
-    s = S()
-    plinth(s, 2, 29, 23)
-    for x in range(4, 28):                                # stone waves
-        s.set(x, 22 - (1 if (x // 3) % 2 else 0), STONE[3])
-    s.disc(16, 13, 4, 7, STONE)                           # LUGIA rising in the middle
-    s.poly([(12, 9), (3, 3), (6, 12)], STONE[3]); s.poly([(20, 9), (29, 3), (26, 12)], STONE[2])
-    s.disc(16, 5, 2.5, 2.5, STONE); s.set(17, 5, (88, 120, 200))
-    for cx, cy, eye in ((5, 15, (120, 200, 248)), (16, 20, (248, 216, 64)), (27, 15, (248, 104, 64))):   # the three birds
-        s.line(cx - 3, cy - 2, cx, cy, STONE[3]); s.line(cx + 3, cy - 2, cx, cy, STONE[2])   # wings up
-        s.line(cx - 4, cy - 3, cx - 3, cy - 3, STONE[3]); s.line(cx + 3, cy - 3, cx + 4, cy - 3, STONE[2])
-        s.rect(cx, cy, cx, cy + 2, STONE[2]); s.set(cx, cy - 1, eye)
     return s
 
 def orb(col):
@@ -397,14 +212,263 @@ def plate_shrine():
     for x, y in ((8, 25), (23, 15)): s.set(x, y, MOSS[1])
     return s
 
-def rival_frame():
-    """The rival's standing frame from the last build's export (gba/generated), if there is one."""
+ROOT = os.path.join(HERE, '..', '..', '..')
+
+def mon(num, size):
+    """An official Pokémon sprite, cropped and scaled so its longer side is `size` (only ever carved, never shown as is)."""
+    im = Image.open(os.path.join(ROOT, 'sprites', 'pokemon', '%d.png' % num)).convert('RGBA')
+    im = im.crop(im.getbbox())
+    k = size / max(im.size)
+    size = (max(1, round(im.width * k)), max(1, round(im.height * k)))
+    # Shrunk smoothly, then the edge made hard again: nearest-neighbour drops the sprite's lines at this scale.
+    rgb = im.convert('RGB').resize(size, Image.BOX)
+    alpha = im.getchannel('A').resize(size, Image.BOX).point(lambda a: 255 if a >= 110 else 0)
+    rgb.putalpha(alpha)
+    return rgb
+
+def paste(s, im, x, y, ramp=None, flip=False):
+    """Draws a picture at (x, y): as it is, or carved in `ramp`: one face, lit where the shape faces the top left,
+    shaded where it faces the bottom right, its own dark lines cut in."""
+    if flip:
+        im = im.transpose(Image.FLIP_LEFT_RIGHT)
+    on = lambda u, v: 0 <= u < im.width and 0 <= v < im.height and im.getpixel((u, v))[3] >= 128
+    for v in range(im.height):
+        for u in range(im.width):
+            if not on(u, v):
+                continue
+            r, g, b, a = im.getpixel((u, v))
+            if ramp is None:
+                s.set(x + u, y + v, (r, g, b))
+                continue
+            l = (r * 3 + g * 6 + b) // 10
+            c = ramp[0] if l < 60 else ramp[1] if l < 150 else ramp[2]
+            if not on(u - 1, v - 1) or not on(u, v - 1):
+                c = ramp[3]
+            elif not on(u + 1, v + 1) or not on(u + 1, v):
+                c = ramp[1]
+            s.set(x + u, y + v, c)
+
+def person(kind):
+    """A person's standing frame from the last build's export (gba/generated), if there is one."""
     import json
     p = os.path.join(HERE, '..', '..', 'generated', 'export', 'data.json')
-    return json.load(open(p, encoding='utf8'))['people']['rival']['down'][0]['px'] if os.path.exists(p) else None
+    return json.load(open(p, encoding='utf8'))['people'][kind]['down'][0]['px'] if os.path.exists(p) else None
+
+def cast(s, frame, x, y, R, scale=2):
+    """A person cast in stone or bronze at twice their size: their frame's light and dark on ramp R."""
+    for v, row in enumerate(frame):
+        for u, c in enumerate(row):
+            if c:
+                l = (c[0] * 3 + c[1] * 6 + c[2]) // 10
+                col = R[0] if sum(c) < 90 else R[min(len(R) - 1, 1 + l * (len(R) - 1) // 256)]
+                s.rect(x + u * scale, y + v * scale, x + u * scale + scale - 1, y + v * scale + scale - 1, col)
+
+def plinth(s, x0, x1, top, R=STONE, bottom=None):
+    """A two-step plinth from row `top` to the ground."""
+    bottom = s.h - 2 if bottom is None else bottom
+    mid = top + (bottom - top) // 3
+    s.box(x0 + 3, top, x1 - 3, mid, R)
+    s.box(x0, mid + 1, x1, bottom, R)
+    s.rect(x0 + 1, mid + 2, x1 - 1, mid + 2, R[3])
+
+# ---------------------------------------------------------------- the town squares' centre pieces (64x64)
+def wren():
+    s = S(64, 64)
+    plinth(s, 6, 57, 42)
+    f = person('rival')
+    if f:
+        cast(s, f, 16, 0, STONE)
+    for k in range(8):                                  # the eight GYM LEADERS carved round the base, small figures
+        x = 10 + k * 6
+        s.set(x + 1, 52, STONE[3]); s.rect(x, 53, x + 2, 55, STONE[1]); s.rect(x, 56, x, 57, STONE[1]); s.rect(x + 2, 56, x + 2, 57, STONE[1])
+    s.rect(24, 59, 39, 60, GOLD[1]); s.rect(25, 59, 38, 59, GOLD[2])     # the name plate
+    return s
+
+def arden():
+    s = S(64, 64)
+    plinth(s, 6, 57, 42)
+    f = person('prof')
+    if f:
+        cast(s, f, 16, 0, BRONZE)
+    s.rect(22, 50, 41, 56, GOLD[1]); s.rect(23, 51, 40, 51, GOLD[3])       # the plaque
+    for x in range(24, 39, 3): s.rect(x, 53, x + 1, 53, GOLD[0])
+    for x, y in ((14, 58), (15, 59), (17, 58), (46, 59), (47, 58)): s.set(x, y, STONE[0])   # what's scratched under it
+    return s
+
+def launch_board():
+    s = S(64, 64)
+    s.box(2, 56, 61, 62, STONE)                                            # the pad
+    for lx in (8, 32): s.box(lx, 34, lx + 3, 56, STEEL)                    # legs
+    s.box(1, 2, 43, 35, STEEL)                                             # the board
+    s.rect(4, 5, 40, 32, (20, 24, 36))
+    s.rect(6, 7, 38, 9, (64, 112, 200)); s.rect(6, 7, 20, 9, (112, 160, 232))   # NEXT LAUNCH
+    big = {'4': ['1..1', '1..1', '1111', '...1', '...1'], '3': ['111.', '...1', '.11.', '...1', '111.'],
+           '2': ['111.', '...1', '.11.', '1...', '1111'], '1': ['.1..', '11..', '.1..', '.1..', '111.']}
+    for k, ch in enumerate('4321'):
+        for y, row in enumerate(big[ch]):
+            for x, c in enumerate(row):
+                if c == '1':
+                    s.rect(6 + k * 8 + x * 2 // 1 - x, 13 + y * 2, 6 + k * 8 + x, 14 + y * 2, (248, 168, 64) if k == 0 else (96, 224, 120))
+    s.rect(6, 27, 38, 29, (48, 56, 80)); s.rect(6, 27, 28, 29, (248, 168, 64))  # the countdown bar
+    # The rocket on its own stand, nose to the sky.
+    s.box(46, 50, 61, 56, STEEL)
+    s.rect(50, 14, 57, 49, WHITE); s.rect(50, 14, 51, 49, (208, 214, 224)); s.rect(56, 14, 57, 49, (176, 184, 200))
+    s.poly([(50, 14), (53, 4), (54, 4), (58, 14)], (200, 64, 48)); s.line(51, 13, 53, 5, (232, 104, 80))
+    s.disc(53.5, 24, 2.5, 2.5, [(40, 72, 152), (64, 112, 200), (112, 160, 232)])
+    s.poly([(50, 40), (46, 50), (50, 47)], (200, 64, 48)); s.poly([(58, 40), (62, 50), (58, 47)], (168, 48, 40))
+    s.rect(52, 34, 55, 34, (200, 64, 48))
+    return s
+
+def three_birds():
+    s = S(64, 64)
+    # A round fountain: stone basin, water, LUGIA rising from it, the three birds around the rim.
+    s.disc(31.5, 54, 30, 9, STONE)
+    s.disc(31.5, 52, 25, 6, [(56, 120, 200), (88, 152, 224), (136, 192, 240)], lit=False)
+    for x, y in ((14, 52), (26, 50), (40, 53), (50, 51)): s.rect(x, y, x + 3, y, (200, 232, 252))
+    s.rect(29, 42, 34, 51, (88, 152, 224)); s.rect(30, 42, 31, 51, (136, 192, 240))   # the spout it rises on
+    paste(s, mon(249, 46), 14, 2, [(84, 88, 108), (150, 156, 176), (212, 216, 228), (244, 246, 250)])   # LUGIA, pale stone
+    tint = lambda c: [tuple(int(v * f) for v in c) for f in (0.45, 0.7, 0.9, 1.0)]
+    for num, x, y, flip, c in ((144, 0, 36, False, (176, 204, 228)), (145, 46, 36, True, (224, 212, 156)),
+                               (146, 0, 4, False, (224, 172, 148))):     # the birds, stone with a hint of each one
+        paste(s, mon(num, 18), x, y, tint(c), flip)
+    return s
+
+def town_clock():
+    s = S(64, 64)
+    s.box(14, 52, 49, 62, [(120, 64, 52), (164, 92, 72), (200, 128, 100)])   # the brick base
+    for y in (55, 58):
+        for x in range(16 + (y % 2) * 2, 48, 6): s.rect(x, y, x, y + 1, (120, 64, 52))
+    s.box(27, 36, 36, 52, STEEL)                                           # the column
+    s.rect(29, 38, 30, 50, STEEL[3])
+    s.disc(31.5, 19.5, 18, 18, [(32, 56, 64), (48, 88, 96), (72, 120, 128), (104, 152, 160)])  # the iron case
+    s.disc(31.5, 19.5, 14.5, 14.5, [(220, 214, 196), (240, 236, 220), (252, 252, 244)], lit=False)
+    for k in range(12):                                                    # the hours
+        a = 2 * math.pi * k / 12
+        x, y = round(31.5 + 12 * math.sin(a)), round(19.5 - 12 * math.cos(a))
+        s.set(x, y, O)
+        if k % 3 == 0: s.set(x + (1 if k == 9 else -1 if k == 3 else 0), y + (1 if k == 0 else -1 if k == 6 else 0), O)
+    s.line(31, 19, 31, 10, O); s.line(31, 19, 25, 23, O); s.set(31, 19, (200, 64, 48))   # hands, going backwards
+    for x, y in ((28, 1), (35, 1)): s.rect(x, y, x + 1, y + 1, GOLD[2])
+    s.poly([(26, 2), (31, 0), (37, 2)], GOLD[1])
+    for x, y in ((6, 10), (56, 14), (10, 30), (54, 32)): s.set(x, y, (152, 232, 255)); s.set(x + 1, y + 1, (200, 248, 255))   # time shimmering
+    for x in (6, 10, 52, 57): s.set(x, 61, (184, 152, 104)); s.set(x + 1, 62, (184, 152, 104))   # paw prints in the dust
+    return s
+
+def church_clock():
+    s = S(64, 64)
+    WALL = [(150, 136, 120), (190, 176, 156), (220, 208, 188), (240, 232, 216)]
+    ROOF = [(96, 44, 44), (140, 64, 56), (176, 92, 76)]
+    s.box(4, 34, 59, 62, WALL)                                             # the nave
+    s.poly([(2, 35), (14, 22), (50, 22), (62, 35)], ROOF[1]); s.line(2, 35, 14, 22, ROOF[2]); s.line(14, 22, 50, 22, ROOF[2])
+    s.rect(2, 35, 61, 35, ROOF[0])
+    s.box(23, 8, 40, 40, WALL)                                             # the tower
+    s.poly([(21, 9), (31, 0), (32, 0), (42, 9)], ROOF[1]); s.line(21, 9, 31, 0, ROOF[2])
+    s.set(31, 0, GOLD[2]); s.set(32, 0, GOLD[2])
+    for cx, cy, hx, hy in ((31.5, 18.5, (0, -5), (4, 0)), (31.5, 31, (-3, 3), (0, -4))):   # two faces, two times
+        s.disc(cx, cy, 5.5, 5.5, [(208, 200, 184), (236, 232, 216), (248, 248, 240)], lit=False)
+        x, y = round(cx), round(cy)
+        s.line(x, y, x + hx[0], y + hx[1], O); s.line(x, y, x + hy[0], y + hy[1], O); s.set(x, y, GOLD[0])
+    s.poly([(26, 62), (26, 47), (31, 42), (32, 42), (37, 47), (37, 62)], WOOD[1])   # the arched door
+    s.line(31, 44, 31, 61, WOOD[0]); s.set(34, 54, GOLD[2])
+    for wx in (9, 47):                                                     # stained glass
+        s.poly([(wx, 56), (wx, 44), (wx + 3, 41), (wx + 6, 44), (wx + 6, 56)], (64, 96, 168))
+        s.rect(wx + 1, 45, wx + 2, 49, (232, 104, 104)); s.rect(wx + 4, 45, wx + 5, 49, (248, 216, 96)); s.rect(wx + 1, 51, wx + 5, 54, (96, 192, 120))
+    s.box(1, 60, 62, 62, STONE)
+    return s
+
+# ---------------------------------------------------------------- the big ones elsewhere (64x64)
+def emerald_carving():
+    s = S(64, 64)
+    s.poly([(1, 24), (58, 14), (63, 62), (3, 62)], STONE[2])               # a fallen block of the SKY PILLAR, tilted
+    s.line(1, 24, 58, 14, STONE[4]); s.line(1, 24, 3, 61, STONE[3]); s.line(58, 14, 63, 62, STONE[1])
+    s.poly([(58, 14), (62, 12), (63, 62)], STONE[1])
+    s.rect(4, 60, 62, 62, STONE[1])
+    for x0, y0, x1, y1 in ((6, 30, 12, 26), (50, 44, 56, 54), (20, 58, 26, 52)): s.line(x0, y0, x1, y1, STONE[0])   # cracks
+    RED = [(96, 40, 40), (156, 72, 64), (200, 112, 96), (232, 160, 136)]
+    BLUE = [(40, 56, 104), (64, 96, 160), (104, 144, 200), (160, 192, 232)]
+    GREEN = [(32, 80, 56), (56, 128, 88), (96, 176, 120), (152, 216, 160)]
+    paste(s, mon(384, 46), 9, 20, GREEN)                                   # RAYQUAZA coiled across the top
+    paste(s, mon(383, 24), 4, 34, RED)                                     # GROUDON
+    paste(s, mon(382, 24), 34, 36, BLUE, flip=True)                        # KYOGRE
+    for x, y in ((8, 59), (30, 61), (44, 58), (56, 60), (60, 40)): s.set(x, y, MOSS[1]); s.set(x + 1, y, MOSS[2]); s.set(x, y - 1, MOSS[2])
+    return s
+
+def ancient_tree():
+    s = S(64, 64)
+    for x0, y0, x1, y1 in ((22, 52, 4, 62), (26, 56, 14, 62), (40, 52, 60, 62), (37, 56, 50, 62), (31, 58, 31, 62)):   # roots
+        for k in range(3): s.line(x0, y0 - k, x1, y1 - k, WOOD[1 if k else 0])
+        s.line(x0, y0 - 3, x1, y1 - 3, WOOD[2])
+    s.poly([(22, 30), (42, 30), (44, 58), (20, 58)], WOOD[1])              # the trunk
+    s.rect(22, 30, 26, 57, WOOD[2]); s.line(34, 34, 36, 56, WOOD[0]); s.line(28, 40, 29, 52, WOOD[0])
+    s.disc(31.5, 50, 3, 4, [(48, 28, 20)] * 3, lit=False)                 # a hollow
+    s.set(31, 51, (232, 160, 232)); s.set(32, 50, WHITE)                  # the plate's glint in it
+    for cx, cy, rx, ry in ((32, 16, 31, 16), (12, 24, 12, 9), (52, 24, 12, 9), (32, 6, 18, 7)):   # the great crown
+        s.disc(cx, cy, rx, ry, LEAF)
+    for x, y in ((14, 8), (30, 4), (44, 10), (8, 20), (22, 14), (38, 18), (54, 20)):
+        s.rect(x, y, x + 2, y, LEAF[3]); s.set(x + 1, y + 1, LEAF[3])
+    return s
+
+def meteor_shard():
+    s = S(64, 64)
+    # The crater: scorched ground in a ring, a raised rim lit on the far side.
+    s.disc(31.5, 52, 31, 11, [(92, 64, 48), (124, 92, 64), (156, 120, 84), (188, 156, 112)])
+    s.disc(31.5, 53, 24, 7.5, [(44, 32, 36), (64, 44, 44), (84, 60, 52)], lit=False)
+    for x, y in ((10, 48), (52, 50), (20, 59), (44, 60)): s.set(x, y, (56, 40, 40))
+    V = [(56, 40, 80), (88, 64, 120), (128, 96, 168), (176, 144, 216)]
+    s.poly([(26, 56), (28, 12), (34, 4), (38, 56)], V[1])                   # the big shard
+    s.poly([(29, 56), (30, 14), (33, 9), (34, 56)], V[2]); s.line(31, 10, 30, 55, V[3])
+    s.poly([(16, 57), (18, 34), (24, 28), (27, 57)], V[1]); s.line(19, 35, 18, 56, V[2])
+    s.poly([(37, 57), (41, 26), (48, 33), (50, 57)], V[0]); s.line(42, 28, 41, 56, V[2])
+    for x, y in ((32, 20), (33, 34), (21, 44), (44, 42), (31, 48)):
+        s.set(x, y, (120, 232, 232)); s.set(x, y + 1, (64, 176, 200))    # the glowing core
+    for x, y in ((10, 30), (54, 24), (14, 16), (50, 10)): s.set(x, y, V[3])   # sparks
+    return s
+
+# ---------------------------------------------------------------- altars the guardian stands on (32x32) and graves
+def altar(gem):
+    def make():
+        s = S()
+        R = [(40, 56, 112), (64, 88, 160), (104, 136, 208), (160, 188, 236)] if gem == 'diamond' else \
+            [(120, 56, 96), (176, 88, 136), (220, 136, 176), (244, 192, 216)]
+        s.box(2, 24, 29, 30, R)
+        s.box(5, 14, 26, 24, R)
+        s.box(3, 10, 28, 14, R)                     # the top, where the guardian stands (overworld::perch)
+        if gem == 'diamond':
+            s.poly([(16, 15), (20, 19), (16, 23), (12, 19)], (176, 232, 255)); s.line(16, 15, 12, 19, WHITE)
+        else:
+            s.disc(16, 19, 3.5, 3.5, [(232, 168, 216), (248, 208, 232), (255, 240, 248)])
+        for x in (8, 23): s.set(x, 27, R[3]); s.set(x, 28, R[3])
+        return s
+    return make
+
+def candy(s, x, y):
+    s.set(x, y, (152, 104, 200)); s.set(x + 1, y, WHITE); s.set(x - 1, y, (120, 80, 168)); s.set(x + 2, y, (120, 80, 168))
+
+def gravestone(s, top):
+    s.poly([(10, 30), (10, top + 4), (13, top), (18, top), (21, top + 4), (21, 30)], STONE[2])
+    s.line(10, top + 4, 13, top, STONE[4]); s.line(13, top, 18, top, STONE[4]); s.line(10, top + 4, 10, 29, STONE[3]); s.line(21, top + 4, 21, 29, STONE[1])
+
+def nameless_grave():
+    s = S()
+    gravestone(s, 16)
+    for x in (13, 15, 17, 19): s.set(x, 22, STONE[0])                       # "?????????"
+    s.rect(12, 26, 19, 26, STONE[1])
+    for x, y in ((4, 28), (7, 30), (24, 29), (27, 27), (3, 30), (26, 30), (13, 29), (18, 30), (25, 24)):   # RARE CANDY
+        candy(s, x, y)
+    return s
+
+def flower_grave():
+    s = S()
+    gravestone(s, 17)
+    s.rect(12, 22, 19, 22, STONE[1]); s.rect(12, 25, 17, 25, STONE[1])
+    s.box(8, 28, 23, 30, STONE)
+    for x, c in ((4, (248, 120, 152)), (7, (255, 232, 96)), (24, (248, 120, 152)), (27, (176, 136, 248))):  # fresh flowers
+        s.line(x, 30, x, 26, LEAF[1]); s.set(x - 1, 27, LEAF[2])
+        s.set(x, 24, c); s.set(x - 1, 25, c); s.set(x + 1, 25, c); s.set(x, 26, c); s.set(x, 25, (255, 248, 200))
+    return s
 
 LOOKS = {
-    'wren': lambda: wren(rival_frame()), 'hooh_figurehead': hooh_figurehead, 'emerald_carving': emerald_carving, 'launch_board': launch_board,
+    'wren': wren, 'hooh_figurehead': hooh_figurehead, 'emerald_carving': emerald_carving, 'launch_board': launch_board,
     'meteor_shard': meteor_shard, 'arden': arden, 'lab_terminal': lab_terminal, 'pickup_truck': pickup_truck,
     'clone_tank': clone_tank, 'church_clock': church_clock, 'wooden_shrine': wooden_shrine, 'ancient_tree': ancient_tree,
     'altar_diamond': altar('diamond'), 'altar_pearl': altar('pearl'), 'town_clock': town_clock,

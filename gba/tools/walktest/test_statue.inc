@@ -4,8 +4,8 @@
 #include "pr_game_data.h"
 #include "pr_people_sprites.h"
 #include "pr_world_data.h"
-// Statue test (9.4.1, statuetest.py): SRAM 0x7E00 holds n; you start beside the nth landmark (a 32x32 statue_<look>
-// person) on the tile below its right half, facing it. 0x7E20 gets the address of game_state (map, x, y first),
+// Statue test (9.4.1, statuetest.py): SRAM 0x7E00 holds n; you start beside the nth landmark (a statue_<look> person,
+// wider than 16 px) on the tile below its left end, facing it. 0x7E20 gets the address of game_state (map, x, y first),
 // 0x7E24 the landmark's map, x, y and kind, 0x7E2C the number of landmarks. An assert writes "CRSH" at 0x7E10.
 static void crash_mark()
 {
@@ -33,11 +33,11 @@ static void test_setup()
         for(int k = 0; k < m.people_count; ++k)
         {
             const pr::person& p = m.people[k];
-            if(pr::person_sprites[int(p.kind)]->shape_size().width() != 32) continue;
+            if(pr::person_sprites[int(p.kind)]->shape_size().width() <= 16) continue;
             if(++count == n)
             {
                 found[0] = int16_t(i); found[1] = int16_t(p.x); found[2] = int16_t(p.y); found[3] = int16_t(p.kind);
-                g.map = int16_t(i); g.x = int16_t(p.x + 1); g.y = int16_t(p.y + 1); g.facing = pr::direction::UP;
+                g.map = int16_t(i); g.x = int16_t(p.x); g.y = int16_t(p.y + 1); g.facing = pr::direction::UP;
                 g.region = uint8_t(pr::map_region(i));
             }
         }

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Statue test (9.4.1): for every landmark (a 32x32 statue_<look> person), starts on the tile below its right half in
+"""Statue test (9.4.1): for every landmark (a statue_<look> person), starts on the tile below its left end in
 mGBA, checks that tile's statue blocks you (Up doesn't move you) and that A there reads its text. OUT gets
 s<n>.png (the view, then the text) for each.
     python3 tools/walktest/statuetest.py [OUT]
@@ -48,7 +48,7 @@ def main():
         crashed = open(os.path.join(work, 's%d.sav' % n), 'rb').read()[0x7E10:0x7E14] == b'CRSH'
         said = sum(1 for px in talk.crop((0, 112, 240, 160)).getdata() if px[0] > 240 and px[1] > 240) > 400
         why = 'crash' if crashed else None if blocked and said else 'walked through' if not blocked else 'no text'
-        print(n, 'map %d (%d,%d)' % (m, x - 1, y - 1), why or 'ok', flush=True)
+        print(n, 'map %d (%d,%d)' % (m, x, y - 1), why or 'ok', flush=True)
         bad += [n] * bool(why)
         pair = Image.new('RGB', (480, 160))
         pair.paste(view, (0, 0)); pair.paste(talk, (240, 0))

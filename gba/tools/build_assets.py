@@ -627,36 +627,36 @@ def build_world(exp, data, out_inc):
                 a['people'].append({'kind': 'prof', 'x': x, 'y': y, 'facing': 'down', 'role': 'prof', 'wander': False,
                                     'lines': ['PROF. EMBER: "Welcome to CALDERRA!"']})
                 # 2.0.1: the statue of WREN and VELLORIN's GYM LEADERS, who opened the port.
-                x, y = free_spot(a, a['spawn']['x'], a['spawn']['y'] - 3, hid, True)
+                x, y = place_statue(a, 'statue_wren', a['spawn']['x'], a['spawn']['y'] - 3, hid)
                 a['people'].append({'kind': 'statue_wren', 'x': x, 'y': y, 'facing': 'down', 'role': '', 'wander': False, 'lines': [
                     'A stone statue of WREN, rival and friend, with VELLORIN\'s eight GYM LEADERS carved around the base.',
                     'RELL, SABLE, ORIN, ISKA, JUNO, BRYN, HALE and CORVIN. "They crossed the sea so CALDERRA could open its port."']})
         if a['name'] in CAPTAIN_PORTS:
             # 3.0.0: the ship's CAPTAIN between PORT CALDER and PORT KEEL (after everything older, so nothing moves).
             hid = {(h['x'], h['y']) for h in hidden if h['area'] == by_index[a['index']]}
-            x, y = free_spot(a, a['spawn']['x'] - 2, a['spawn']['y'] + 1, hid)
+            x, y = flank(a, 0) or free_spot(a, a['spawn']['x'] - 2, a['spawn']['y'] + 1, hid)
             a['people'].append({'kind': 'captain', 'x': x, 'y': y, 'facing': 'down', 'role': 'captain', 'wander': False,
                                 'lines': ['CAPTAIN: "My ship sails between CALDERRA and the SUNDERED ISLES."']})
             if a['region'] == 3:
                 # ...and PORT KEEL's figurehead: HO-OH, a nod to CALDERRA.
-                x, y = free_spot(a, a['spawn']['x'] + 3, a['spawn']['y'] - 3, hid, True)
+                x, y = place_statue(a, 'statue_hooh_figurehead', a['spawn']['x'] + 3, a['spawn']['y'] - 3, hid)
                 a['people'].append({'kind': 'statue_hooh_figurehead', 'x': x, 'y': y, 'facing': 'down', 'role': '', 'wander': False, 'lines': [
                     'An old ship\'s figurehead, carved like HO-OH. A plaque reads: "From CALDERRA, with thanks."',
                     'Someone has carved three sets of paw prints into the base: thunder, fire and rain.']})
         if a['name'] in PILOT_PORTS:
             # 4.0.0: the airship's PILOT between PORT KEEL and WINDWARD (after everything older, so nothing moves).
             hid = {(h['x'], h['y']) for h in hidden if h['area'] == by_index[a['index']]}
-            x, y = free_spot(a, a['spawn']['x'] + 2, a['spawn']['y'] + 1, hid)
+            x, y = flank(a, 3) or free_spot(a, a['spawn']['x'] + 2, a['spawn']['y'] + 1, hid)
             a['people'].append({'kind': 'pilot', 'x': x, 'y': y, 'facing': 'down', 'role': 'pilot', 'wander': False,
                                 'lines': ['PILOT: "My airship flies between the SUNDERED ISLES and the SKYREACH."']})
             if a['region'] == 4:
                 # ...and WINDWARD's carving at the foot of the SKY PILLAR: the Emerald trio.
-                x, y = free_spot(a, a['spawn']['x'] - 3, a['spawn']['y'] - 3, hid, True)
+                x, y = place_statue(a, 'statue_emerald_carving', a['spawn']['x'] - 3, a['spawn']['y'] - 3, hid)
                 a['people'].append({'kind': 'statue_emerald_carving', 'x': x, 'y': y, 'facing': 'down', 'role': '', 'wander': False, 'lines': [
                     'An old carving on a fallen block of the SKY PILLAR: GROUDON and KYOGRE, and RAYQUAZA between them.',
                     'Underneath: "THE ONE WHO STOPPED THE SUNDERING SLEEPS ABOVE THE CLOUDS."']})
                 # ...and the SPACE CENTER's launch board, brought down to the airship dock.
-                x, y = free_spot(a, a['spawn']['x'] + 4, a['spawn']['y'] - 2, hid, True)
+                x, y = place_statue(a, 'statue_launch_board', a['spawn']['x'] + 4, a['spawn']['y'] - 2, hid)
                 a['people'].append({'kind': 'statue_launch_board', 'x': x, 'y': y, 'facing': 'down', 'role': '', 'wander': False, 'lines': [
                     'A launch board from the SPACE CENTER. "NEXT LAUNCH: 4.0.0". The countdown reads 4... 3... 2... 1...',
                     '"...LIFTOFF! Thank you for flying to the SKYREACH."']})
@@ -666,22 +666,30 @@ def build_world(exp, data, out_inc):
             hid = {(h['x'], h['y']) for h in hidden if h['area'] == by_index[a['index']]}
             # (On a route, near the middle, out of the narrow way in.)
             near = (a['w'] // 2 + 3, a['h'] // 2 + 2) if a['type'] in ('route', 'trainer') else (a['spawn']['x'] + 1, a['spawn']['y'] - 2)
-            x, y = free_spot(a, near[0], near[1], hid, True)
+            x, y = place_statue(a, 'statue_meteor_shard', near[0], near[1], hid)
             a['people'].append({'kind': 'statue_meteor_shard', 'x': x, 'y': y, 'facing': 'down', 'role': 'shard%d' % form, 'wander': False,
                                 'lines': ['A shard of the meteor, %s. It hums with a strange power.' % where]})
 
         # 5.0.0: the people a region's data adds (loc.extras), after everything older so nothing moves. `at`: near the
-        # spawn ('spawn', the default) or the middle ('mid'), `dx`/`dy` from there; a 'twin' rift also goes at the
+        # spawn ('spawn', the default), the middle ('mid') or the bottom-left corner ('corner'), `dx`/`dy` from there (a
+        # landmark in its town's square, 'plaza', or under the area's guardian, 'legend', goes exactly there); a 'twin' rift also goes at the
         # same spot in the area's twin (mirrored on the HOLLOW LANDS' reverse side).
         hid = {(h['x'], h['y']) for h in hidden if h['area'] == by_index[a['index']]}
         for n in a['extras']:
+            # 9.4.1: a landmark (kind 'statue') is drawn as its own look (tools/art/statues.py), on a base of tiles.
+            kind = 'statue_' + n['look'] if n['kind'] == 'statue' else n['kind']
+            bx, by = {'mid': (a['w'] // 2, a['h'] // 2), 'corner': (3, a['h'] - 4)}.get(n.get('at'), (a['spawn']['x'], a['spawn']['y']))
             if 'x' in n:
                 x, y = n['x'], n['y']
+            elif n.get('at') == 'legend':
+                # 9.4.1: the altar the area's guardian stands on, its right half under the guardian (overworld::perch).
+                x, y = a['legend']['x'] - 1, a['legend']['y']
+                if any(a['behaviour'][v][u] != 0 for u, v in base({'kind': kind, 'x': x, 'y': y})):
+                    raise SystemExit('%s in %s: no room under the guardian' % (kind, a['name']))
+            elif kind.startswith('statue_'):
+                x, y = place_statue(a, kind, bx + n.get('dx', 0), by + n.get('dy', 0), hid)
             else:
-                bx, by = (a['w'] // 2, a['h'] // 2) if n.get('at') == 'mid' else (a['spawn']['x'], a['spawn']['y'])
-                x, y = free_spot(a, bx + n.get('dx', 0), by + n.get('dy', 0), hid, n['kind'] == 'statue')
-            # 9.4.1: a landmark (kind 'statue') is drawn as its own look (tools/art/statues.py), two tiles wide.
-            kind = 'statue_' + n['look'] if n['kind'] == 'statue' else n['kind']
+                x, y = free_spot(a, bx + n.get('dx', 0), by + n.get('dy', 0), hid)
             a['people'].append({'kind': kind, 'x': x, 'y': y, 'facing': n.get('facing', 'down'), 'role': n.get('role', ''),
                                 'wander': False, 'lines': n.get('lines', [])})
 
@@ -985,7 +993,8 @@ def build_people(data, gfx):
     for kind, dirs in data['people'].items():
         if 'big' in dirs:
             # A landmark: one 32x32 frame for every facing and step; overworld.cpp draws it over its two tiles.
-            save_sprite(gfx, 'person_' + kind.lower(), [Image.open(dirs['big']).convert('RGBA')] * 9, 32, 32)
+            im = Image.open(dirs['big']).convert('RGBA')
+            save_sprite(gfx, 'person_' + kind.lower(), [im] * 9, im.width, im.height)
             continue
         frames = []
         for d in ('down', 'up', 'left'):
@@ -1887,6 +1896,8 @@ def add_statues(data):
     """9.4.1: the landmarks' looks, 32x32 each (tools/art/statues.py): person kinds statue_<look>, built 32x32."""
     for f in sorted(os.listdir(STATUES)):
         data['people']['statue_' + f[:-4]] = {'big': os.path.join(STATUES, f)}
+        w, h = Image.open(os.path.join(STATUES, f)).size
+        FOOT['statue_' + f[:-4]] = (w // 16, 2 if w >= 64 and h >= 64 else 1)
 
 def add_specials(data):
     """5.0.0 on: people that aren't people. A pink SPARKLE (GENOVA's MEW, seen for a moment), a RIFT (AETERNA's way
@@ -1921,27 +1932,50 @@ def add_specials(data):
     data['people']['rift'] = {d: [frame(rift, violet), frame(rift2, violet), frame(rift, violet)] for d in ('down', 'up', 'left')}
     data['people']['shadow'] = {d: [frame(shadow, grey)] * 3 for d in ('down', 'up', 'left')}
 
-def free_spot(a, x, y, also=(), off_path=False):
+def free_spot(a, x, y, also=(), off_path=False, foot=(1, 1)):
     """The nearest open path tile to (x, y) in an area: nobody on it, and not right below a door. 9.4.0: kept two tiles
     from other people and the spawn where the area has room, so a town's people don't bunch up; `off_path`: a statue
-    or shrine stands beside the path, not on it, where it can; 9.4.1: it's two tiles wide, so the tile to its right is
-    free too."""
+    or shrine stands beside the path, not on it, where it can; 9.4.1: `foot` (tiles wide, deep) is a landmark's base,
+    from the returned tile rightward and upward, all of it free."""
     beh = a['behaviour']
-    taken = set(also) | {(n['x'] + k, n['y']) for n in a['people'] for k in ((0, 1) if n['kind'].startswith('statue_') else (0,))} | {(t['x'], t['y']) for t in a['trainers']} | \
+    taken = set(also) | {t for n in a['people'] for t in base(n)} | {(t['x'], t['y']) for t in a['trainers']} | \
             {(sg['x'], sg['y']) for sg in a['signs']} | {(it['x'], it['y']) for it in a['items']} | \
-            {(d['x'], d['y'] + k) for d in a['doors'] for k in (0, 1)}
+            {(d['x'], d['y'] + k) for d in a['doors'] for k in (0, 1)} | {(a['spawn']['x'], a['spawn']['y'])}
     folk = [(n['x'], n['y']) for n in a['people']] + [(t['x'], t['y']) for t in a['trainers']] + [(a['spawn']['x'], a['spawn']['y'])]
+    def fits(tx, ty, road):
+        return all(0 <= v < len(beh) and 0 <= u < len(beh[0]) and beh[v][u] == 0 and (u, v) not in taken and
+                   (road or a['tiles'][v][u] != ':') for u in range(tx, tx + foot[0]) for v in range(ty - foot[1] + 1, ty + 1))
     for gap, road in ((2, not off_path), (1, not off_path), (2, True), (1, True), (0, True)):
         for r in range(0, 12):
             for dy in range(-r, r + 1):
                 for dx in range(-r, r + 1):
                     tx, ty = x + dx, y + dy
-                    if max(abs(dx), abs(dy)) == r and 0 <= ty < len(beh) and 0 <= tx < len(beh[0]) and beh[ty][tx] == 0 \
-                            and (tx, ty) not in taken and (road or a['tiles'][ty][tx] != ':') and all(max(abs(tx - fx), abs(ty - fy)) > gap for fx, fy in folk) \
-                            and (not off_path or (tx + 1 < len(beh[0]) and beh[ty][tx + 1] == 0 and (tx + 1, ty) not in taken
-                                                  and (road or a['tiles'][ty][tx + 1] != ':') and (tx + 1, ty) != (a['spawn']['x'], a['spawn']['y']))):
+                    if max(abs(dx), abs(dy)) == r and fits(tx, ty, road) and all(max(abs(tx - fx), abs(ty - fy)) > gap for fx, fy in folk):
                         return tx, ty
     raise SystemExit('no free spot near (%d, %d) in %s' % (x, y, a['name']))
+
+FOOT = {}       # 9.4.1: statue_<look> -> its base in tiles (wide, deep), from add_statues
+
+def base(n):
+    """The tiles a person stands on: one, or a landmark's whole base (its tile, rightward and upward)."""
+    w, d = FOOT.get(n['kind'], (1, 1))
+    return [(n['x'] + u, n['y'] - v) for u in range(w) for v in range(d)]
+
+def flank(a, dx):
+    """9.4.1: PORT KEEL's CAPTAIN and PILOT stand either side of the HO-OH figurehead in its square (dx 0 left, 3 right)."""
+    p = a.get('plaza')
+    return (p['x'] + dx, p['y']) if p and p['look'] == 'hooh_figurehead' else None
+
+def place_statue(a, kind, x, y, hid):
+    """A landmark beside the path near (x, y), or in the middle of its town's square (js/app.js buildTown: loc.plaza)."""
+    p = a.get('plaza')
+    if p and p['look'] == kind[7:]:
+        n = {'kind': kind, 'x': p['x'] + (4 - FOOT[kind][0]) // 2, 'y': p['y']}
+        bad = [t for t in base(n) if a['behaviour'][t[1]][t[0]] != 0 or any((q['x'], q['y']) == t for q in a['people'])]
+        if bad:
+            raise SystemExit('%s in %s: its square is taken at %s' % (kind, a['name'], bad))
+        return n['x'], n['y']
+    return free_spot(a, x, y, hid, True, FOOT[kind])
 
 def add_extras(data):
     """GBA 1.8 (data/extras.json, from tools/build_extras.py): evolutions by item (stones, the LINKING CORD) and the
