@@ -20,6 +20,8 @@
 #include "bn_sprite_items_dust.h"
 #include "bn_sprite_items_glint.h"
 #include "bn_sprite_items_grass_front.h"
+#include "bn_sprite_items_grass_front_b.h"
+#include "bn_sprite_items_grass_front_c.h"
 #include "bn_sprite_items_surf.h"
 #include "bn_regular_bg_items_wx_ash_1.h"
 #include "bn_regular_bg_items_wx_ash_2.h"
@@ -187,6 +189,10 @@ int overworld::metatile_at(int tx, int ty) const
         return ts.fill_metatile;
     }
     const map_def& m = wd::maps[p.map];
+    if(p.link < 0 && m.room && m.room->puzzle)
+    {
+        return puzzle_metatile(p.x, p.y);
+    }
     if(p.link < 0)
     {
         int i = p.y * m.w + p.x;
@@ -240,6 +246,11 @@ behaviour overworld::behaviour_at(int tx, int ty) const
         return behaviour::SOLID;
     }
     const map_def& m = wd::maps[p.map];
+    if(p.link < 0 && m.room && m.room->puzzle)
+    {
+        char c = puzzle_cell(p.x, p.y);
+        return c == 'M' ? behaviour::MAT : c == 'u' ? behaviour::STATUE : puzzle_solid(p.x, p.y) ? behaviour::SOLID : behaviour::WALK;
+    }
     behaviour b = behaviour(m.behaviours[p.y * m.w + p.x]);
     if(b == behaviour::ITEM && picked_at(p.map, p.x, p.y))
     {
@@ -415,6 +426,17 @@ void overworld::animate_tiles()
     }
 }
 
+// 9.4.0: the tall grass in front of you matches the area's ground.
+static const bn::sprite_item& grass_item()
+{
+    switch(map_look(state().map))
+    {
+    case 1: return bn::sprite_items::grass_front_b;
+    case 2: return bn::sprite_items::grass_front_c;
+    default: return bn::sprite_items::grass_front;
+    }
+}
+
 void overworld::load_map(int index, bool keep_bg)
 {
     game_state& g = state();
@@ -422,6 +444,7 @@ void overworld::load_map(int index, bool keep_bg)
     _map = &wd::maps[index];
     g.map = int16_t(index);
     g.region = uint8_t(bn::max(int(g.region), map_region(index) - 1));
+    puzzle_enter();
     if(! _map->is_room())
     {
         g.visited.set(index);
@@ -441,6 +464,11 @@ void overworld::load_map(int index, bool keep_bg)
     _grass_x = g.x;
     _grass_y = g.y;
     _from_x = _from_y = -1000;
+    if(_grass_here)
+    {
+        _grass_here->set_item(grass_item());
+        _grass_from->set_item(grass_item());
+    }
     if(_map->is_room() || ! _map->area || area_weather_now(_map->area) != area_weather::CAVE)
     {
         _flash = false;     // FLASH lasts until you leave the cave
@@ -480,6 +508,15 @@ void overworld::make_sprite(actor& a)
         a.sprite = s.front.create_sprite(0, 0);
         apply_shiny(*a.sprite, int(a.legend_species), a.legend_shiny, mon_view::FRONT);
         a.sprite->set_bg_priority(1);
+        // 9.4.0: in its own SUMMONING CHAMBER it's drawn as the art has it (or is part of the art).
+        if(const room_info* r = _map->room; r && r->legend >= 0)
+        {
+            a.sprite->set_visible(! r->baked);
+            if(r->legend_scale != 256)
+            {
+                a.sprite->set_scale(bn::fixed(r->legend_scale) / 256);
+            }
+        }
         return;
     }
     a.sprite = person_sprites[int(a.kind)]->create_sprite(0, 0, 0);
@@ -525,7 +562,7 @@ void overworld::load_actors()
         const trainer& t = _map->trainers[i];
         // A beaten rival has left (unless they're still about to say goodbye); scene trainers only come with
         // their scene.
-        if((t.vanish && g.beaten.test(t.id) && g.walk_off != t.id) || t.scene)
+        if((t.vanish && g.beaten.test(t.id) && g.walk_off != t.id) || t.scene || puzzle_skips(t))
         {
             continue;
         }
@@ -564,7 +601,7 @@ void overworld::load_actors()
         a.legend_species = species_id(g.tower.legend);
         a.legend_shiny = g.tower.legend_shiny;
         a.x = a.home_x = 7;
-        a.y = a.home_y = 3;
+        a.y = a.home_y = _map->room->legend >= 0 ? 4 : 3;     // 9.4.0: its own chamber: you face it from the path
         _actors.push_back(a);
     }
     // People in the connected areas, standing where they are (nbNpcs).
@@ -665,7 +702,7 @@ void overworld::place_actor(bn::sprite_ptr& sprite, int wx, int wy, int lift)
 void overworld::set_player_frame(int step, bool run)
 {
     game_state& g = state();
-    bool riding = (g.surfing && ! _map->is_room()) || deep();
+    bool riding = (g.surfing && (! _map->is_room() || puzzle())) || deep();
     _player_step = step;
     _player_run = run;
     if(! _player)
@@ -712,8 +749,8 @@ void overworld::refresh(bool force)
         _player = person_sprites[int(person_kind::player)]->create_sprite(0, 0, 0);
         _player->set_bg_priority(1);
         set_player_frame(_player_step, _player_run);
-        _grass_here = bn::sprite_items::grass_front.create_sprite(0, 0);
-        _grass_from = bn::sprite_items::grass_front.create_sprite(0, 0);
+        _grass_here = grass_item().create_sprite(0, 0);
+        _grass_from = grass_item().create_sprite(0, 0);
         for(bn::sprite_ptr* s : { &*_grass_here, &*_grass_from })
         {
             s->set_bg_priority(1);
@@ -721,7 +758,7 @@ void overworld::refresh(bool force)
         }
         update_tint();
     }
-    bool riding = (g.surfing && ! _map->is_room()) || deep();
+    bool riding = (g.surfing && (! _map->is_room() || puzzle())) || deep();
     if(riding)
     {
         _player->set_position(sx(_px - _cam_x + 16), sy(_py - _cam_y + 1));
@@ -743,7 +780,14 @@ void overworld::refresh(bool force)
         {
             // The guardian floats over its spot (.ow-legend: 64x64 art, centred, bobbing).
             int bob = (_bob_timer / 45) % 2 ? -2 : 0;
-            a.sprite->set_position(sx(a.x * 16 - _cam_x + 8), sy(a.y * 16 - _cam_y - 12 + bob));
+            int lx = 0, ly = 0;
+            if(const room_info* r = _map->room; r && r->legend >= 0)
+            {
+                bob = 0;
+                lx = r->legend_dx;
+                ly = r->legend_dy;
+            }
+            a.sprite->set_position(sx(a.x * 16 - _cam_x + 8 + lx), sy(a.y * 16 - _cam_y - 12 + bob + ly));
             a.sprite->set_z_order(-bn::clamp((a.y * 16 - _cam_y + 8 + 32) >> 4, 0, 16) - 2);
             continue;
         }
@@ -857,7 +901,9 @@ void overworld::update_weather(bool smooth)
     if(_map->is_room())
     {
         // The Ghost gym: dark but for a circle around you that grows with every junior beaten.
-        if(_map->room && _map->room->kind == room_kind::GYM && _map->room->theme == gym_theme::GHOST)
+        // 9.4.0: a gym's challenge says whether it's dark (any type) or foggy.
+        const gym_puzzle* pz = puzzle();
+        if(pz ? pz->dark == 1 : _map->room && _map->room->kind == room_kind::GYM && _map->room->theme == gym_theme::GHOST)
         {
             kind = WX_GHOST;
             int beaten = 0;
@@ -865,7 +911,11 @@ void overworld::update_weather(bool smooth)
             {
                 beaten += _map->trainers[i].role == trainer_role::JUNIOR && g.beaten.test(_map->trainers[i].id);
             }
-            amount = 1 + beaten;
+            amount = bn::min(3, 1 + beaten);
+        }
+        else if(pz && pz->dark == 2)
+        {
+            kind = WX_FOG;
         }
     }
     else if(a)
@@ -1289,7 +1339,7 @@ void overworld::hold_until_released()
 void overworld::step(direction want)
 {
     game_state& g = state();
-    bool riding = (g.surfing && ! _map->is_room()) || deep();
+    bool riding = (g.surfing && (! _map->is_room() || puzzle())) || deep();
     // From a standstill, a new direction first turns you on the spot; keep holding and you walk.
     if(_fresh_press && want != g.facing)
     {
@@ -1316,6 +1366,11 @@ void overworld::step(direction want)
     {
         set_player_frame(0);
         trainer_approach(who);
+        return;
+    }
+    if(puzzle())
+    {
+        puzzle_step(want);
         return;
     }
     if(target_place.link >= 0)
@@ -1825,6 +1880,10 @@ void overworld::tower_legend_battle(species_id s, int level)
 // across water).
 bool overworld::check_sight()
 {
+    if(puzzle())
+    {
+        return puzzle_sight();
+    }
     game_state& g = state();
     for(int i = 0; i < _actors.size(); ++i)
     {
@@ -1953,7 +2012,7 @@ bool overworld::run(encounter& battle, const battle_report* last)
     _battle = &battle;
     _last = last;
     game_state& g = state();
-    if(g.surfing && (_map->is_room() || behaviour_at(g.x, g.y) != behaviour::WATER))
+    if(g.surfing && (puzzle() ? ! puzzle_water(g.x, g.y) : _map->is_room() || behaviour_at(g.x, g.y) != behaviour::WATER))
     {
         g.surfing = false;
     }
@@ -1965,6 +2024,10 @@ bool overworld::run(encounter& battle, const battle_report* last)
     if(! _start_battle && ! _quit)
     {
         story_enter();
+    }
+    if(! _start_battle && ! _quit)
+    {
+        puzzle_resume();
     }
     while(! _quit && ! _start_battle)
     {

@@ -293,6 +293,7 @@ int level_cap_now();
 
 // The region a map is in (1 Vellorin, 2 Calderra...): a room's is its area's.
 int map_region(int map);
+int map_look(int map);              // 9.4.0: the area's ground look (rooms: the area outside)
 
 // The level cap where a map is (advLevel). Vellorin's is the place's own; Calderra's branches go in any order,
 // so its levels follow your Calderra badges instead: 100, then 12 more per badge.

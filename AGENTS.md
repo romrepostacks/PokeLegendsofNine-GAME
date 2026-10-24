@@ -62,6 +62,9 @@ sh tools/setup-toolchain.sh                  # once; Wonderful toolchain (devkit
 make -j8                                     # -> party-royale.gba
 python3 tools/walktest/walktest.py OUT       # walks a party on every map in mGBA, reports crashes (~4 min)
 sh tools/savetest/run.sh                     # old save converts and round-trips (when the save changes)
+python3 tools/gym/solver.py                  # every gym's challenge solvable, no soft locks (gba/data/gym_layouts.json)
+python3 tools/walktest/gymtest.py OUT        # plays each gym's solver route in mGBA (when gyms or pr_gym.cpp change)
+python3 tools/walktest/gymtest.py --fight OUT  # the same with juniors unbeaten: each spots you and battles (~20 min)
 ```
 
 Tests need `libmgba-dev`. There is no unit test suite; walktest is the smoke test before any release.

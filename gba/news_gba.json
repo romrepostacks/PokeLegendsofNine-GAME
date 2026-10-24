@@ -1,7 +1,30 @@
 {
   "_howto": "The game's WHAT'S NEW: the title screen's message of the day (motd) and the changelog, newest first. Player-facing only.",
-  "motd": "Version 9.3.3: new looks for 23 POKéMON of the SUNDERED ISLES, the SKYREACH and GENOVA, and a new species, SAURHORN.",
+  "motd": "Version 9.4.0: the whole world redrawn, new GYMS, new POKéMON CENTERS and a chamber for every legendary.",
   "changelog": [
+    {
+      "version": "GBA 9.4.0",
+      "date": "2026-10-24",
+      "title": "A new look for the whole world",
+      "changes": [
+        "Every region is redrawn: new grass, paths, trees, water, rocks, signs, fences, ledges and caves",
+        "Each region has its own ground: green meadows, deep green forests, and golden grass in CALDERRA, the SUNDERED ISLES and ashen places",
+        "Oaks in the open, pines in forests and the cold, and sandy tropical shallows in warm regions",
+        "Rain leaves puddles, snow settles in drifts and on the treetops, and ash dries the grass to straw",
+        "Where two areas look different, they now fade into each other instead of meeting in a straight line",
+        "POKé MARTS and houses come in three styles, each town matching its POKéMON CENTER, with new rooms inside",
+        "Every person in the game is redrawn with softer outlines",
+        "Battles have three new backdrops: a meadow, a pine forest edge and golden hour, picked by where you are",
+        "The plate shrines and statues are carved in stone, and townsfolk spread out instead of crowding the path",
+        "All 72 GYMS are rebuilt, each with its own challenge: ice slides, boulders and pits, switches and fences, fans and currents, warp pads, cracked floors, tesla coils, gas valves, rooms that change with the tide, the season or the clock, and more",
+        "Some GYMS have more junior trainers, and dark GYMS light up as you beat them",
+        "POKéMON CENTERS come in three new styles: a red arch with a big POKé BALL, a striped awning, and a glass atrium between two wings",
+        "Each style has its own interior: classic yellow tiles, a cosy cottage with a fireplace and lounges, and an indoor park with trees and benches",
+        "Every region has all three",
+        "The CHALLENGE TOWER in SPIRECREST TOWN has a new look: a white hall with a beacon column rising above it",
+        "Every legendary POKéMON now waits in a SUMMONING CHAMBER of its own, 92 in all, from a lava cave for GROUDON to a sunrise glade for XERNEAS. KYOGRE rests half under the water of its pool"
+      ]
+    },
     {
       "version": "GBA 9.3.3",
       "date": "2026-10-17",

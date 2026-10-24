@@ -14,12 +14,13 @@
 Needs Node.js and Pillow. Called by the Makefile (EXTTOOL) before every build; it skips work when its
 inputs haven't changed.
 """
-import argparse, hashlib, json, os, re, subprocess
+import argparse, glob, hashlib, json, os, re, subprocess
 import numpy as np
 from PIL import Image, ImageDraw
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 GBA = os.path.dirname(HERE)
+DATA = os.path.join(GBA, 'data')
 ROOT = os.path.dirname(GBA)
 MAP_BANKS = 14          # BG palette banks a map tileset may use; the 15th is the weather's, the 16th the UI's
 MAX_TRAINERS = 2048     # bits in game_state::beaten
@@ -375,7 +376,9 @@ def build_world(exp, data, out_inc):
     map_order = []
     for rg in regions:
         map_order += [('area', ai) for ai, a in enumerate(areas) if a['region'] == rg]
-        map_order += [('room', ri) for ri, r in enumerate(rooms) if region_of[r['area']] == rg]
+        map_order += [('room', ri) for ri, r in enumerate(rooms) if region_of[r['area']] == rg and not r.get('late')]
+    # 9.4.0: rooms added later than every region (the SUMMONING CHAMBERS) go last.
+    map_order += [('room', ri) for ri, r in enumerate(rooms) if r.get('late')]
     map_index = {k: mi for mi, k in enumerate(map_order)}
     by_index = {a['index']: map_index[('area', ai)] for ai, a in enumerate(areas)}
     tilesets = []
@@ -413,6 +416,11 @@ def build_world(exp, data, out_inc):
                 'fill': ts.add(solid((0, 0, 0)))}
         if r['kind'] == 'league':
             info['gate'] = ts.add(png(exp, 'league_floor.png'))
+        if r.get('puzzle'):
+            # 9.4.0: each state of the gym as drawn, switched and with boulders (tools/gym/gym_rooms.py).
+            pz = r['puzzle']
+            info['pz'] = [[ts.add(png(DATA, 'gym_%d_%d%s.png' % (pz['area'], k, suf))) for suf in ('', '_alt', '_rock')]
+                          for k in range(len(pz['states']))]
         tilesets.append(ts)
         room_ts[art] = info
     for ts in tilesets:
@@ -437,6 +445,8 @@ def build_world(exp, data, out_inc):
         info['meta'] = ts.metatiles_of(info['map'])
         info['fill_meta'] = ts.metatiles_of(info['fill'])[0]
         info['gate_meta'] = ts.metatiles_of(info['gate'])[0] if 'gate' in info else -1
+        if 'pz' in info:
+            info['pz_meta'] = [[ts.metatiles_of(pic) for pic in pics] for pics in info['pz']]
     fills = {}
     for info in area_info:
         fills[info['ts']] = info['fill_meta']
@@ -460,7 +470,7 @@ def build_world(exp, data, out_inc):
                     'guide_on': 'GUIDE_ON', 'guide_back': 'GUIDE_BACK', 'mew': 'MEW_SIGHT', 'twin': 'TWIN', 'seed': 'SEED',
                     'tree': 'TREE', 'form': 'FORM', 'post': 'POST', 'plate': 'PLATE', 'altar': 'ALTAR', 'season': 'SEASON'}.get(n.get('role', ''), 'NONE')
             rows.append('{%d, %d, person_kind::%s, direction::%s, person_role::%s, %s, %sperson%d_lines, %d}' % (
-                n['x'], n['y'], n['kind'], n['facing'].upper(), role, 'true' if n.get('wander') else 'false', p, i, count))
+                n['x'], n['y'], 'shrine' if role == 'PLATE' else n['kind'], n['facing'].upper(), role, 'true' if n.get('wander') else 'false', p, i, count))
         L.append('constexpr person %speople[] = {%s};' % (p, nonempty(', '.join(rows),
             '{0, 0, person_kind::player, direction::DOWN, person_role::NONE, false, nullptr, 0}')))
 
@@ -473,15 +483,27 @@ def build_world(exp, data, out_inc):
     # 3.0.0: KAI's fights (2.0.1) took the ids right after Calderra's, so later regions' trainers come after them.
     ids = {}
     next_id, kai_next = 0, None
+    extra = []
     kai_count = sum(1 for a in areas if a['name'] in KAI_FIGHTS)
     for kind, i in map_order:
         if kai_next is None and (areas[i]['region'] if kind == 'area' else region_of[rooms[i]['area']]) >= 3:
             kai_next, next_id = next_id, next_id + kai_count
-        for ti in range((areas if kind == 'area' else rooms)[i]['trainers'].__len__()):
+        own = (areas if kind == 'area' else rooms)[i]['trainers']
+        for ti, t in enumerate(own):
+            if t.get('extra'):
+                extra.append((kind, i, ti))
+                continue
             ids[(kind, i, ti)] = next_id
             next_id += 1
+        if kind == 'room' and rooms[i].get('puzzle'):
+            # 9.4.0: a gym keeps its leader's and two juniors' ids even with a single junior now.
+            next_id += max(0, 3 - sum(1 for t in own if not t.get('extra')))
     if kai_next is None:
         kai_next, next_id = next_id, next_id + kai_count
+    # 9.4.0: the juniors the new gyms added come after everyone else, so no older id moves.
+    for key in extra:
+        ids[key] = next_id
+        next_id += 1
     if next_id > MAX_TRAINERS:
         raise SystemExit('%d trainers (max %d)' % (len(ids), MAX_TRAINERS))
     def leader_of(ai):
@@ -515,6 +537,21 @@ def build_world(exp, data, out_inc):
                 'true' if t.get('scene') else 'false'))
         L.append('constexpr trainer %strainers[] = {%s};' % (p, nonempty(', '.join(rows),
             '{0, 0, person_kind::player, direction::DOWN, trainer_role::ROUTE, "", nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0, false, 0, -1, 0, false}')))
+
+    def puzzle_rows(p, pz, info):
+        """9.4.0: a gym's challenge (gym_puzzle): its tiles in each state, their metatiles, and its rules."""
+        cells = ''.join(''.join(state) for state in pz['states'])
+        L.append('constexpr char %scells[] = {%s};' % (p, ', '.join(str(ord(c)) for c in cells)))
+        L.append('constexpr uint16_t %smetas[] = {%s};' % (p, ', '.join(str(m) for pics in info['pz_meta'] for meta in pics for m in meta)))
+        L.append('constexpr int16_t %saux[] = {%s};' % (p, ', '.join(str(a) for a in pz['aux'])))
+        flags = [n for n, on in (('SURF', pz['surf']), ('DIVE', pz['dive']), ('RAFT', pz['raft']), ('R_SOLID', pz['R'] == 'solid'),
+                                 ('J_STEP', pz['J'] == 'step'), ('Y_JET', pz['Y'] == 'jet'), ('E_MAG', pz['e'] == 'mag'),
+                                 ('ERA_SWITCH', pz['era_by'] == 'switch'), ('STEP_ASIDE', pz['step_aside']), ('S_FANS', pz['S'] == 'fans'),
+                                 ('GATE_PLATES', pz['gate'] == 'plates'), ('GATE_PEARLS', pz['gate'] == 'pearls'),
+                                 ('GATE_JUNIORS', pz['gate'] == 'juniors')) if on]
+        L.append("constexpr gym_puzzle %spuzzle = {%scells, %smetas, %saux, %d, '%s', %d, %d, %s, %d};" % (
+            p, p, p, p, len(pz['states']), pz['over'], pz['fans'], pz['pulse'],
+            ' | '.join('puzzle_flag::' + f for f in flags) or '0', 2 if pz['dark'] == 'fog' else 1 if pz['dark'] else 0))
 
     def species_array(name, names):
         L.append('constexpr species_id %s[] = {%s};' % (name, ', '.join('species_id::%s' % enum_name(n) for n in names) or 'species_id::PIDGEY'))
@@ -590,7 +627,7 @@ def build_world(exp, data, out_inc):
                 a['people'].append({'kind': 'prof', 'x': x, 'y': y, 'facing': 'down', 'role': 'prof', 'wander': False,
                                     'lines': ['PROF. EMBER: "Welcome to CALDERRA!"']})
                 # 2.0.1: the statue of WREN and VELLORIN's GYM LEADERS, who opened the port.
-                x, y = free_spot(a, a['spawn']['x'], a['spawn']['y'] - 3, hid)
+                x, y = free_spot(a, a['spawn']['x'], a['spawn']['y'] - 3, hid, True)
                 a['people'].append({'kind': 'statue', 'x': x, 'y': y, 'facing': 'down', 'role': '', 'wander': False, 'lines': [
                     'A stone statue of WREN, rival and friend, with VELLORIN\'s eight GYM LEADERS carved around the base.',
                     'RELL, SABLE, ORIN, ISKA, JUNO, BRYN, HALE and CORVIN. "They crossed the sea so CALDERRA could open its port."']})
@@ -602,7 +639,7 @@ def build_world(exp, data, out_inc):
                                 'lines': ['CAPTAIN: "My ship sails between CALDERRA and the SUNDERED ISLES."']})
             if a['region'] == 3:
                 # ...and PORT KEEL's figurehead: HO-OH, a nod to CALDERRA.
-                x, y = free_spot(a, a['spawn']['x'] + 3, a['spawn']['y'] - 3, hid)
+                x, y = free_spot(a, a['spawn']['x'] + 3, a['spawn']['y'] - 3, hid, True)
                 a['people'].append({'kind': 'statue', 'x': x, 'y': y, 'facing': 'down', 'role': '', 'wander': False, 'lines': [
                     'An old ship\'s figurehead, carved like HO-OH. A plaque reads: "From CALDERRA, with thanks."',
                     'Someone has carved three sets of paw prints into the base: thunder, fire and rain.']})
@@ -614,12 +651,12 @@ def build_world(exp, data, out_inc):
                                 'lines': ['PILOT: "My airship flies between the SUNDERED ISLES and the SKYREACH."']})
             if a['region'] == 4:
                 # ...and WINDWARD's carving at the foot of the SKY PILLAR: the Emerald trio.
-                x, y = free_spot(a, a['spawn']['x'] - 3, a['spawn']['y'] - 3, hid)
+                x, y = free_spot(a, a['spawn']['x'] - 3, a['spawn']['y'] - 3, hid, True)
                 a['people'].append({'kind': 'statue', 'x': x, 'y': y, 'facing': 'down', 'role': '', 'wander': False, 'lines': [
                     'An old carving on a fallen block of the SKY PILLAR: GROUDON and KYOGRE, and RAYQUAZA between them.',
                     'Underneath: "THE ONE WHO STOPPED THE SUNDERING SLEEPS ABOVE THE CLOUDS."']})
                 # ...and the SPACE CENTER's launch board, brought down to the airship dock.
-                x, y = free_spot(a, a['spawn']['x'] + 4, a['spawn']['y'] - 2, hid)
+                x, y = free_spot(a, a['spawn']['x'] + 4, a['spawn']['y'] - 2, hid, True)
                 a['people'].append({'kind': 'statue', 'x': x, 'y': y, 'facing': 'down', 'role': '', 'wander': False, 'lines': [
                     'A launch board from the SPACE CENTER. "NEXT LAUNCH: 4.0.0". The countdown reads 4... 3... 2... 1...',
                     '"...LIFTOFF! Thank you for flying to the SKYREACH."']})
@@ -629,7 +666,7 @@ def build_world(exp, data, out_inc):
             hid = {(h['x'], h['y']) for h in hidden if h['area'] == by_index[a['index']]}
             # (On a route, near the middle, out of the narrow way in.)
             near = (a['w'] // 2 + 3, a['h'] // 2 + 2) if a['type'] in ('route', 'trainer') else (a['spawn']['x'] + 1, a['spawn']['y'] - 2)
-            x, y = free_spot(a, near[0], near[1], hid)
+            x, y = free_spot(a, near[0], near[1], hid, True)
             a['people'].append({'kind': 'statue', 'x': x, 'y': y, 'facing': 'down', 'role': 'shard%d' % form, 'wander': False,
                                 'lines': ['A shard of the meteor, %s. It hums with a strange power.' % where]})
 
@@ -642,7 +679,7 @@ def build_world(exp, data, out_inc):
                 x, y = n['x'], n['y']
             else:
                 bx, by = (a['w'] // 2, a['h'] // 2) if n.get('at') == 'mid' else (a['spawn']['x'], a['spawn']['y'])
-                x, y = free_spot(a, bx + n.get('dx', 0), by + n.get('dy', 0), hid)
+                x, y = free_spot(a, bx + n.get('dx', 0), by + n.get('dy', 0), hid, n['kind'] == 'statue')
             a['people'].append({'kind': n['kind'], 'x': x, 'y': y, 'facing': n.get('facing', 'down'), 'role': n.get('role', ''),
                                 'wander': False, 'lines': n.get('lines', [])})
 
@@ -727,13 +764,13 @@ def build_world(exp, data, out_inc):
         if a['own_pool']:
             flags.append('area_flag::OWN_POOL')
         L.append('constexpr area_info %sarea = {area_kind::%s, area_theme::%s, area_weather::%s, %s, %d, %d, %d, %d, %d, %d, %s, '
-                 '%sdive, %d, %sshafts, %d, %s, %d, %d, %d, %d, %s, %d};' % (
+                 '%sdive, %d, %sshafts, %d, %s, %d, %d, %d, %d, %s, %d, %d};' % (
             p, kind, theme, weather, ' | '.join(flags) or '0', a['tier'], a['region'], a['at'][0], a['at'][1],
             by_index.get(a['dive'], -1) if a['dive'] >= 0 else -1, by_index.get(a['surface'], -1) if a['surface'] >= 0 else -1,
             c_text(a['scene']), p, nd, p, ns,
             'species_id::%s' % enum_name(legend['name']) if legend else 'species_id::PIDGEY', legend['x'] if legend else -1,
             legend['y'] if legend else -1, nw, nf, '%sclean' % p if info['clean_meta'] is not None else 'nullptr',
-            by_index[a['twin']] if a['twin'] >= 0 else -1))
+            by_index[a['twin']] if a['twin'] >= 0 else -1, 'ABC'.index(a['look'])))
         map_rows[by_index[a['index']]] = ('{%s, %d, %d, %d, %smap, %sbehaviour, %ssigns, %d, %sdoors, %d, %speople, %d, %strainers, %d, %sitems, %d, '
                         'nullptr, 0, %slinks, %d, %spool, %d, %d, %d, %d, -1, 0, 0, %d, gate_kind::%s, %s, %s, &%sarea, %swater, %sfish, %s, nullptr}' % (
             c_text(a['name'].upper()), info['ts'], a['w'], a['h'], p, p, p, len(a['signs']), p, len(a['doors']), p, len(a['people']),
@@ -748,7 +785,9 @@ def build_world(exp, data, out_inc):
         people = r['people']
         if r['kind'] == 'center' and not any(n.get('role') == 'tutor' for n in people):
             # GBA 1.8: the MOVE TUTOR in every POKéMON CENTER, by the right-hand wall.
-            people.append({'kind': 'gentleman', 'x': 11, 'y': 6, 'facing': 'left', 'role': 'tutor', 'wander': False,
+            # 9.4.0: each CENTER style says where its tutor stands.
+            tx, ty = r.get('tutor') or (11, 6)
+            people.append({'kind': 'gentleman', 'x': tx, 'y': ty, 'facing': 'left', 'role': 'tutor', 'wander': False,
                            'lines': ['MOVE TUTOR: "I can help POKéMON remember moves."']})
         people_rows(p, people)
         area, aai = by_index[r['area']], ai_of[r['area']]
@@ -766,8 +805,19 @@ def build_world(exp, data, out_inc):
         kind = {'center': 'CENTER', 'mart': 'MART', 'gym': 'GYM', 'league': 'LEAGUE', 'house': 'HOUSE', 'tower': 'TOWER',
                 'summit': 'SUMMIT', 'chamber': 'CHAMBER'}[r['kind']]
         theme = (r.get('theme') or '').upper() or ('LEAGUE' if r['kind'] in ('summit', 'chamber') else 'NONE')
-        L.append('constexpr room_info %sroom = {room_kind::%s, gym_theme::%s, %sgates, %d, %d, %s, %d};' % (
-            p, kind, theme, p, len(r['gates']), info['gate_meta'], 'true' if r['home'] else 'false', r.get('floor', -1)))
+        puzzle = 'nullptr'
+        if r.get('puzzle'):
+            puzzle_rows(p, r['puzzle'], info)
+            puzzle = '&%spuzzle' % p
+        legend, lx, ly, lk = 'int16_t(-1)', 0, 0, 256
+        if r.get('legend'):
+            theme = 'NONE'
+            sp = next(sp for sp in data['species'] if sp['num'] == r['legend'])
+            legend = 'int16_t(species_id::%s)' % enum_name(sp['name'])
+            lx, ly, lk = chamber_placement(r['legend'])
+        L.append('constexpr room_info %sroom = {room_kind::%s, gym_theme::%s, %sgates, %d, %d, %s, %d, %s, %s, %s, %s, %d, %d, %d};' % (
+            p, kind, theme, p, len(r['gates']), info['gate_meta'], 'true' if r['home'] else 'false', r.get('floor', -1), puzzle,
+            legend, 'true' if r.get('legend_shiny') else 'false', 'true' if r.get('baked') else 'false', lx, ly, lk))
         map_rows[map_index[('room', ri)]] = ('{%s, %d, %d, %d, %s_map, %sbehaviour, nullptr, 0, nullptr, 0, %speople, %d, %strainers, %d, nullptr, 0, '
                         '%sthings, %d, nullptr, 0, nullptr, 0, %d, %d, %d, %d, %d, %d, %d, gate_kind::NONE, %s, %s, nullptr, nullptr, nullptr, "", &%sroom}' % (
             c_text(name), info['ts'], r['w'], r['h'], 'room_' + r['art'], p, p, len(r['people']), p, len(r['trainers']),
@@ -893,6 +943,32 @@ def save_bg(img, gfx, name, bpp='bpp_4'):
     pal, idx = quantize_rgba(img, 15 if bpp == 'bpp_4' else 255)
     save_indexed_bmp(os.path.join(gfx, name + '.bmp'), pal, idx, {'type': 'regular_bg', 'bpp_mode': bpp})
 
+# 9.4.0: the people restyled for the new world (plans/9.3.5-overworld/people1/people.py, style B): the silhouette takes the
+# world's #262638 outline, lines inside a figure a dark shade of the colour beside them, and each shape's top catches light.
+def restyle_person(px):
+    O = (38, 38, 56)
+    h, w = len(px), len(px[0])
+    line = lambda c: c and sum(c) < 60
+    get = lambda x, y: px[y][x] if 0 <= x < w and 0 <= y < h else 0
+    out = [[tuple(c) if c else 0 for c in r] for r in px]
+    for y in range(h):
+        for x in range(w):
+            if not line(px[y][x]):
+                continue
+            nb = [get(x + dx, y + dy) for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))]
+            fill = [n for n in nb if not line(n)]
+            if any(not n for n in nb) or not fill:
+                out[y][x] = O
+            else:
+                d = min(fill, key=sum)
+                out[y][x] = tuple(int(v * .55 + o * .15) for v, o in zip(d, O))
+    for y in range(1, h):
+        for x in range(w):
+            c = out[y][x]
+            if c and c != O and out[y - 1][x] == O and not line(px[y][x]):
+                out[y][x] = tuple(min(255, int(v * 1.12 + 10)) for v in c)
+    return [[list(c) if c else 0 for c in r] for r in out]
+
 def person_frame(f, scale=1):
     img = Image.new('RGBA', (16, 21), (0, 0, 0, 0))
     px = img.load()
@@ -983,6 +1059,17 @@ def mon_sprite(path, box_of=None):
     out = Image.new('RGBA', (64, 64), (0, 0, 0, 0))
     out.alpha_composite(img.crop(box), ((64 - w) // 2, 64 - h - 2 if h < 62 else 0))
     return out
+
+def chamber_placement(num):
+    """9.4.0: a SUMMONING CHAMBER's legendary as the approved art shows it (tools/art/chambers/place.py: the 96 px
+    sprite at 64 px, centred on x 120, feet on y 66). The game's 64x64 frame (mon_sprite) is drawn centred on
+    (120, 36); this is the affine scale and the offset of that centre that puts it there."""
+    path = os.path.join(ROOT, 'sprites', 'pokemon', '%d.png' % num)
+    x0, y0, x1, y1 = Image.open(path).convert('RGBA').getbbox()
+    k = max(64, x1 - x0, y1 - y0) / 96
+    f0, g0, f1, g1 = mon_sprite(path).getbbox()
+    cx, bottom = 120 - ((f0 + f1) / 2 - 32) * k, 66 - (g1 - 32) * k
+    return round(cx - 120), round(bottom - 36) - 16, round(k * 256)   # the actor stands a tile lower (7, 4)
 
 def shiny_palette(pal, idx, shiny, alpha_from=None):
     """The shiny colours for a sprite's palette: for each colour slot, the commonest colour the shiny sprite
@@ -1721,36 +1808,25 @@ def build_weather(gfx):
         save_bg(img, gfx, 'wx_ghost_%d' % k)
 
 def build_grass_front(data, gfx):
-    # The bottom half of a tall-grass tile, drawn over whoever stands in it (the web game's .tg-front).
-    img = Image.new('RGBA', (16, 8), (0, 0, 0, 0))
-    px = img.load()
-    for y in range(8):
-        for x in range(16):
-            c = data['tall_grass'][y + 8][x]
-            if c:
-                px[x, y] = tuple(c) + (255,)
-    save_sprite(gfx, 'grass_front', [img], 16, 8)
+    # The bottom half of a tall-grass tile, drawn over whoever stands in it (the web game's .tg-front), one per ground
+    # look (9.4.0: meadow, deep green, golden).
+    for look, name in zip('ABC', ('grass_front', 'grass_front_b', 'grass_front_c')):
+        img = Image.new('RGBA', (16, 8), (0, 0, 0, 0))
+        px = img.load()
+        for y in range(8):
+            for x in range(16):
+                c = data['tall_grass_looks'][look][y + 8][x]
+                if c:
+                    px[x, y] = tuple(c) + (255,)
+        save_sprite(gfx, name, [img], 16, 8)
 
 # ---------------------------------------------------------------------------------------------------
 # Full-screen backgrounds (256x256 so Butano can use them as regular BGs; the screen shows 240x160).
 def build_backgrounds(data, gfx):
-    a = data['art']
-    # Battle: the sky/hedge backdrop repeated sideways over its fill, and the two platforms.
-    img = Image.new('RGBA', (256, 256), (0xd4, 0xf2, 0xc4, 255))
-    bg = art_image(a['battle_bg'])
-    for x in range(0, 256, bg.size[0]):
-        img.alpha_composite(bg, (x, 0))
-    def platform(l, m, r, x, y, mids):
-        Lp, M, R = art_image(a[l]), art_image(a[m]), art_image(a[r])
-        img.alpha_composite(Lp, (x, y))
-        cx = x + Lp.size[0]
-        for _ in range(mids):
-            img.alpha_composite(M, (cx, y))
-            cx += M.size[0]
-        img.alpha_composite(R, (cx, y))
-    platform('plat_enemy_l', 'plat_enemy_m', 'plat_enemy_r', 132, 50, 6)     # 24 + 48 + 24 = 96 wide
-    platform('plat_player_l', 'plat_player_m', 'plat_player_r', 0, 84, 5)    # 32 + 40 + 32 = 104 wide
-    save_bg(img, gfx, 'battle_bg', 'bpp_8')
+    # 9.4.0: the backdrop per ground look (meadow, forest edge, golden hour; plans/9.3.5-overworld/battle1/battle.py),
+    # platforms where they always were.
+    for look, name in zip('ABC', ('battle_bg', 'battle_bg_b', 'battle_bg_c')):
+        save_bg(Image.open(os.path.join(HERE, '..', 'data', 'overworld', 'battle_bg_%s.png' % look)).convert('RGBA'), gfx, name, 'bpp_8')
 
     # Intro stage: the web game's dark radial spotlight (.intro-stage).
     img = Image.new('RGBA', (256, 256), (0x10, 0x18, 0x20, 255))
@@ -1807,8 +1883,23 @@ def add_statue(data):
             return 0
         l = (c[0] * 3 + c[1] * 6 + c[2]) // 10
         return [min(255, 72 + l * 3 // 4)] * 2 + [min(255, 80 + l * 3 // 4)]
-    frame = {'dy': 0, 'px': [[stone(c) for c in row] for row in f['px']]}
+    # 9.4.0: from the waist up on a plinth, so it reads as carved stone and not as someone standing there.
+    O, P = [38, 38, 56], {'o': [38, 38, 56], 'l': [208, 208, 216], 'm': [168, 168, 180], 'd': [124, 124, 140]}
+    plinth = ['..oooooooooooo..', '..olllllllllll..'.replace('l', 'l'), '..ommmmmmmmmmd..', '..ommmmmmmmmmd..', '.oooooooooooooo.',
+              '.olllllllllllld.', '.ommmmmmmmmmmmd.', '.oooooooooooooo.']
+    bust = [[stone(c) for c in row] for row in f['px'][:13]]
+    bust = [[c if c else 0 for c in row] for row in bust]
+    rows = bust + [[P[ch] if ch != '.' else 0 for ch in r] for r in plinth]
+    frame = {'dy': 0, 'px': rows}
     data['people']['statue'] = {d: [frame] * 3 for d in ('down', 'up', 'left')}
+    # The old shrines that hold the ARCEUS plates (9.0.0): a little stone shrine with two plate hollows under a roof.
+    shrine = ['................', '......oooo......', '....oo2222oo....', '..oo22222222oo..', '.o222222222222o.',
+              '.oooooooooooooo.', '..olllllllllld..', '..olooolooolld..', '..olo1olo1olld..', '..olo1olo1olld..',
+              '..olooolooolld..', '..ommmmmmmmmmd..', '..ommmmmmmmmmd..', '..ommmmmmmmmmd..', '.oooooooooooooo.',
+              '.olllllllllllld.', '.ommmmmmmmmmmmd.', '.oooooooooooooo.', '................', '................', '................']
+    Q = dict(P, **{'1': [72, 64, 96], '2': [176, 96, 72]})
+    data['people']['shrine'] = {d: [{'dy': 0, 'px': [[Q[ch] if ch != '.' else 0 for ch in r] for r in shrine]}] * 3
+                                for d in ('down', 'up', 'left')}
 
 def add_specials(data):
     """5.0.0 on: people that aren't people. A pink SPARKLE (GENOVA's MEW, seen for a moment), a RIFT (AETERNA's way
@@ -1843,19 +1934,23 @@ def add_specials(data):
     data['people']['rift'] = {d: [frame(rift, violet), frame(rift2, violet), frame(rift, violet)] for d in ('down', 'up', 'left')}
     data['people']['shadow'] = {d: [frame(shadow, grey)] * 3 for d in ('down', 'up', 'left')}
 
-def free_spot(a, x, y, also=()):
-    """The nearest open path tile to (x, y) in an area: nobody on it, and not right below a door."""
+def free_spot(a, x, y, also=(), off_path=False):
+    """The nearest open path tile to (x, y) in an area: nobody on it, and not right below a door. 9.4.0: kept two tiles
+    from other people and the spawn where the area has room, so a town's people don't bunch up; `off_path`: a statue
+    or shrine stands beside the path, not on it, where it can."""
     beh = a['behaviour']
     taken = set(also) | {(n['x'], n['y']) for n in a['people']} | {(t['x'], t['y']) for t in a['trainers']} | \
             {(sg['x'], sg['y']) for sg in a['signs']} | {(it['x'], it['y']) for it in a['items']} | \
             {(d['x'], d['y'] + k) for d in a['doors'] for k in (0, 1)}
-    for r in range(0, 12):
-        for dy in range(-r, r + 1):
-            for dx in range(-r, r + 1):
-                tx, ty = x + dx, y + dy
-                if max(abs(dx), abs(dy)) == r and 0 <= ty < len(beh) and 0 <= tx < len(beh[0]) and beh[ty][tx] == 0 \
-                        and (tx, ty) not in taken:
-                    return tx, ty
+    folk = [(n['x'], n['y']) for n in a['people']] + [(t['x'], t['y']) for t in a['trainers']] + [(a['spawn']['x'], a['spawn']['y'])]
+    for gap, road in ((2, not off_path), (1, not off_path), (2, True), (1, True), (0, True)):
+        for r in range(0, 12):
+            for dy in range(-r, r + 1):
+                for dx in range(-r, r + 1):
+                    tx, ty = x + dx, y + dy
+                    if max(abs(dx), abs(dy)) == r and 0 <= ty < len(beh) and 0 <= tx < len(beh[0]) and beh[ty][tx] == 0 \
+                            and (tx, ty) not in taken and (road or a['tiles'][ty][tx] != ':') and all(max(abs(tx - fx), abs(ty - fy)) > gap for fx, fy in folk):
+                        return tx, ty
     raise SystemExit('no free spot near (%d, %d) in %s' % (x, y, a['name']))
 
 def add_extras(data):
@@ -2109,6 +2204,7 @@ def inputs_hash():
     files.append(os.path.join(HERE, '..', 'news_gba.json'))
     files.append(os.path.join(HERE, '..', 'data', 'extras.json'))
     files += [os.path.join(HERE, '..', 'data', 'title_%s.png' % n) for n in ('sky', 'logo', 'spark', 'hooh')]
+    files += sorted(glob.glob(os.path.join(HERE, '..', 'data', '*.png')) + glob.glob(os.path.join(HERE, '..', 'data', '*.json')))
     for f in files:
         h.update(open(f, 'rb').read())
     h.update(MON_COMPRESSION.encode())
@@ -2135,6 +2231,10 @@ def main():
             os.remove(os.path.join(inc, f))
     subprocess.run(['node', os.path.join(HERE, 'export.js'), EXP], check=True)
     data = json.load(open(os.path.join(EXP, 'data.json'), encoding='utf8'))
+    for dirs in data['people'].values():
+        for frames in dirs.values():
+            for f in frames:
+                f['px'] = restyle_person(f['px'])
     add_extras(data)
     add_statue(data)
     add_specials(data)

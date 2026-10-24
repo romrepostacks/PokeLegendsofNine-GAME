@@ -53,9 +53,43 @@ function svgPixels(svg){
   if(/scaleX\(-1\)/.test(svg)) px.forEach(r=>r.reverse());
   return {w, h, px};
 }
+// 9.4.0: the overworld art approved in the art rounds (gba/data/overworld, drawn by plans/9.3.5-overworld/*/): each
+// area draws with its own layers (lookOf, useLayers), first found wins. <layer>/<name>.png replaces a tile and the
+// ground layer's ground_map.json recolours the old pieces. ART_OVERRIDE=<dir> goes on top (the rounds' previews).
+const OVERRIDE = process.env.ART_OVERRIDE, ART_DIR = path.join(__dirname, '..', 'data', 'overworld'), overridden = new Map();
+let LAYERS = [], RECOLOUR = {};
+function useLayers(names){
+  LAYERS = (OVERRIDE ? [OVERRIDE] : []).concat(names.map(n=>path.join(ART_DIR, n)));
+  const g = LAYERS.map(d=>path.join(d, 'ground_map.json')).find(f=>fs.existsSync(f));
+  RECOLOUR = g ? JSON.parse(fs.readFileSync(g, 'utf8')) : {};
+}
+function override(name){
+  for(const d of LAYERS){
+    const f = path.join(d, name + '.png');
+    if(!overridden.has(f)) overridden.set(f, fs.existsSync(f) ? readPng(name + '.png', d) : null);
+    if(overridden.get(f)) return overridden.get(f);
+  }
+  return null;
+}
+// An area's look: ground A meadow (most), B deep green (forests), C golden (Calderra, the Sundered Isles, ash), with
+// oaks or pines, tropical shallows on golden ground, mossy props in forests, warm or cool caves, the weather's art and
+// the town's MART, house and room style (its CENTER's). Areas the region already tints keep the meadow under the tint.
+function lookOf(loc, map){
+  const n = loc.name, r = loc.region || 1, wx = map.weather || '', cold = wx==='snow' || /frost|glacier|northwind|rime|snow|\bice/i.test(n);
+  const forest = map.tint==='jungle' || /wood|forest|jungle|canopy|grove|thorn|overgrown|verdan|moss|fen\b|marsh|hive/i.test(n);
+  const ground = map.tint && map.tint!=='jungle' || map.volcano || cold ? 'A' : wx==='ash' || r===2 || r===3 ? 'C' : forest ? 'B' : 'A';
+  const tree = ground==='B' || cold ? 'pine' : 'oak';
+  const cave = map.deep ? 'U' : r>=2 && r<=4 || map.volcano ? 'A' : 'B';
+  return {ground, tree, cave, style:map.centerStyle || 'A', gym:G.gymTheme(loc.leaderName) || 'normal', layers:[
+    ...(wx==='ash' ? ['weather_ash'] : wx==='rain' || wx==='snow' ? ['weather_' + tree] : []),
+    'caves_' + cave, ...(ground==='C' && wx!=='ash' && !map.volcano ? ['water_C'] : []),
+    ...(ground==='B' ? ['props_B_moss'] : []), 'props_' + ground, `trees_${ground}_${tree}`, 'ground_' + ground,
+    'buildings_' + (map.centerStyle || 'A')]};
+}
 function artPixels(name, pal){
+  if(!pal && override(name)) return override(name);
   const a = G.TILE_ART[name], p = pal || a.pal;
-  return {w:a.w, h:a.h, px:a.rows.map(r=>[...r].map(ch=>ch==='.' ? null : hex(p[ch])))};
+  return {w:a.w, h:a.h, px:a.rows.map(r=>[...r].map(ch=>ch==='.' ? null : hex(RECOLOUR[p[ch].toLowerCase()] || p[ch])))};
 }
 class Canvas {
   constructor(w, h, fill){ this.w = w; this.h = h; this.d = Buffer.alloc(w*h*3); if(fill) this.rect(0, 0, w, h, fill); }
@@ -83,10 +117,62 @@ function writePng(file, w, h, rgb){
 }
 function crop(c, x0, y0, w, h){ const out = new Canvas(w, h); for(let y=0; y<h; y++) c.d.copy(out.d, y*w*3, ((y0+y)*c.w + x0)*3, ((y0+y)*c.w + x0 + w)*3); return out; }
 const savePng = (name, c)=>writePng(path.join(OUT, name), c.w, c.h, c.d);
+// 9.4.0: hand-drawn art in gba/data (tools/art/*.py), 8-bit RGB or RGBA, as {w, h, px} (null = transparent).
+function readPng(name, dir=path.join(__dirname, '..', 'data')){
+  const b = fs.readFileSync(path.join(dir, name)), w = b.readUInt32BE(16), h = b.readUInt32BE(20), n = b[25]===6 ? 4 : 3;
+  if(b[24]!==8 || ![2,6].includes(b[25]) || b[28]) throw new Error(name + ': only 8-bit RGB(A) PNGs');
+  const idat = [];
+  for(let i=8; i<b.length; i += 12 + b.readUInt32BE(i)) if(b.toString('ascii', i+4, i+8)==='IDAT') idat.push(b.subarray(i+8, i+8+b.readUInt32BE(i)));
+  const raw = zlib.inflateSync(Buffer.concat(idat)), st = w*n, out = Buffer.alloc(st*h);
+  for(let y=0; y<h; y++){
+    const f = raw[y*(st+1)];
+    for(let x=0; x<st; x++){
+      const a = x>=n ? out[y*st+x-n] : 0, u = y ? out[(y-1)*st+x] : 0, c = x>=n && y ? out[(y-1)*st+x-n] : 0;
+      const p = a + u - c, pr = Math.abs(p-a)<=Math.abs(p-u) && Math.abs(p-a)<=Math.abs(p-c) ? a : Math.abs(p-u)<=Math.abs(p-c) ? u : c;
+      out[y*st+x] = raw[y*(st+1)+1+x] + [0, a, u, (a+u)>>1, pr][f];
+    }
+  }
+  return {w, h, px:Array.from({length:h}, (_,y)=>Array.from({length:w}, (_,x)=>{ const i = y*st+x*n;
+    return n===4 && out[i+3]<128 ? null : [out[i], out[i+1], out[i+2]]; }))};
+}
+// 9.4.0: the three POKéMON CENTERS (tools/art/centers.py, center_rooms.py), taken in turn by the towns that have one,
+// in area order, so each region gets all three.
+const CENTER_ROOMS = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data', 'center_rooms.json'), 'utf8'));
+const CENTER_FRONT = Object.fromEntries(Object.keys(CENTER_ROOMS).map(k=>[k, readPng(`center_${k}.png`)]));
+const centerTowns = G.LOCATIONS.filter(l=>l.center);
+// 9.4.0: the CHALLENGE TOWER's front and a SUMMONING CHAMBER for each legendary (tools/art/chambers/build.py).
+const TOWER_FRONT = readPng('tower_front.png');
+const CHAMBERS = fs.readdirSync(path.join(__dirname, '..', 'data')).map(f=>f.match(/^chamber_(\d+)(_shiny)?\.png$/)).filter(Boolean)
+  .map(m=>({num:+m[1], shiny:!!m[2], art:m[0].slice(0, -4)})).sort((a, b)=>a.num-b.num || a.shiny-b.shiny);
+const liOfMap = new Map();
+for(const loc of G.LOCATIONS){
+  const own = loc.twinOf!==undefined ? G.LOCATIONS[loc.twinOf] : loc, map = G.getMap(loc);
+  if(map.buildings.some(b=>b.kind==='center')) map.centerStyle = Object.keys(CENTER_ROOMS)[Math.max(0, centerTowns.indexOf(own)) % 3];
+  map.look = lookOf(loc, map);
+  liOfMap.set(map, G.LOCATIONS.indexOf(loc));
+}
+
+// 9.4.0: every gym its own challenge (tools/gym/gym_rooms.py draws them; tools/gym/solver.py tests them): the room's
+// tiles, people and rules. Its juniors keep their #gym0/#gym1 ids; any more get ids after everyone else's.
+const GYM_PUZZLES = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data', 'gym_puzzles.json'), 'utf8'));
+function puzzleRoom(room, loc, li){
+  const P = GYM_PUZZLES[li], tiles = P.states[0].map(r=>[...r]);
+  const g = G.GYM_STYLE[loc.leaderName] || {kind:'leaderFire', type:'tough'};
+  const J = g.juniors || G.GYM_JUNIORS[room.theme] || G.GYM_JUNIORS.fire, pick = (k,n)=>Array.from({length:n}, (_,i)=>J.team[(k*2+i) % J.team.length]);
+  const names = J.kind==='lass' || J.kind==='oldwoman' ? ['MAYA','LENA','ROSE','JUNE'] : ['TOMMY','CARL','JAKE','OWEN'];
+  const [gx, gy] = P.guide;
+  const npcs = [{kind:g.kind, x:P.leader[0], y:P.leader[1], facing:'down', trainer:true, gymLeader:true},
+    {kind:'gentleman', x:gx, y:gy, facing:gx < P.w/2 ? 'right' : 'left', lines:room.npcs.find(n=>n.kind==='gentleman' && !n.trainer).lines},
+    ...P.juniors.map(([x,y,facing],k)=>({kind:J.kind, x, y, facing, trainer:true, id:`${loc.name}#gym${k}`, extra:k>=2,
+      title:`${J.cls} ${names[k]}`, team:pick(k, 3 + k%2), intro:`${loc.leaderName} is the best! You'll have to get past me first!`,
+      after:`${loc.leaderName} is waiting at the top. Good luck!`}))];
+  for(const n of npcs) n.home = {x:n.x, y:n.y};
+  return {...room, w:P.w, h:P.h, tiles, npcs, puzzle:li, spawn:{x:P.start[0], y:P.start[1]}, mat:{x:tiles[P.h-1].indexOf('M'), y:P.h-1}};
+}
 
 // ---------- Tile behaviours (what the GBA needs to know about each tile) ----------
-const GRASS = hex(G.GROUND.base);
-const tallGrass = svgPixels(G.tallGrassSvg());
+const grassFill = ()=>override('grass_v0') ? override('grass_v0').px[0][0] : hex(G.GROUND.base);
+const TALL_SVG = svgPixels(G.tallGrassSvg()), tallArt = ()=>override('tall') || TALL_SVG;
 const BEHAVIOUR = {walk:0, solid:1, tall:2, water:3, ledgeDown:4, ledgeRight:5, ledgeLeft:6, sign:7, door:8, item:9,
   counter:10, pc:11, mat:12, statue:13, windUp:14, windDown:15, windLeft:16, windRight:17};
 function behaviour(ch){
@@ -126,8 +212,49 @@ function ellipse(c, cx, cy, rx, ry, col, a){
 // filters on the view, so a neighbour seen across a connection takes them from where you are.
 // opts: frameB draws water and flowers in their second animation frame; noItems leaves the item balls out
 // (what's under one once it's picked up); noAsh leaves the settled ash off (where you've walked).
+// 9.4.0: where a neighbour looks different (another ground, tint or a cave), the three rows or columns along that
+// edge fade toward the neighbour's look, more of it nearer the edge, so the two meet without a straight seam. Colours
+// blend; trees of another kind (or cave rock against a forest) can't blend, so some of them are swapped for the
+// neighbour's instead. Both sides do it, so nothing changes as you cross.
+const styleKey = m=>JSON.stringify([m.look.layers.filter(l=>!l.startsWith('buildings_')), m.tint || '', !!m.cave, !!m.deep, !!m.volcano]);
+const treeKey = m=>JSON.stringify([m.look.layers.filter(l=>/^(trees|weather|caves)_/.test(l)), !!m.cave, !!m.deep]);
+const BLEND = [0.42, 0.26, 0.1], SWAP = [70, 40, 15];   // by tile: each step costs the tileset another set of colours
 function drawArea(map, view, opts={}){
-  const c = new Canvas(map.w*16, map.h*16, GRASS);
+  const c = drawPlain(map, view, opts), li = liOfMap.get(map);
+  if(li===undefined) return c;
+  const blocked = (x, y)=>map.buildings.some(b=>x>=b.x && x<b.x+b.w && y>=b.y-1 && y<b.y+b.h);
+  const tall = (x, y)=>y<map.h && (map.tiles[y][x]==='T' || map.tiles[y][x]==='^');   // rises 8 px into the tile above
+  for(const n of G.neighbours(li)){
+    if(styleKey(n.map)===styleKey(map)) continue;
+    const alt = drawPlain({...map, look:n.map.look, tint:n.map.tint, cave:n.map.cave, deep:n.map.deep, volcano:n.map.volcano}, view, opts);
+    const swapTrees = treeKey(n.map)!==treeKey(map), d = n.exit.dir, vert = d==='up' || d==='down';
+    // A cave draws rocks, signs and grass as its floor: only the ground itself can blend with the outside.
+    const caveEdge = !!n.map.cave!==!!map.cave || !!n.map.deep!==!!map.deep;
+    // Blended colours cost the tileset palette room, so only a tint changes them all; another ground set only swaps
+    // trees, and a cave blends just the path into its floor.
+    const tinted = (n.map.tint || '')!==(map.tint || '') || !!n.map.volcano!==!!map.volcano;
+    const lo = vert ? Math.max(0, n.ox) : Math.max(0, n.oy), hi = vert ? Math.min(map.w, n.ox + n.map.w) : Math.min(map.h, n.oy + n.map.h);
+    const band = (x, y)=>{   // how far (x, y) is from this edge, if it's on it
+      const i = vert ? x : y, k = d==='up' ? y : d==='down' ? map.h-1-y : d==='left' ? x : map.w-1-x;
+      return i>=lo && i<hi && k<3 && !blocked(x, y) ? k : -1;
+    };
+    // A pixel belongs to the tile whose art is on top there: a tree's crown to the tree below.
+    for(let py=0; py<c.h; py++) for(let px=0; px<c.w; px++){
+      const x = px>>4, ty = py>>4, y = (py&15)>=8 && tall(x, ty+1) ? ty+1 : ty, k = band(x, y);
+      if(k<0) continue;
+      if(swapTrees && map.tiles[y][x]==='T'){
+        if((((x*2654435761) ^ (y*40503) ^ (li*97)) >>> 8) % 100 < SWAP[k]) c.set(px, py, alt.get(px, py));
+      } else if(tinted ? !caveEdge || ['grass', 'path', 'exit'].includes(G.TILE_CLS[map.tiles[y][x]]) : caveEdge && ['path', 'exit'].includes(G.TILE_CLS[map.tiles[y][x]])){
+        c.set(px, py, blend(c.get(px, py), alt.get(px, py), BLEND[k]));
+      }
+    }
+    useLayers(map.look.layers);
+  }
+  return c;
+}
+function drawPlain(map, view, opts={}){
+  useLayers(map.look.layers);
+  const c = new Canvas(map.w*16, map.h*16, grassFill()), tallGrass = tallArt();
   const at = (x,y)=>{ const ch = map.tiles[y][x]; return opts.noItems && ch==='I' ? '.' : ch; };
   const cave = map.cave, deep = map.deep, wx = map.weather;
   const floorArt = v=>(cave ? 'cave_floor_v' : 'deep_floor_v') + (v%4===1 || v%4===3 ? 1 : 0);
@@ -146,7 +273,10 @@ function drawArea(map, view, opts={}){
       const kind = cls==='water' ? 'water' : 'path';
       c.draw(artPixels(kind==='water' && opts.frameB ? 'water_b' : kind), X, Y);
       const ov = G.edgeOverlay(map, x, y, G.EDGE_GROUPS[kind], kind);
-      for(const m of ov.matchAll(/--art-([a-z_]+)\)/g)) c.draw(artPixels(m[1]), X, Y);
+      const names = [...ov.matchAll(/--art-([a-z_]+)\)/g)].map(m=>m[1]);
+      // Overridden shorelines round their corners over their edges.
+      if(override(kind + '_edge_t')) names.sort((a, b)=>/corner|inner/.test(a) - /corner|inner/.test(b));
+      for(const n of names) c.draw(artPixels(n), X, Y);
       // Dive spots (.divespot): brightness .55, saturate 1.25.
       if(kind==='water' && map.diveSpots && map.diveSpots.has(x+','+y)) c.filter(X, Y, 16, 16, p=>saturate(p.map(q=>q*0.55), 1.25));
     }
@@ -159,9 +289,12 @@ function drawArea(map, view, opts={}){
     if(map.shafts && map.shafts.has(x+','+y)) c.wash(X, Y, 16, 16, hex('#d8f8ff'), 0x50/255);
     // Weather on the ground (tileHtml): puddles in the rain, drifts in the snow, ash on the grass.
     const h = v % 11;
-    if(wx==='rain' && cls==='grass' && h<2) ellipse(c, X+8, Y+8.25, 5, 2.25, hex('#6f9ed0'), 0xaa/255);
-    if(wx==='snow' && cls==='grass' && h<4){ ellipse(c, X+4.8, Y+9.6, 4.5*0.7, 2.5*0.7, hex('#fbfdff'), 0xee/255); ellipse(c, X+11.5, Y+5.6, 3.5*0.7, 2*0.7, hex('#f4f8ff'), 0xdd/255); }
-    if(wx==='ash' && !opts.noAsh && (cls==='grass' && h<6 || cls==='tall')){
+    const wxArt = override;   // the weather's own art replaces the drawn shapes
+    if(wx==='rain' && cls==='grass' && h<2){ if(wxArt('puddle')) c.draw(wxArt('puddle'), X, Y); else ellipse(c, X+8, Y+8.25, 5, 2.25, hex('#6f9ed0'), 0xaa/255); }
+    if(wx==='snow' && cls==='grass' && h<4 && wxArt('drift')) c.draw(wxArt('drift'), X, Y);
+    else if(wx==='snow' && cls==='grass' && h<4){ ellipse(c, X+4.8, Y+9.6, 4.5*0.7, 2.5*0.7, hex('#fbfdff'), 0xee/255); ellipse(c, X+11.5, Y+5.6, 3.5*0.7, 2*0.7, hex('#f4f8ff'), 0xdd/255); }
+    if(wx==='ash' && wxArt('ash')){ if(!opts.noAsh && cls==='grass') c.draw(wxArt('ash' + (v%4 ? '' : '_b')), X, Y); }   // every lawn tile ashen
+    else if(wx==='ash' && !opts.noAsh && (cls==='grass' && h<6 || cls==='tall')){
       c.wash(X, Y, 16, 16, hex('#8a8a90'), 0x40/255);
       for(const [fx,fy,col] of [[0.2,0.3,'#6a6a70'],[0.6,0.7,'#707078'],[0.8,0.2,'#5c5c64'],[0.4,0.85,'#66666e']]){
         const px = X + Math.floor(fx*16), py = Y + Math.floor(fy*16);
@@ -171,8 +304,24 @@ function drawArea(map, view, opts={}){
   }
   // Buildings (as buildingHtml lays them out).
   for(const b of map.buildings){
+    if(b.kind==='center' && map.centerStyle){
+      if(b.w!==5 || b.h!==4 || b.door.x-b.x!==2) throw new Error('a CENTER the art does not fit');
+      c.draw(CENTER_FRONT[map.centerStyle], b.x*16, b.y*16 - 8);
+      continue;
+    }
+    // 9.4.0: a gym in its town's style and its type's colours (tools/art/gym_fronts.py), doorway over the door.
+    const gymFront = b.kind==='gym' && b.w===6 && b.h===4 && `gym_${map.look.style}_${map.look.gym}_d${b.door.x-b.x}.png`;
+    if(gymFront && fs.existsSync(path.join(__dirname, '..', 'data', gymFront))){ c.draw(readPng(gymFront), b.x*16, b.y*16 - 8); continue; }
+    if(b.kind==='tower'){
+      if(b.w!==7 || b.door.x-b.x!==3) throw new Error('a TOWER the art does not fit');
+      c.draw(TOWER_FRONT, b.x*16, (b.door.y+1)*16 - TOWER_FRONT.h);
+      continue;
+    }
     const roof = b.kind==='center' ? 'red' : b.kind==='mart' ? 'blue' : b.kind==='gym' || b.kind==='league' || b.kind==='tower' ? 'slate'
       : G.HOUSE_ROOF_NAMES[G.HOUSE_ROOFS.indexOf(b.roof)] || 'green';
+    // An overridden MART or house front replaces the pieces below.
+    const front = b.w===4 && b.h===3 && override(b.kind==='mart' ? 'mart_d'+(b.door.x-b.x) : 'house_'+roof);
+    if(front){ c.draw(front, b.x*16, b.y*16 - 8); continue; }
     const wall = b.kind==='gym' || b.kind==='league' || b.kind==='tower' ? 'grey' : 'cream';
     const piece = name=>{ const a = G.TILE_ART[name], r = G.ROOF_SWAP[roof], w = G.WALL_SWAP[wall];
       return artPixels(name, {...a.pal, 1:r[0], 2:r[1], 3:r[2], 4:r[3], A:w[0], B:w[1], C:w[2]}); };
@@ -203,7 +352,9 @@ function drawArea(map, view, opts={}){
   // settle on the treetops.
   for(let y=0; y<map.h; y++) for(let x=0; x<map.w; x++){
     if(at(x,y)==='T' && !cave && !deep){
-      c.draw(artPixels((x+y)%2 ? 'tree2' : 'tree'), x*16, y*16 - 8);
+      const tv = (x+y)%2 ? 'tree2' : 'tree', wt = view==='snow' || view==='ash' ? override(tv + '_' + view) : null;
+      c.draw(wt || artPixels(tv), x*16, y*16 - 8);
+      if(wt) continue;
       if(view==='snow'){ const X = x*16+1.5, Y = y*16-7.5; ellipse(c, X+6.5, Y+2.5, 6.5, 3, hex('#ffffff'), 1); ellipse(c, X+6.5, Y+3.2, 6, 2.2, hex('#e4eef8'), 0.6); }
       if(view==='ash') ellipse(c, x*16+2+6, y*16-7+2, 5, 2.2, hex('#9a9aa2'), 0xcc/255);
     }
@@ -334,6 +485,7 @@ const GYMWALL_CSS = {electric:['#c8a830','#f8e048','#c89818','#806010','#fff8b0'
   fighting:['#b08858','#f0d0a0','#c8a070','#705030','#f8e8c8',false], psychic:['#d888b0','#ffe0f0','#e8a8c8','#a05080','#fff',true],
   league:['#8878b0','#e0d0f8','#9080c0','#605088','#fff',false]};
 function drawGym(room, opts={}){
+  useLayers([]);
   const league = room.interior==='league';
   const theme = league ? 'league' : room.theme || 'fire', c = new Canvas(room.w*16, room.h*16, [0,0,0]);
   const at = (x,y)=>room.tiles[y] ? room.tiles[y][x] : '#';
@@ -366,7 +518,11 @@ function drawGym(room, opts={}){
 // A League gate tile, open: the floor.
 function leagueFloor(){ const c = new Canvas(16, 16, hex('#c0b8d8')); return c; }
 function drawRoom(room, opts={}){
+  if(room.chamber){ const a = readPng(room.chamber + '.png'), c = new Canvas(a.w, a.h); c.draw(a, 0, 0); return c; }
+  if(room.style){ const a = readPng(`center_room_${room.style}.png`), c = new Canvas(a.w, a.h); c.draw(a, 0, 0); return c; }
+  if(room.puzzle!=null){ const a = readPng(`gym_${room.puzzle}_0.png`), c = new Canvas(a.w, a.h); c.draw(a, 0, 0); return c; }
   if(room.interior==='gym' || room.interior==='league') return drawGym(room, opts);
+  useLayers(room.look ? ['interiors_' + room.look] : []);
   const art = ROOM_ART[room.interior], c = new Canvas(room.w*16, room.h*16, [0,0,0]);
   const at = (x,y)=>room.tiles[y] ? room.tiles[y][x] : '#';
   const pieces = [];
@@ -400,7 +556,7 @@ function trainerOut(n, loc){
   // Elite Four: their own six, at your average level plus their place in line (startTrainerBattle).
   if(n.elite!=null) return {kind:n.kind, x:n.x, y:n.y, facing:n.facing, role:'elite', elite:n.elite, title:n.title, team:n.team,
     intro:[`${n.title}: "${n.intro}"`], after:[`${n.title}: "${n.after}"`], vanish:false};
-  if(n.id) return {kind:n.kind, x:n.x, y:n.y, facing:n.facing, role:/#gym\d/.test(n.id) ? 'junior' : 'route', title:n.title, team:n.team,
+  if(n.id) return {kind:n.kind, x:n.x, y:n.y, facing:n.facing, role:/#gym\d/.test(n.id) ? 'junior' : 'route', extra:!!n.extra, title:n.title, team:n.team,
     intro:[`${n.title}: "${n.intro}"`], after:[`${n.title}: "${n.after}"`], vanish:false, grunt:n.kind==='grunt'};
   const leader = loc.type==='gym', name = loc.leaderName;
   const quote = n.champion ? loc.championQuote || "So you made it. I always knew it'd be you. One last battle, for real this time!"
@@ -444,6 +600,7 @@ function towerRooms(li, bi, b){
   towerRoom(li, `${bi}/summit`, 'summit', 'league', TOWER_ROOMS.summit, b, [],
     [{x:7, y:5, text:['A SUMMONING STONE. It hums faintly.']}]);
   for(const t of CHAMBER_THEMES) towerRoom(li, `${bi}/chamber_${t}`, 'chamber', t, TOWER_ROOMS.chamber, b, [], []);
+  towerAt = {li, bi, b};
   return {x:b.door.x, y:b.door.y, kind:'tower', room:first};
 }
 
@@ -451,6 +608,7 @@ fs.mkdirSync(OUT, {recursive:true});
 G.setAdv({cleared:{}, picked:{}, story:{}, items:{}, party:[], box:[]});   // the League's gates start shut
 const areas = [], rooms = [], peopleKinds = new Set(['player', 'prof', 'nurse', 'clerk', 'mom', 'rival', 'grunt', 'admin', 'captain', 'pilot']);
 const roomArts = new Map(), trainerSpecies = new Set();
+let towerAt = null;
 const lines = n=>n.lines || [];
 const STRIP_X = 10, STRIP_Y = 8;   // how far into a neighbour the camera can see (and the BG draws)
 const locIndex = new Map(G.LOCATIONS.map((l,i)=>[l, i]));
@@ -490,17 +648,23 @@ for(const li of AREAS){
   });
   const doors = map.buildings.map((b, bi)=>{
     if(b.kind==='tower') return towerRooms(li, bi, b);
-    const room = G.getInterior(loc, bi);
-    const art = room.interior==='gym' ? `gym_${room.theme}_${li}` : room.interior;    // 9.3.0: each gym its own layout
-    if(!roomArts.has(art)) roomArts.set(art, {area:li, building:bi});
+    let room = G.getInterior(loc, bi);
+    // 9.4.0: each CENTER style has its own room, drawn by hand, with its own tile rows.
+    if(room.interior==='center') room = {...room, style:map.centerStyle, tiles:CENTER_ROOMS[map.centerStyle].rows.map(r=>[...r])};
+    if(room.interior==='gym' && GYM_PUZZLES[li]) room = puzzleRoom(room, loc, li);
+    // 9.4.0: houses and MARTs are furnished in the town's style.
+    if(room.interior==='house' || room.interior==='mart') room = {...room, look:map.look.style};
+    const art = room.interior==='gym' ? `gym_${room.theme}_${li}` : room.style ? `center_${room.style}` : room.look ? `${room.interior}_${room.look}` : room.interior;    // 9.3.0: each gym its own layout
+    if(!roomArts.has(art)) roomArts.set(art, {area:li, building:bi, room});
     for(const n of room.npcs) peopleKinds.add(n.kind);
     const roomTrainers = room.npcs.filter(n=>n.trainer).map(n=>trainerOut(n, loc));
     for(const t of roomTrainers) [...t.team, ...(t.fill || [])].forEach(s=>trainerSpecies.add(s));
-    rooms.push({area:li, building:bi, kind:room.interior, art, theme:room.theme, home:!!b.home, w:room.w, h:room.h, tiles:room.tiles.map(r=>r.join('')),
+    rooms.push({area:li, building:bi, kind:room.interior, art, tutor:room.style ? CENTER_ROOMS[room.style].tutor : null, theme:room.theme, home:!!b.home, w:room.w, h:room.h, tiles:room.tiles.map(r=>r.join('')),
       trainers:roomTrainers, gym:room.interior==='gym' ? {name:loc.name.toUpperCase(), leader:loc.leaderName} : null,
-      behaviour:room.tiles.map(r=>r.map(behaviour)), spawn:room.spawn, door:{x:b.door.x, y:b.door.y},
+      behaviour:room.puzzle!=null ? room.tiles.map(r=>r.map(ch=>ch==='M' ? BEHAVIOUR.mat : ch==='u' ? BEHAVIOUR.statue : BEHAVIOUR.walk)) : room.tiles.map(r=>r.map(behaviour)),
+      spawn:room.spawn, door:{x:b.door.x, y:b.door.y}, puzzle:room.puzzle!=null ? {...GYM_PUZZLES[li], area:li} : null,
       people:room.npcs.filter(n=>!n.trainer).map(n=>({kind:n.kind, x:n.x, y:n.y, facing:n.facing, role:n.role || '', wander:!!n.wander, lines:lines(n)})),
-      things:room.tiles.flatMap((r,y)=>r.map((ch,x)=>({x, y, text:G.THING_TEXT[(G.TILE_CLS[ch]||'').split(' ')[0]]})).filter(t=>t.text)),
+      things:room.puzzle!=null ? [] : room.tiles.flatMap((r,y)=>r.map((ch,x)=>({x, y, text:G.THING_TEXT[(G.TILE_CLS[ch]||'').split(' ')[0]]})).filter(t=>t.text)),
       // League: the gate rows that open as each Elite Four trainer is beaten (leagueGates).
       gates:room.interior==='league' ? [17,13,9,5].map((row,k)=>({y:row, x0:6, x1:8, elite:k})) : []});
     return {x:b.door.x, y:b.door.y, kind:b.kind, room:rooms.length-1};
@@ -522,12 +686,26 @@ for(const li of AREAS){
       intro:['TEMPEST GRUNT: "The Admin said nobody gets past. That means you!"'],
       after:['TEMPEST GRUNT: "Go ahead, then. You\'ll never reach the shrine without a way to dive."']}] : []),
     spawn:map.spawn, pool:loc.pool || [], area_pool:G.areaPool(loc), water:G.waterPool(loc), fish:G.fishPool(loc), tier:loc.tier ?? li,
-    theme:loc.theme || 'plain', weather:map.weather || '', volcano:!!map.volcano, tint:map.tint || '', cave:!!map.cave, deep:!!map.deep, center:!!loc.center,
+    theme:loc.theme || 'plain', weather:map.weather || '', volcano:!!map.volcano, tint:map.tint || '', cave:!!map.cave, deep:!!map.deep, center:!!loc.center, look:map.look.ground,
     dive:loc.dive ?? -1, surface:loc.surface ?? -1, dive_spots:keys(map.diveSpots), shafts:keys(map.shafts),
     scene:loc.scene || '', legend:legend ? {name:legend.legend, x:legend.x, y:legend.y} : null, league:!!loc.league, champion:!!loc.champion, tower_town:loc===TOWER_TOWN, trade_town:loc===TRADE_TOWN, safari:loc===SAFARI, shrine:!!loc.shrine, roam:loc.roam || [],
     leader_team:loc.leaderTeam || [], rival_after:loc.rivalAfter || [], own_pool:!!loc.pool,
     extras:loc.extras || [], twin:loc.twin ?? loc.twinOf ?? -1, mirror:!!(loc.mirror || (loc.twin!==undefined && G.LOCATIONS[loc.twin].mirror))});
   if(legend) trainerSpecies.add(legend.legend);
+}
+// 9.4.0: one SUMMONING CHAMBER per legendary, after every region's rooms (`late`) so no saved map index moves.
+// The art is the whole room; you walk the stone path from the mat up to the dais.
+if(towerAt){
+  const {li, bi, b} = towerAt;
+  const rows = ['###############','###############','###############','###############',
+    ...Array(8).fill('#######_#######'), '#######M#######'];
+  for(const ch of CHAMBERS){
+    const room = {w:15, h:13, tiles:rows.map(r=>r.split('')), chamber:ch.art};
+    roomArts.set(ch.art, {area:li, building:`${bi}/${ch.art}`, room});
+    rooms.push({area:li, building:`${bi}/${ch.art}`, kind:'chamber', art:ch.art, theme:null, home:false, w:15, h:13, tiles:rows,
+      trainers:[], gym:null, behaviour:room.tiles.map(r=>r.map(behaviour)), spawn:{x:7, y:11}, door:{x:b.door.x, y:b.door.y},
+      people:[], things:[], gates:[], floor:-1, legend:ch.num, legend_shiny:ch.shiny, baked:ch.num===382, late:true});
+  }
 }
 for(const [art, {area, building, room:own}] of roomArts){
   const room = own || G.getInterior(G.LOCATIONS[area], building);
@@ -616,7 +794,7 @@ fs.writeFileSync(path.join(OUT, 'data.json'), JSON.stringify({
   pix:G.PIX, type_col:G.TYPE_COL,
   areas, rooms, people, surf, species, species_v1:species.filter(sp=>!gen89.has(sp.name)).length,
   // 3.0.0 on: where each later region's forms start (the SUNDERED ISLES' first), then the end.
-  species_from:G.FORM_LISTS.reduce((a, l)=>[...a, a[a.length-1] + l.length], [species.length - G.FORM_LISTS.flat().length]), moves, moves_v1, tall_grass:tallGrass.px, types:G.TYPES, chart:G.CHART, type_colors:G.TYPE_COLORS,
+  species_from:G.FORM_LISTS.reduce((a, l)=>[...a, a[a.length-1] + l.length], [species.length - G.FORM_LISTS.flat().length]), moves, moves_v1, tall_grass:TALL_SVG.px, tall_grass_looks:Object.fromEntries('ABC'.split('').map(g=>{ useLayers(['ground_' + g]); return [g, tallArt().px]; })), types:G.TYPES, chart:G.CHART, type_colors:G.TYPE_COLORS,
   starter_trios:G.STARTER_TRIOS, prof:G.PROF, intro:G.INTRO_LINES, items:G.ITEM_INFO, held_items:G.ITEMS, prof_calls:G.PROF_CALLS,
   elites:G.ELITES, time_types:G.TIME_TYPES, night_visitors:G.NIGHT_VISITORS, tempest_pool:G.TEMPEST_POOL, admin:G.ADMIN,
   music, weather:G.WEATHER, wallpapers:G.WALLPAPERS, wall_names:G.WALL_NAMES,

@@ -15,6 +15,8 @@
 #include "bn_vector.h"
 
 #include "bn_regular_bg_items_battle_bg.h"
+#include "bn_regular_bg_items_battle_bg_b.h"
+#include "bn_regular_bg_items_battle_bg_c.h"
 #include "bn_sprite_items_ball.h"
 
 #include "pr_audio.h"
@@ -177,13 +179,24 @@ namespace
         }
     }
 
+    // 9.4.0: the backdrop matches the ground you're on (meadow, forest edge, golden hour).
+    const bn::regular_bg_item& battle_bg_item()
+    {
+        switch(map_look(state().map))
+        {
+        case 1: return bn::regular_bg_items::battle_bg_b;
+        case 2: return bn::regular_bg_items::battle_bg_c;
+        default: return bn::regular_bg_items::battle_bg;
+        }
+    }
+
     class battle
     {
 
     public:
         explicit battle(battle_setup& setup) :
             _s(setup),
-            _bg(bn::regular_bg_items::battle_bg.create_bg(8, 48))
+            _bg(battle_bg_item().create_bg(8, 48))
         {
             _bg.set_priority(3);
         }

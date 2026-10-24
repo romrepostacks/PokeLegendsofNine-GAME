@@ -262,6 +262,10 @@ void overworld::interact()
         talk_to(who);
         return;
     }
+    if(puzzle() && puzzle_interact())
+    {
+        return;
+    }
     // Signs and tablets on this map.
     for(int i = 0; i < _map->signs_count; ++i)
     {
@@ -3311,7 +3315,20 @@ void overworld::tower_stone()
     upper(text, game_data::species_list[g.tower.legend].name);
     text.append(" answers the call!");
     say(text);
-    int chamber = tower_room(room_kind::CHAMBER, -1, chamber_theme(g.tower.legend));
+    // 9.4.0: its own chamber (Kyogre's shiny has its own picture); the type chambers are left as a fallback.
+    int chamber = -1;
+    for(int i = 0; i < wd::maps_count && chamber < 0; ++i)
+    {
+        const room_info* r = wd::maps[i].room;
+        if(r && r->legend == g.tower.legend && (! r->baked || r->legend_shiny == g.tower.legend_shiny))
+        {
+            chamber = i;
+        }
+    }
+    if(chamber < 0)
+    {
+        chamber = tower_room(room_kind::CHAMBER, -1, chamber_theme(g.tower.legend));
+    }
     if(chamber < 0)
     {
         chamber = tower_room(room_kind::CHAMBER, -1, gym_theme::LEAGUE);
