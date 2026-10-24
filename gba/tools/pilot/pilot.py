@@ -722,7 +722,10 @@ class Pilot:
             sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'gym'))
             from solver import Gym
             L = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'data', 'gym_layouts.json')))
-            self._gyms = {int(a): Gym(int(a), dict(g, states=[tuple(x) for x in g['states']])) for a, g in L.items()}
+            # The layouts go by area; a gym's trainers know their town by its map (area_maps[area]).
+            wd = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'generated', 'include', 'pr_world_data.h')).read()
+            area_maps = [int(v) for v in wd[wd.index('area_maps[] = {') + 15:].split('}')[0].split(',')]
+            self._gyms = {area_maps[int(a)]: Gym(int(a), dict(g, states=[tuple(x) for x in g['states']])) for a, g in L.items()}
         return self._gyms.get(lead[0]['area'])
 
     def gym_run(self, mi):
