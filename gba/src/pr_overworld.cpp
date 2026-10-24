@@ -1759,17 +1759,24 @@ void overworld::arrive()
     // REPEL, the DAY CARE and EGGS count the step; REPEL keeps wild Pokémon away (GBA 1.8).
     bool spoke = step_counters();
     bool can_fight = g.first_able() >= 0 && ! g.has(story::CHEAT_NO_WILD) && ! g.extra.repel_steps && ! spoke;
-    if(b == behaviour::TALL_GRASS && rng().get_int(100) < grass_percent && can_fight)
+    // 9.6.0: the lead's ILLUMINATE draws twice as many wild Pokémon, STENCH half as many.
+    int roll = rng().get_int(100);
+    if(can_fight)
+    {
+        ability_kind lead = g.party[g.first_able()].abil().kind;
+        roll = lead == ability_kind::ILLUMINATE ? roll / 2 : lead == ability_kind::STENCH ? roll * 2 : roll;
+    }
+    if(b == behaviour::TALL_GRASS && roll < grass_percent && can_fight)
     {
         wild_battle(false);
         return;
     }
-    if(b == behaviour::WALK && _map->area && _map->area->theme == area_theme::CAVE && rng().get_int(100) < cave_percent && can_fight)
+    if(b == behaviour::WALK && _map->area && _map->area->theme == area_theme::CAVE && roll < cave_percent && can_fight)
     {
         wild_battle(false);
         return;
     }
-    if(b == behaviour::WATER && g.surfing && ! _surf_fresh && rng().get_int(100) < water_percent && can_fight)
+    if(b == behaviour::WATER && g.surfing && ! _surf_fresh && roll < water_percent && can_fight)
     {
         wild_battle(true);
         return;

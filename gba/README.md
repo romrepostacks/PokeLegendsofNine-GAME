@@ -3,7 +3,7 @@
 A real GBA ROM of Poké Legends: Lands of Nine (called Party Royale before 2.0.1), built with [Butano](https://github.com/GValiente/butano) (C++). It runs in
 emulators (Delta, mGBA) and on real hardware from a flash cart. Saves go to cartridge SRAM.
 
-Version **9.5.0**: the whole game, from the professor's welcome to the Hall of Fame, built from the retired
+Version **9.6.0**: the whole game, from the professor's welcome to the Hall of Fame, built from the retired
 web game's data (`js/`, `sprites/`), plus the two story phases planned after it (STORY.md phases 6 and 7):
 NUZLOCKE mode and ADVENTURE MODE with the CHALLENGE TOWER, shiny Pokémon, and PP, stat and weather moves.
 The GBA is now the only supported version of the game.
@@ -28,7 +28,8 @@ The GBA is now the only supported version of the game.
   commanded, then everyone acting in speed order. Damage, the type chart, accuracy, status, abilities
   (type immunities and boosts, Iron Fist, Merciless, Corrosion, Disguise; 9.5.0 adds about 75 more: weather
   setters and swimmers, Intimidate, Sturdy, Guts, Technician, Static and the other contact abilities, status
-  immunities, Speed Boost, Clear Body, Pressure, Mold Breaker...; the rest are still flavour), held items (LEFTOVERS,
+  immunities, Speed Boost, Clear Body, Pressure, Mold Breaker...; 9.6.0 the rest: Truant, Slow Start, Quark
+  Drive, Prankster, terrains, Trace, Illusion, flinching and confusion, and field abilities like Pickup and Illuminate), held items (LEFTOVERS,
   LIFE ORB, FOCUS SASH, SITRUS BERRY, CHOICE SCARF), EXP and EXP SHARE, level-ups, new moves, evolution
   and prize money all follow the web game. Every move has the web game's animation.
 - **Moves beyond the web game (GBA only):** every move has its real PP (shown in battle and on the

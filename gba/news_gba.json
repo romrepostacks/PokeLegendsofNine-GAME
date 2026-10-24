@@ -1,7 +1,24 @@
 {
   "_howto": "The game's WHAT'S NEW: the title screen's message of the day (motd) and the changelog, newest first. Player-facing only.",
-  "motd": "Version 9.5.0: a new title screen, every landmark redrawn, and abilities come alive in battle.",
+  "motd": "Version 9.6.0: every ability does something now, in battle and out.",
   "changelog": [
+    {
+      "version": "GBA 9.6.0",
+      "date": "2026-10-24",
+      "title": "Every ability counts",
+      "changes": [
+        "The last 130 abilities work: TRUANT loafs every other turn, SLOW START takes five turns to get going, QUARK DRIVE boosts its best stat",
+        "PICKUP finds items after battles you win, and HONEY GATHER gathers HONEY that sells on the spot",
+        "Leading your party, ILLUMINATE draws out more wild POKéMON and STENCH keeps them away",
+        "PRANKSTER's status moves go first; SOUNDPROOF, BULLETPROOF, STRONG JAW, MEGA LAUNCHER and PUNK ROCK know their moves",
+        "Flinching, confusion and infatuation come with STENCH, POISON PUPPETEER and CUTE CHARM, and INNER FOCUS, OWN TEMPO and OBLIVIOUS stop them (and INTIMIDATE)",
+        "Terrains: ELECTRIC, GRASSY, MISTY and PSYCHIC SURGE, HADRON ENGINE and SEED SOWER",
+        "Allies help each other: PLUS and MINUS, BATTERY, POWER SPOT, FRIEND GUARD, HEALER, FLOWER GIFT, HOSPITALITY",
+        "TRACE, MUMMY and WANDERING SPIRIT trade abilities; FORECAST and COLOR CHANGE change type; STANCE CHANGE, SCHOOLING and ZERO TO HERO change form",
+        "ZOROARK's ILLUSION fools you until it's hit, and wild POKéMON with SHADOW TAG or MAGNET PULL won't let you run",
+        "NATURAL CURE heals its status after a battle, and the four Treasures of Ruin weaken everyone around them"
+      ]
+    },
     {
       "version": "GBA 9.5.0",
       "date": "2026-10-24",

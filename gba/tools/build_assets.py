@@ -1920,6 +1920,108 @@ ABILITY_BY_NAME = {
     'Protosynthesis': ('PROTOSYNTHESIS', -1), 'Pressure': ('PRESSURE', -1), 'Synchronize': ('SYNCHRONIZE', -1),
     'Mold Breaker': ('MOLD_BREAKER', -1), 'Liquid Ooze': ('LIQUID_OOZE', -1), 'Aftermath': ('AFTERMATH', -1),
     'Ripen': ('RIPEN', -1),
+    # 9.6.0: the rest.
+    'Truant': ('TRUANT', -1), 'Slow Start': ('SLOW_START', -1), 'Quark Drive': ('QUARK_DRIVE', -1),
+    'Pickup': ('PICKUP', -1), 'Honey Gather': ('HONEY_GATHER', -1), 'Illuminate': ('ILLUMINATE', -1),
+    'Stench': ('STENCH', -1), 'Natural Cure': ('NATURAL_CURE', -1), 'Cute Charm': ('CUTE_CHARM', -1),
+    'Inner Focus': ('FOCUS', 0), 'Own Tempo': ('FOCUS', 1), 'Oblivious': ('FOCUS', 2), 'Scrappy': ('FOCUS', 3),
+    'Shield Dust': ('SHIELD_DUST', -1), 'Prankster': ('PRANKSTER', -1), 'Mycelium Might': ('MYCELIUM_MIGHT', -1),
+    'Dazzling': ('DAZZLING', -1), 'Soundproof': ('FLAG_IMMUNE', 1), 'Bulletproof': ('FLAG_IMMUNE', 8),
+    'Strong Jaw': ('FLAG_POWER', 2), 'Mega Launcher': ('FLAG_POWER', 4), 'Punk Rock': ('PUNK_ROCK', -1),
+    'Leaf Guard': ('LEAF_GUARD', -1), 'Healer': ('HEALER', -1), 'Steadfast': ('STEADFAST', -1),
+    'Early Bird': ('EARLY_BIRD', -1), 'Frisk': ('FRISK', -1), 'Overcoat': ('OVERCOAT', -1), 'Damp': ('DAMP', -1),
+    'Shadow Tag': ('TRAP', -1), 'Magnet Pull': ('TRAP', 'Steel'), 'Serene Grace': ('SERENE_GRACE', -1),
+    'Plus': ('PLUS_MINUS', -1), 'Minus': ('PLUS_MINUS', -1), 'Anticipation': ('ANTICIPATION', -1),
+    'Forewarn': ('FOREWARN', -1), 'Flower Veil': ('FLOWER_VEIL', -1), 'Contrary': ('CONTRARY', -1),
+    'Simple': ('SIMPLE', -1), 'Trace': ('TRACE', -1), 'Cheek Pouch': ('CHEEK_POUCH', -1), 'Gluttony': ('GLUTTONY', -1),
+    'Steam Engine': ('STEAM_ENGINE', -1), 'Water Compaction': ('WATER_COMPACTION', -1),
+    'Toxic Chain': ('TOXIC_CHAIN', -1), 'Mummy': ('MUMMY', -1), 'Lingering Aroma': ('MUMMY', -1),
+    'Wandering Spirit': ('WANDERING_SPIRIT', -1), 'Defeatist': ('DEFEATIST', -1), 'Illusion': ('ILLUSION', -1),
+    'Refrigerate': ('REFRIGERATE', 'Ice'), 'Stakeout': ('STAKEOUT', -1), 'Cotton Down': ('COTTON_DOWN', -1),
+    'Sand Spit': ('SAND_SPIT', -1), 'Seed Sower': ('SEED_SOWER', -1), 'Wind Power': ('CHARGE_UP', 1),
+    'Electromorphosis': ('CHARGE_UP', 0), 'Unburden': ('UNBURDEN', -1), 'Wind Rider': ('WIND_RIDER', -1),
+    'Gooey': ('GOOEY', -1), 'Toxic Debris': ('TOXIC_DEBRIS', -1), 'Supersweet Syrup': ('SUPERSWEET_SYRUP', -1),
+    'Hospitality': ('HOSPITALITY', -1), 'Cursed Body': ('CURSED_BODY', -1), 'Forecast': ('FORECAST', -1),
+    'Color Change': ('COLOR_CHANGE', -1), 'Air Lock': ('AIR_LOCK', -1), 'Flower Gift': ('FLOWER_GIFT', -1),
+    'Bad Dreams': ('BAD_DREAMS', -1), 'Victory Star': ('VICTORY_STAR', -1), 'Wonder Skin': ('WONDER_SKIN', -1),
+    'Turboblaze': ('MOLD_BREAKER', -1), 'Teravolt': ('MOLD_BREAKER', -1), 'Sand Force': ('SAND_FORCE', -1),
+    'Download': ('DOWNLOAD', -1), 'Stance Change': ('STANCE_CHANGE', -1), 'Fairy Aura': ('AURA', 'Fairy'),
+    'Dark Aura': ('AURA', 'Dark'), 'Aura Break': ('AURA_BREAK', -1), 'Magician': ('MAGICIAN', -1),
+    'Sticky Hold': ('STICKY_HOLD', -1), 'Battery': ('BATTERY', -1), 'Power Spot': ('POWER_SPOT', -1),
+    'Friend Guard': ('FRIEND_GUARD', -1), 'Dancer': ('DANCER', -1), 'Schooling': ('SCHOOLING', -1),
+    'Receiver': ('RECEIVER', -1), 'Wimp Out': ('WIMP_OUT', -1), 'Innards Out': ('INNARDS_OUT', -1),
+    'Shields Down': ('SHIELDS_DOWN', -1), 'Berserk': ('BERSERK', -1), 'Anger Shell': ('ANGER_SHELL', -1),
+    'Electric Surge': ('TERRAIN_START', 1), 'Grassy Surge': ('TERRAIN_START', 2), 'Misty Surge': ('TERRAIN_START', 3),
+    'Psychic Surge': ('TERRAIN_START', 4), 'Soul-Heart': ('SOUL_HEART', -1), 'Ball Fetch': ('BALL_FETCH', -1),
+    'Gulp Missile': ('GULP_MISSILE', -1), 'Ice Face': ('ICE_FACE', -1), 'Intrepid Sword': ('ENTRY_STAT', 0),
+    'Dauntless Shield': ('ENTRY_STAT', 1), 'Chilling Neigh': ('MOXIE', 0), 'Grim Neigh': ('MOXIE', 2),
+    'Unnerve': ('UNNERVE', -1), 'Aroma Veil': ('AROMA_VEIL', -1), 'Opportunist': ('OPPORTUNIST', -1),
+    'Commander': ('COMMANDER', -1), 'Cud Chew': ('CUD_CHEW', -1), 'Good as Gold': ('GOOD_AS_GOLD', -1),
+    'Tablets of Ruin': ('RUIN', 0), 'Sword of Ruin': ('RUIN', 1), 'Vessel of Ruin': ('RUIN', 2), 'Beads of Ruin': ('RUIN', 3),
+    'Orichalcum Pulse': ('ORICHALCUM_PULSE', -1), 'Hadron Engine': ('HADRON_ENGINE', -1),
+    'Poison Puppeteer': ('POISON_PUPPETEER', -1), 'Tangled Feet': ('TANGLED_FEET', -1),
+    'Multitype': ('FORM_TYPE', -1), 'RKS System': ('FORM_TYPE', -1), 'Hunger Switch': ('HUNGER_SWITCH', -1),
+    'Zero to Hero': ('FORM_CHANGE', 0), 'Tera Shift': ('FORM_CHANGE', 1), 'Run Away': ('RUN_AWAY', -1), 'Rivalry': ('RIVALRY', -1),
+}
+# 9.6.0: what this game's version of an ability does, where it differs from the main games' (no switching,
+# genders, terrain-setting moves or Booster Energy here) or the PokeAPI text is wrong.
+ABILITY_DESC = {
+    'Quark Drive': 'Boosts its best stat in Electric Terrain, and for its first five turns (Booster Energy).',
+    'Pickup': 'May find an item after a battle it won.',
+    'Honey Gather': 'May gather HONEY after a battle it won, sold on the spot.',
+    'Illuminate': 'Leading the party: twice as many wild POKéMON.',
+    'Stench': 'Its hits may make the target flinch. Leading the party: half as many wild POKéMON.',
+    'Natural Cure': 'Its status is cured when the battle ends.',
+    'Cute Charm': 'A physical hit on it may infatuate the attacker.',
+    'Inner Focus': 'Prevents flinching, and INTIMIDATE.',
+    'Own Tempo': 'Prevents confusion, and INTIMIDATE.',
+    'Oblivious': 'Prevents infatuation, and INTIMIDATE.',
+    'Scrappy': 'Its Normal and Fighting moves hit Ghost types. Ignores INTIMIDATE.',
+    'Rivalry': 'Its moves x1.25 against POKéMON that share a type with it.',
+    'Healer': 'May cure each ally\'s status at the end of every turn.',
+    'Frisk': 'Sees the foes\' held items when the battle starts.',
+    'Shadow Tag': 'Wild ones: you can\'t run (GHOST types and RUN AWAY can).',
+    'Magnet Pull': 'Wild ones: you can\'t run while a STEEL type of yours fights.',
+    'Plus': 'SP. ATK x1.5 when an ally has PLUS or MINUS.',
+    'Minus': 'SP. ATK x1.5 when an ally has PLUS or MINUS.',
+    'Gluttony': 'Eats its SITRUS BERRY at half HP (as everyone does here).',
+    'Mummy': 'A physical hit on it turns the attacker\'s ability into MUMMY.',
+    'Lingering Aroma': 'A physical hit on it turns the attacker\'s ability into LINGERING AROMA.',
+    'Wandering Spirit': 'A physical hit on it swaps abilities with the attacker.',
+    'Stakeout': 'Its moves are twice as strong on the first turn, as the foes come in.',
+    'Cotton Down': 'When hit, scatters cotton: everyone else\'s SPEED falls.',
+    'Toxic Debris': 'A physical hit on it poisons the attacker.',
+    'Magician': 'Takes the target\'s held item when it hits holding none (given back after the battle).',
+    'Battery': 'Its allies\' special moves x1.3.',
+    'Power Spot': 'Its allies\' moves x1.3.',
+    'Wimp Out': 'Wild ones flee once their HP falls below half.',
+    'Telepathy': 'Its allies\' moves never hit it (true for everyone here).',
+    'Zero to Hero': 'Becomes its Hero Form after its first turn.',
+    'Commander': 'With a DONDOZO on its side, DONDOZO\'s stats rise sharply when the battle starts.',
+    'Run Away': 'Can always run from wild POKéMON, even ones that trap.',
+    'Stance Change': 'Blade Forme to attack, Shield Forme for status moves.',
+    'Ball Fetch': 'Holding nothing, brings back the first POKé BALL that fails.',
+    'Ice Face': 'The first physical hit does nothing. Hail brings it back.',
+    'Hunger Switch': 'AURA WHEEL turns Dark every second turn.',
+    'Tera Shift': 'Takes its Terastal Form when the battle starts.',
+}
+# 9.6.0: the moves' move_flag bits, by name.
+MOVE_FLAGS = {
+    1: {'Sing', 'Disarming Voice', 'Hyper Voice', 'Sparkling Aria', 'Bug Buzz', 'Clanging Scales', 'Echoed Voice',
+        'Growl', 'Screech', 'Metal Sound', 'Snore', 'Uproar', 'Round', 'Boomburst', 'Chatter', 'Snarl',
+        'Grass Whistle', 'Overdrive', 'Torch Song'},
+    2: {'Bite', 'Crunch', 'Fire Fang', 'Ice Fang', 'Thunder Fang', 'Poison Fang', 'Hyper Fang', 'Psychic Fangs',
+        'Jaw Lock', 'Fishious Rend'},
+    4: {'Water Pulse', 'Dragon Pulse', 'Dark Pulse', 'Aura Sphere', 'Origin Pulse', 'Terrain Pulse'},
+    8: {'Shadow Ball', 'Energy Ball', 'Sludge Bomb', 'Seed Bomb', 'Egg Bomb', 'Mud Bomb', 'Magnet Bomb', 'Bullet Seed',
+        'Ice Ball', 'Weather Ball', 'Mist Ball', 'Aura Sphere', 'Focus Blast', 'Barrage', 'Octazooka', 'Rock Blast',
+        'Zap Cannon', 'Pyro Ball', 'Syrup Bomb', 'Beak Blast', 'Acid Spray'},
+    16: {'Petal Dance', 'Fiery Dance', 'Feather Dance', 'Quiver Dance', 'Dragon Dance', 'Swords Dance',
+         'Revelation Dance', 'Aqua Step'},
+    32: {'Gust', 'Twister', 'Hurricane', 'Icy Wind', 'Heat Wave', 'Air Cutter', 'Fairy Wind', 'Ominous Wind',
+         'Silver Wind', 'Razor Wind', 'Blizzard', 'Petal Blizzard', 'Leaf Tornado', 'Springtide Storm', 'Sandstorm'},
+    64: {'Sleep Powder', 'Stun Spore', 'Poison Powder', 'Spore', 'Cotton Spore'},
+    128: {'Self-Destruct'},
 }
 
 HELD = ['none', 'leftovers', 'lifeorb', 'scarf', 'sash', 'sitrus']
@@ -2104,11 +2206,12 @@ def build_game_data(data, out_inc):
         sec = m.get('sec') or {}
         st = (m.get('stats') or [])[:3]
         st_c = ', '.join('{%d, %d}' % (a, b) for a, b in st + [(0, 0)] * (3 - len(st)))
-        mv.append('{%s, %d, %d, %s, %d, %s, %s, %d, %s, %d, move_target::%s, %d, %d, {%s}, %d, %d, %s, battle_weather::%s}' % (
+        mv.append('{%s, %d, %d, %s, %d, %s, %s, %d, %s, %d, move_target::%s, %d, %d, {%s}, %d, %d, %s, battle_weather::%s, %d}' % (
             c_text(m['n'].upper()), types.index(m['t']), m['p'], cat[m['c']], m['a'],
             STATUS[m.get('status')], STATUS[sec.get('status')], sec.get('chance', 0), 'true' if m.get('punch') else 'false',
             m.get('pp', 10), (m.get('target') or 'one').upper(), m.get('drain', 0), m.get('heal', 0), st_c, len(st),
-            m.get('stat_chance', 100), 'true' if m.get('stat_self') else 'false', (m.get('weather') or 'none').upper()))
+            m.get('stat_chance', 100), 'true' if m.get('stat_self') else 'false', (m.get('weather') or 'none').upper(),
+            sum(b for b, names in MOVE_FLAGS.items() if m['n'] in names)))
     L.append('constexpr move moves[] = {\n    ' + ',\n    '.join(mv) + '\n};\n')
     L.append('constexpr int moves_count = %d;' % len(data['moves']))
     L.append('// 2.0.0: the moves after this one came with Gen 8 and 9 (Calderra\'s MOVE TUTOR sells them).')
@@ -2136,6 +2239,7 @@ def build_game_data(data, out_inc):
             if kind == 'FLAVOR' and a['n'] in ABILITY_BY_NAME:
                 kind, of = ABILITY_BY_NAME[a['n']]
                 of = types.index(of) if isinstance(of, str) else of
+            desc = ABILITY_DESC.get(a['n'], desc)
             abil_rows.append('{%s, %s, ability_kind::%s, %d}' % (c_text(a['n'].upper()), c_text(desc), kind, of))
     L.append('constexpr ability abilities[] = {\n    %s\n};\n' % ',\n    '.join(abil_rows))
     for i, s in enumerate(data['species']):
