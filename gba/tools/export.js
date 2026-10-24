@@ -631,7 +631,7 @@ for(const li of AREAS){
   pictureSet(map, V, null, itemsHere, `map_${li}`);
   if(V==='ash') savePng(`map_${li}_clean.png`, drawArea(map, V, {noAsh:true}));
   // 5.0.0: people the region's data adds (loc.extras: guides, Easter eggs, rifts...); build_assets.py finds them a spot.
-  for(const n of loc.extras || []) if(!['statue', 'sparkle', 'rift', 'shadow'].includes(n.kind)) peopleKinds.add(n.kind);
+  for(const n of loc.extras || []) if(!['statue', 'sparkle', 'rift', 'shadow', 'prints'].includes(n.kind)) peopleKinds.add(n.kind);
   const nb = G.neighbours(li);
   const people = map.npcs.filter(n=>!n.trainer && !n.legend), trainers = map.npcs.filter(n=>n.trainer && !n.legend);
   for(const n of map.npcs) if(!n.legend) peopleKinds.add(n.kind);
@@ -690,7 +690,7 @@ for(const li of AREAS){
     dive:loc.dive ?? -1, surface:loc.surface ?? -1, dive_spots:keys(map.diveSpots), shafts:keys(map.shafts),
     scene:loc.scene || '', legend:legend ? {name:legend.legend, x:legend.x, y:legend.y} : null, league:!!loc.league, champion:!!loc.champion, tower_town:loc===TOWER_TOWN, trade_town:loc===TRADE_TOWN, safari:loc===SAFARI, shrine:!!loc.shrine, roam:loc.roam || [],
     leader_team:loc.leaderTeam || [], rival_after:loc.rivalAfter || [], own_pool:!!loc.pool,
-    extras:loc.extras || [], twin:loc.twin ?? loc.twinOf ?? -1, mirror:!!(loc.mirror || (loc.twin!==undefined && G.LOCATIONS[loc.twin].mirror))});
+    extras:loc.extras || [], plaza:map.plaza ? {...map.plaza, look:loc.plaza} : null, twin:loc.twin ?? loc.twinOf ?? -1, mirror:!!(loc.mirror || (loc.twin!==undefined && G.LOCATIONS[loc.twin].mirror))});
   if(legend) trainerSpecies.add(legend.legend);
 }
 // 9.4.0: one SUMMONING CHAMBER per legendary, after every region's rooms (`late`) so no saved map index moves.

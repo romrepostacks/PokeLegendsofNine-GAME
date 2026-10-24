@@ -1986,6 +1986,52 @@ namespace
 {
     int dex_index = -1;
 
+    // 9.5.0: the list's tabs (L/R): 0 the national POKéDEX, 1 to 9 a region's own. A tab's list is dex_order cut
+    // down to that region's species; dex_list points at the one showing.
+    int dex_tab = -1;
+    BN_DATA_EWRAM uint16_t tab_list[game_data::dex_order_count];
+    const uint16_t* dex_list = game_data::dex_order;
+
+    // A region's own species, [lo, hi) in species_list (VELLORIN's: everything before Gen 8).
+    void region_dex_range(int rg, int& lo, int& hi)
+    {
+        if(rg <= 1)
+        {
+            lo = 0;
+            hi = species_v1;
+            return;
+        }
+        rg = bn::min(rg, region_species_first + region_species_count - 1);
+        lo = rg == 2 ? species_v1 : region_species[rg - region_species_first];
+        hi = rg == 2 ? species_v2 : region_species[rg - region_species_first + 1];
+    }
+
+    // Points dex_list at a tab's list; returns its length (up to the last species seen, 0 if none).
+    int dex_tab_list(int tab)
+    {
+        const game_state& g = state();
+        int n = 0, count = 0;
+        int lo = 0, hi = species_count;
+        if(tab)
+        {
+            region_dex_range(tab, lo, hi);
+        }
+        for(int i = 0; i < game_data::dex_order_count; ++i)
+        {
+            int s = game_data::dex_order[i];
+            if(s >= lo && s < hi)
+            {
+                tab_list[n++] = uint16_t(s);
+                if(g.seen.test(s))
+                {
+                    count = n;
+                }
+            }
+        }
+        dex_list = tab ? tab_list : game_data::dex_order;
+        return count;
+    }
+
     int seen_count()
     {
         // Every species seen, regional forms included (the web game's Object.keys(adv.seen)).
@@ -2012,7 +2058,7 @@ namespace
         int timer = 0;
         while(true)
         {
-            int s = game_data::dex_order[index];
+            int s = dex_list[index];
             const species& sp = game_data::species_list[s];
             bool owned = g.owned.test(s);
             if(redraw)
@@ -2257,7 +2303,7 @@ namespace
                 int step = bn::keypad::up_pressed() ? -1 : 1;
                 for(int i = index + step; i >= 0 && i < list_count; i += step)
                 {
-                    if(g.seen.test(game_data::dex_order[i]))
+                    if(g.seen.test(dex_list[i]))
                     {
                         index = i;
                         redraw = true;
@@ -2279,15 +2325,8 @@ void dex_screen(int register_species)
     ui& u = gui();
     ui::fade_out(8);
     u.win().clear_all();
-    // The list runs from No. 1 to the highest species seen.
-    int list_count = 0;
-    for(int i = 0; i < game_data::dex_order_count; ++i)
-    {
-        if(g.seen.test(game_data::dex_order[i]))
-        {
-            list_count = i + 1;
-        }
-    }
+    // The list runs from No. 1 to the highest species seen. Registering a new one always uses the national list.
+    int list_count = dex_tab_list(0);
     if(! list_count)
     {
         return;
@@ -2296,7 +2335,7 @@ void dex_screen(int register_species)
     {
         for(int i = 0; i < list_count; ++i)
         {
-            if(game_data::dex_order[i] == register_species)
+            if(dex_list[i] == register_species)
             {
                 ui::fade_in(8);
                 int index = i;
@@ -2307,11 +2346,36 @@ void dex_screen(int register_species)
         }
         return;
     }
+    // 9.5.0: the tabs with something seen in them; it opens on the region you're in (from CALDERRA on), as the
+    // counts did before.
+    bn::vector<int, 10> tabs;
+    for(int rg = 1; rg <= 9; ++rg)
+    {
+        if(dex_tab_list(rg))
+        {
+            tabs.push_back(rg);
+        }
+    }
+    tabs.push_back(0);
+    if(dex_tab < 0)
+    {
+        dex_tab = map_region(g.map) >= 2 ? map_region(g.map) : 0;
+    }
+    int tab_at = 0;
+    for(int t = 0; t < tabs.size(); ++t)
+    {
+        if(tabs[t] == dex_tab)
+        {
+            tab_at = t;
+        }
+    }
+    dex_tab = tabs[tab_at];
+    list_count = dex_tab_list(dex_tab);
     if(dex_index < 0 || dex_index >= list_count)
     {
         for(int i = 0; i < list_count; ++i)
         {
-            if(g.seen.test(game_data::dex_order[i]))
+            if(g.seen.test(dex_list[i]))
             {
                 dex_index = i;
                 break;
@@ -2342,7 +2406,7 @@ void dex_screen(int register_species)
                         {
                             continue;
                         }
-                        int s = game_data::dex_order[i];
+                        int s = dex_list[i];
                         const species& sp = game_data::species_list[s];
                         int y = -8 + r * 16 + 4;
                         bn::string<8> number("No");
@@ -2361,18 +2425,13 @@ void dex_screen(int register_species)
                             balls.push_back(b);
                         }
                     }
-                    // In Calderra, its own POKéDEX: the Gen 8 and 9 species (species_v1 on).
+                    // The tab's counts (9.1.0: a multiform POKéMON's forms count once, as its base) and its name.
                     bn::string<16> seen("SEEN ");
                     bn::string<16> own("OWN ");
-                    if(map_region(g.map) >= 2)
+                    if(dex_tab)
                     {
-                        // The SUNDERED ISLES' (3.0.0): its island forms (species_v2 on); the SKYREACH's (4.0.0): its
-                        // highland forms and DEOXYS' (species_v3 on).
-                        // 5.0.0 on: each region's own forms (region_species).
-                        const int rg = bn::min(map_region(g.map), region_species_first + region_species_count - 1);
-                        const int lo = rg == 2 ? species_v1 : region_species[rg - region_species_first];
-                        const int hi = rg == 2 ? species_v2 : region_species[rg - region_species_first + 1];
-                        // 9.1.0: a multiform POKéMON's forms count once, as its base.
+                        int lo, hi;
+                        region_dex_range(dex_tab, lo, hi);
                         int sn = 0, on = 0, total = 0, last = -1;
                         for(int i = lo; i < hi; ++i)
                         {
@@ -2398,6 +2457,10 @@ void dex_screen(int register_species)
                         seen.append(bn::to_string<4>(seen_count()));
                         own.append(bn::to_string<4>(g.owned.count()));
                     }
+                    if(tabs.size() > 1)
+                    {
+                        u.print(4, 120, dex_tab ? region_name(dex_tab) : "NATIONAL", text_color::WHITE, texts, true);
+                    }
                     u.print(4, 132, seen, text_color::WHITE, texts, true);
                     u.print(4, 144, own, text_color::WHITE, texts, true);
                     auto viewer = [&](bn::optional<bn::sprite_ptr>& spr, int i, int y, bool small)
@@ -2407,13 +2470,13 @@ void dex_screen(int register_species)
                         {
                             return;
                         }
-                        if(! g.seen.test(game_data::dex_order[i]))
+                        if(! g.seen.test(dex_list[i]))
                         {
                             // Not seen yet: a question mark (.dex-unk).
                             u.print(94, y - 8, "?", text_color::INK, texts);
                             return;
                         }
-                        spr = game_data::species_list[game_data::dex_order[i]].front.create_sprite(sx(97), sy(y));
+                        spr = game_data::species_list[dex_list[i]].front.create_sprite(sx(97), sy(y));
                         spr->set_bg_priority(2);
                         if(small)
                         {
@@ -2443,13 +2506,38 @@ void dex_screen(int register_species)
                         audio::play(audio::sfx::SELECT);
                     }
                 }
+                else if((bn::keypad::l_pressed() || bn::keypad::r_pressed()) && tabs.size() > 1)
+                {
+                    // The other tabs; the list keeps the species you were on when it's in the new tab too.
+                    int s = dex_list[dex_index];
+                    tab_at = (tab_at + (bn::keypad::r_pressed() ? 1 : tabs.size() - 1)) % tabs.size();
+                    dex_tab = tabs[tab_at];
+                    list_count = dex_tab_list(dex_tab);
+                    dex_index = -1;
+                    for(int i = 0; i < list_count && dex_index < 0; ++i)
+                    {
+                        if(dex_list[i] == s)
+                        {
+                            dex_index = i;
+                        }
+                    }
+                    for(int i = 0; i < list_count && dex_index < 0; ++i)
+                    {
+                        if(g.seen.test(dex_list[i]))
+                        {
+                            dex_index = i;
+                        }
+                    }
+                    redraw = true;
+                    audio::play(audio::sfx::SELECT);
+                }
                 else if(bn::keypad::b_pressed())
                 {
                     audio::play(audio::sfx::SELECT);
                     leave = true;
                     break;
                 }
-                else if(bn::keypad::a_pressed() && g.seen.test(game_data::dex_order[dex_index]))
+                else if(bn::keypad::a_pressed() && g.seen.test(dex_list[dex_index]))
                 {
                     audio::play(audio::sfx::SELECT);
                     break;
@@ -2736,173 +2824,232 @@ int region_map_screen(bool travel)
     {
         here = world_data::maps[here].exit_map;
     }
-    const int region = world_data::maps[here].area->region;
-    // The SUNDERED ISLES' (3.0.0): x 0..5, drawn on a parchment treasure map.
-    // The SKYREACH's (4.0.0): x 0..8, y -1 (the clouds) to 3 (the canyon floor), on a sky blue.
-    // 5.0.0 on: x 0..8 like the SKYREACH, each on its own colour: GENOVA's concrete, AETERNA's old parchment, the HOLLOW
-    // LANDS' grey, TEMPESTA's meadow and ORIGIN's gold.
-    struct layout { int8_t ox, cw; uint8_t r, g, b; };
-    static constexpr layout layouts[] = { {12, 18, 26, 28, 31}, {30, 24, 26, 28, 31}, {12, 18, 26, 28, 31}, {36, 30, 29, 25, 17},
-                                          {12, 24, 20, 25, 31}, {12, 24, 22, 24, 27}, {12, 24, 27, 27, 21}, {12, 24, 21, 20, 25},
-                                          {12, 24, 23, 29, 21}, {12, 24, 30, 28, 20} };
-    const layout& lay = layouts[bn::max(0, bn::min(9, region))];
-    const int ox = lay.ox, oy = 10, cw = lay.cw, ch = 20;
-    bn::bg_palettes::set_transparent_color(bn::color(lay.r, lay.g, lay.b));
-    // 6.0.0 on: a region with twins (AETERNA's past, the HOLLOW LANDS' reverse side) shows the side you're on; the
-    // twins come after their originals.
-    auto twin_side = [](int i) { int t = world_data::maps[i].area->twin; return t >= 0 && t < i; };
-    auto elsewhere = [&](int i)
-    {
-        const area_info& a = *world_data::maps[i].area;
-        return a.at_x >= 100 || a.region != region || twin_side(i) != twin_side(here);   // under the sea, another region or side
-    };
-    int cursor = here;
-    auto cell_xy = [&](const area_info& a, int& x, int& y)
-    {
-        x = ox + a.at_x * cw;
-        y = oy + (a.at_y + 2) * ch;
-    };
-    for(int i : world_data::area_maps)
-    {
-        const map_def& m = world_data::maps[i];
-        const area_info& a = *m.area;
-        if(elsewhere(i))
-        {
-            continue;
-        }
-        int x, y;
-        cell_xy(a, x, y);
-        bool seen = g.visited.test(i) || i == here;
-        int frame_index = ! seen ? 4 : a.kind == area_kind::ROUTE ? 0 : a.kind == area_kind::GYM ? 1 : a.kind == area_kind::TOWN ? 2 : 3;
-        bn::sprite_ptr c = bn::sprite_items::cell.create_sprite(sx(x + 8), sy(y + 8), frame_index);
-        c.set_bg_priority(1);
-        cells.push_back(c);
-        if(g.run.nuzlocke() && g.run.encounter_used.test(i) && ! used_marks.full())
-        {
-            // NUZLOCKE: this area's encounter is spent.
-            u.print(x + 6, y + 4, "x", text_color::RED, used_marks, true);
-        }
-        // Each link once (to the right and down), dashed while shut.
-        for(int k = 0; k < m.links_count && ! links.full(); ++k)
-        {
-            const link& l = m.links[k];
-            if(l.target < 0)
-            {
-                continue;
-            }
-            const area_info& b = *world_data::maps[l.target].area;
-            if(elsewhere(l.target))
-            {
-                continue;
-            }
-            bool right = b.at_x > a.at_x, down = b.at_y > a.at_y;
-            if(! right && ! down)
-            {
-                continue;
-            }
-            bool locked = l.gate && m.leader_id >= 0 && ! g.beaten.test(m.leader_id);
-            int lx = right ? x + 17 : x + 4, ly = right ? y + 4 : y + 14;
-            bn::sprite_ptr ln = bn::sprite_items::link.create_sprite(sx(lx + 4), sy(ly + 4), (right ? 0 : 2) + (locked ? 1 : 0));
-            ln.set_bg_priority(2);
-            links.push_back(ln);
-        }
-    }
-    bn::sprite_ptr mark = bn::sprite_items::cell.create_sprite(0, 0, 5);
-    mark.set_bg_priority(0);
-    bn::sprite_ptr pick = bn::sprite_items::cursor.create_sprite(0, 0);
-    pick.set_bg_priority(0);
-    int timer = 0;
-    bool redraw = true;
-    ui::fade_in(8);
+    const int home_region = world_data::maps[here].area->region;
+    // 9.5.0: L/R page through the other regions you've been to, to look at them (travel stays inside the one you're in).
+    int region = home_region;
     while(true)
     {
-        const area_info& ha = *world_data::maps[here].area;
-        int hx, hy;
-        cell_xy(ha, hx, hy);
-        mark.set_position(sx(hx + 8), sy(hy + 8));
-        mark.set_visible((timer / 30) % 2 == 0);
-        const area_info& ca = *world_data::maps[cursor].area;
-        int cx, cy;
-        cell_xy(ca, cx, cy);
-        pick.set_position(sx(cx - 4), sy(cy + 8));
-        if(redraw)
+        cells.clear();
+        links.clear();
+        texts.clear();
+        used_marks.clear();
+        const bool home = region == home_region;
+        int page = -1;
+        // The SUNDERED ISLES' (3.0.0): x 0..5, drawn on a parchment treasure map.
+        // The SKYREACH's (4.0.0): x 0..8, y -1 (the clouds) to 3 (the canyon floor), on a sky blue.
+        // 5.0.0 on: x 0..8 like the SKYREACH, each on its own colour: GENOVA's concrete, AETERNA's old parchment, the HOLLOW
+        // LANDS' grey, TEMPESTA's meadow and ORIGIN's gold.
+        struct layout { int8_t ox, cw; uint8_t r, g, b; };
+        static constexpr layout layouts[] = { {12, 18, 26, 28, 31}, {30, 24, 26, 28, 31}, {12, 18, 26, 28, 31}, {36, 30, 29, 25, 17},
+                                              {12, 24, 20, 25, 31}, {12, 24, 22, 24, 27}, {12, 24, 27, 27, 21}, {12, 24, 21, 20, 25},
+                                              {12, 24, 23, 29, 21}, {12, 24, 30, 28, 20} };
+        const layout& lay = layouts[bn::max(0, bn::min(9, region))];
+        const int ox = lay.ox, oy = 10, cw = lay.cw, ch = 20;
+        bn::bg_palettes::set_transparent_color(bn::color(lay.r, lay.g, lay.b));
+        // 6.0.0 on: a region with twins (AETERNA's past, the HOLLOW LANDS' reverse side) shows the side you're on; the
+        // twins come after their originals.
+        auto twin_side = [](int i) { int t = world_data::maps[i].area->twin; return t >= 0 && t < i; };
+        auto elsewhere = [&](int i)
         {
-            texts.clear();
-            u.win().box(window_style::WINDOW, 0, 17, 30, 3);
-            const map_def& m = world_data::maps[cursor];
-            bool seen = g.visited.test(cursor) || cursor == here;
-            bn::string<64> name(seen ? bn::string_view(m.name) : bn::string_view("???"));
-            bool cleared = (m.gate == gate_kind::GYM || m.gate == gate_kind::RIVAL) && m.leader_id >= 0 && g.beaten.test(m.leader_id);
-            if(seen && cleared)
-            {
-                name.append("  (cleared)");
-            }
-            if(g.run.nuzlocke() && g.run.encounter_used.test(cursor))
-            {
-                name.append("  (encounter used)");
-            }
-            bool can_go = travel && seen && cursor != here;
-            u.print_fit(8, 140, name, can_go ? 216 - u.width("A: TRAVEL", true) : 224, text_color::INK, texts);
-            if(can_go)
-            {
-                u.print(232 - u.width("A: TRAVEL", true), 142, "A: TRAVEL", text_color::BLUE, texts, true);
-            }
-            redraw = false;
-        }
-        ++timer;
-        frame();
-        if(bn::keypad::a_pressed() && travel && cursor != here && g.visited.test(cursor))
+            const area_info& a = *world_data::maps[i].area;
+            return a.at_x >= 100 || a.region != region || twin_side(i) != (home && twin_side(here));   // under the sea, another region or side
+        };
+        int cursor = here;
+        for(int i : world_data::area_maps)
         {
-            bn::string<80> ask("Travel to ");
-            ask.append(world_data::maps[cursor].name);
-            ask.append("?");
-            u.show_text(ask);
-            bool yes = u.yes_no();
-            u.clear_text();
-            if(yes)
+            if(! home && ! elsewhere(i) && g.visited.test(i))
             {
-                dest = cursor;
+                cursor = i;
                 break;
             }
-            redraw = true;
-            continue;
         }
-        if(bn::keypad::b_pressed() || bn::keypad::start_pressed() || bn::keypad::select_pressed() || bn::keypad::a_pressed())
+        // The next region along (step 1 or -1) with somewhere you've been, or -1 if there's none.
+        auto region_after = [&](int step)
+        {
+            for(int k = 1; k < 10; ++k)
+            {
+                int rg = 1 + (region - 1 + k * step + 90) % 9;
+                for(int i : world_data::area_maps)
+                {
+                    const area_info& a = *world_data::maps[i].area;
+                    if(a.region == rg && a.at_x < 100 && ! twin_side(i) && g.visited.test(i))
+                    {
+                        return rg;
+                    }
+                }
+            }
+            return -1;
+        };
+        auto cell_xy = [&](const area_info& a, int& x, int& y)
+        {
+            x = ox + a.at_x * cw;
+            y = oy + (a.at_y + 2) * ch;
+        };
+        for(int i : world_data::area_maps)
+        {
+            const map_def& m = world_data::maps[i];
+            const area_info& a = *m.area;
+            if(elsewhere(i))
+            {
+                continue;
+            }
+            int x, y;
+            cell_xy(a, x, y);
+            bool seen = g.visited.test(i) || i == here;
+            int frame_index = ! seen ? 4 : a.kind == area_kind::ROUTE ? 0 : a.kind == area_kind::GYM ? 1 : a.kind == area_kind::TOWN ? 2 : 3;
+            bn::sprite_ptr c = bn::sprite_items::cell.create_sprite(sx(x + 8), sy(y + 8), frame_index);
+            c.set_bg_priority(1);
+            cells.push_back(c);
+            if(g.run.nuzlocke() && g.run.encounter_used.test(i) && ! used_marks.full())
+            {
+                // NUZLOCKE: this area's encounter is spent.
+                u.print(x + 6, y + 4, "x", text_color::RED, used_marks, true);
+            }
+            // Each link once (to the right and down), dashed while shut.
+            for(int k = 0; k < m.links_count && ! links.full(); ++k)
+            {
+                const link& l = m.links[k];
+                if(l.target < 0)
+                {
+                    continue;
+                }
+                const area_info& b = *world_data::maps[l.target].area;
+                if(elsewhere(l.target))
+                {
+                    continue;
+                }
+                bool right = b.at_x > a.at_x, down = b.at_y > a.at_y;
+                if(! right && ! down)
+                {
+                    continue;
+                }
+                bool locked = l.gate && m.leader_id >= 0 && ! g.beaten.test(m.leader_id);
+                int lx = right ? x + 17 : x + 4, ly = right ? y + 4 : y + 14;
+                bn::sprite_ptr ln = bn::sprite_items::link.create_sprite(sx(lx + 4), sy(ly + 4), (right ? 0 : 2) + (locked ? 1 : 0));
+                ln.set_bg_priority(2);
+                links.push_back(ln);
+            }
+        }
+        bn::sprite_ptr mark = bn::sprite_items::cell.create_sprite(0, 0, 5);
+        mark.set_bg_priority(0);
+        bn::sprite_ptr pick = bn::sprite_items::cursor.create_sprite(0, 0);
+        pick.set_bg_priority(0);
+        int timer = 0;
+        bool redraw = true;
+        ui::fade_in(8);
+        while(true)
+        {
+            const area_info& ha = *world_data::maps[here].area;
+            int hx, hy;
+            cell_xy(ha, hx, hy);
+            mark.set_position(sx(hx + 8), sy(hy + 8));
+            mark.set_visible(home && (timer / 30) % 2 == 0);
+            const area_info& ca = *world_data::maps[cursor].area;
+            int cx, cy;
+            cell_xy(ca, cx, cy);
+            pick.set_position(sx(cx - 4), sy(cy + 8));
+            if(redraw)
+            {
+                texts.clear();
+                u.win().box(window_style::WINDOW, 0, 17, 30, 3);
+                const map_def& m = world_data::maps[cursor];
+                bool seen = g.visited.test(cursor) || cursor == here;
+                bn::string<64> name;
+                if(! home)
+                {
+                    name.append(region_name(region));
+                    name.append(": ");
+                }
+                name.append(seen ? bn::string_view(m.name) : bn::string_view("???"));
+                bool cleared = (m.gate == gate_kind::GYM || m.gate == gate_kind::RIVAL) && m.leader_id >= 0 && g.beaten.test(m.leader_id);
+                if(seen && cleared)
+                {
+                    name.append("  (cleared)");
+                }
+                if(g.run.nuzlocke() && g.run.encounter_used.test(cursor))
+                {
+                    name.append("  (encounter used)");
+                }
+                bool can_go = travel && home && seen && cursor != here;
+                u.print_fit(8, 140, name, can_go ? 216 - u.width("A: TRAVEL", true) : 224, text_color::INK, texts);
+                if(can_go)
+                {
+                    u.print(232 - u.width("A: TRAVEL", true), 142, "A: TRAVEL", text_color::BLUE, texts, true);
+                }
+                redraw = false;
+            }
+            ++timer;
+            frame();
+            if(bn::keypad::a_pressed() && travel && home && cursor != here && g.visited.test(cursor))
+            {
+                bn::string<80> ask("Travel to ");
+                ask.append(world_data::maps[cursor].name);
+                ask.append("?");
+                u.show_text(ask);
+                bool yes = u.yes_no();
+                u.clear_text();
+                if(yes)
+                {
+                    dest = cursor;
+                    break;
+                }
+                redraw = true;
+                continue;
+            }
+            if(bn::keypad::b_pressed() || bn::keypad::start_pressed() || bn::keypad::select_pressed() || bn::keypad::a_pressed())
+            {
+                break;
+            }
+            if(bn::keypad::l_pressed() || bn::keypad::r_pressed())
+            {
+                int rg = region_after(bn::keypad::r_pressed() ? 1 : -1);
+                if(rg >= 0 && rg != region)
+                {
+                    page = rg;
+                    audio::play(audio::sfx::SELECT);
+                    break;
+                }
+            }
+            int dx = bn::keypad::left_pressed() ? -1 : bn::keypad::right_pressed() ? 1 : 0;
+            int dy = bn::keypad::up_pressed() ? -1 : bn::keypad::down_pressed() ? 1 : 0;
+            if(dx || dy)
+            {
+                // The nearest area in that direction.
+                int best = -1, best_d = 1 << 30;
+                for(int i : world_data::area_maps)
+                {
+                    const area_info& a = *world_data::maps[i].area;
+                    if(elsewhere(i) || i == cursor)
+                    {
+                        continue;
+                    }
+                    int ddx = a.at_x - ca.at_x, ddy = a.at_y - ca.at_y;
+                    if((dx && ddx * dx <= 0) || (dy && ddy * dy <= 0))
+                    {
+                        continue;
+                    }
+                    int d = (dx ? bn::abs(ddx) * 2 + bn::abs(ddy) * 5 : bn::abs(ddy) * 2 + bn::abs(ddx) * 5);
+                    if(d < best_d)
+                    {
+                        best_d = d;
+                        best = i;
+                    }
+                }
+                if(best >= 0)
+                {
+                    cursor = best;
+                    redraw = true;
+                    audio::play(audio::sfx::SELECT);
+                }
+            }
+        }
+        if(page < 0)
         {
             break;
         }
-        int dx = bn::keypad::left_pressed() ? -1 : bn::keypad::right_pressed() ? 1 : 0;
-        int dy = bn::keypad::up_pressed() ? -1 : bn::keypad::down_pressed() ? 1 : 0;
-        if(dx || dy)
-        {
-            // The nearest area in that direction.
-            int best = -1, best_d = 1 << 30;
-            for(int i : world_data::area_maps)
-            {
-                const area_info& a = *world_data::maps[i].area;
-                if(elsewhere(i) || i == cursor)
-                {
-                    continue;
-                }
-                int ddx = a.at_x - ca.at_x, ddy = a.at_y - ca.at_y;
-                if((dx && ddx * dx <= 0) || (dy && ddy * dy <= 0))
-                {
-                    continue;
-                }
-                int d = (dx ? bn::abs(ddx) * 2 + bn::abs(ddy) * 5 : bn::abs(ddy) * 2 + bn::abs(ddx) * 5);
-                if(d < best_d)
-                {
-                    best_d = d;
-                    best = i;
-                }
-            }
-            if(best >= 0)
-            {
-                cursor = best;
-                redraw = true;
-                audio::play(audio::sfx::SELECT);
-            }
-        }
+        region = page;
+        ui::fade_out(8);
+        u.win().clear_all();
     }
     ui::fade_out(8);
     texts.clear();

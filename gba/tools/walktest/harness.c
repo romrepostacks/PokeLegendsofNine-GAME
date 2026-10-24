@@ -27,7 +27,7 @@ int main(int argc, char** argv){
     int c = sscanf(line,"%7s %511s %d",cmd,a,&n);
     if(c<1) continue;
     if(cmd[0]=='w'){ int f=atoi(a); core->setKeys(core,0); for(int i=0;i<f;i++) core->runFrame(core); }
-    else if(cmd[0]=='k'){ uint32_t k=0; for(char*p=a;*p;p++){ switch(*p){case 'A':k|=1;break;case 'B':k|=2;break;case 'E':k|=4;break;case 'S':k|=8;break;case 'R':k|=16;break;case 'L':k|=32;break;case 'U':k|=64;break;case 'D':k|=128;break;} }
+    else if(cmd[0]=='k'){ uint32_t k=0; for(char*p=a;*p;p++){ switch(*p){case 'A':k|=1;break;case 'B':k|=2;break;case 'E':k|=4;break;case 'S':k|=8;break;case 'R':k|=16;break;case 'L':k|=32;break;case 'U':k|=64;break;case 'D':k|=128;break;case 'r':k|=256;break;case 'l':k|=512;break;} }
       core->setKeys(core,k); for(int i=0;i<(n?n:4);i++) core->runFrame(core); core->setKeys(core,0); for(int i=0;i<4;i++) core->runFrame(core); }
     else if(cmd[0]=='K'){ held=0; for(char*p=a;*p;p++){ switch(*p){case 'A':held|=1;break;case 'B':held|=2;break;case 'S':held|=8;break;case 'R':held|=16;break;case 'L':held|=32;break;case 'U':held|=64;break;case 'D':held|=128;break;} } }
     else if(cmd[0]=='h'){ int f=atoi(a); char out[512]; sscanf(line,"%*s %*s %511s",out); FILE* o=fopen(out,"a"); core->setKeys(core,held);
