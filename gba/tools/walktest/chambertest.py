@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Chamber test (9.3.4): for every legendary, calls it at the TOWER SUMMIT's SUMMONING STONE in mGBA, checks you land
+"""Chamber test (9.4.0): for every legendary, calls it at the TOWER SUMMIT's SUMMONING STONE in mGBA, checks you land
 in its own SUMMONING CHAMBER, walks the path up to the dais (7, 5) and presses A to start the battle. The chamber on screen
 is compared with the approved art (gba/data/chamber_<num>.png with the sprite placed as place.py placed it); OUT
 gets c<num>.png (approved | game) and sheet.png, all of them.

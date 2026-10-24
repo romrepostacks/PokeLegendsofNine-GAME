@@ -1,4 +1,4 @@
-# The POKéMON GYM fronts (9.3.5; approved in the 9.3.4 building-art round 8, plans/9.3.4-building-art/round8/gyms.py):
+# The POKéMON GYM fronts (9.4.0; approved in the 9.3.4 building-art round 8, plans/9.3.4-building-art/round8/gyms.py):
 # three styles (a town's gym follows its CENTER's), each in every gym type's colours with its badge, and with the
 # doorway over the building's door column (door+2 or door+3 of the 6x4 tiles), 96x72 with the roof 8 px above.
 # Writes gba/data/gym_<style>_<theme>_d<col>.png:

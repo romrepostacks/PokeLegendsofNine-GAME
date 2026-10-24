@@ -1,4 +1,4 @@
-"""Draws the three POKéMON CENTER interiors (9.3.4), one per exterior style (tools/art/centers.py):
+"""Draws the three POKéMON CENTER interiors (9.4.0), one per exterior style (tools/art/centers.py):
 A arch (classic yellow tiles), B striped awning (cottage), C glass atrium (indoor park). Each is the 14x9-tile room,
 224x144, written to gba/data/center_room_<style>.png, and its tile rows to gba/data/center_rooms.json, which
 export.js uses for the room's collision. Run by hand when the art changes: python3 tools/art/center_rooms.py data

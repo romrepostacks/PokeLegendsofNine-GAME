@@ -2,7 +2,7 @@
 #include "bn_sram.h"
 #include "pr_mon.h"
 #include "pr_world_data.h"
-// Gym test (9.3.4, gymtest.py): SRAM 0x7E00 holds an area (+ 1); you start on the rug of its gym with its juniors
+// Gym test (9.4.0, gymtest.py): SRAM 0x7E00 holds an area (+ 1); you start on the rug of its gym with its juniors
 // beaten (unless 0x7E02 holds 1: then they fight), and the address of game_state goes to 0x7E20 (map, x, y, facing
 // are its first fields), that of its `beaten` bits to 0x7E24, and the juniors' trainer ids to 0x7E28 (4 int16, -1 none).
 // An assert writes "CRSH" at 0x7E10.

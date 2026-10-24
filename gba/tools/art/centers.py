@@ -1,4 +1,4 @@
-"""Draws the three POKéMON CENTER fronts (9.3.4), 80x72 with transparency, to gba/data/center_<style>.png:
+"""Draws the three POKéMON CENTER fronts (9.4.0), 80x72 with transparency, to gba/data/center_<style>.png:
 A a raised arch carrying the emblem, B a scalloped striped awning, C a glass atrium between two red wings.
 export.js draws one over each CENTER (5x4 tiles, rising 8 px above). Run by hand: python3 tools/art/centers.py data"""
 import sys, math

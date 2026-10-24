@@ -3,7 +3,7 @@
 #include "pr_mon.h"
 #include "pr_game_data.h"
 #include "pr_world_data.h"
-// Chamber test (9.3.4, chambertest.py): SRAM 0x7E00 holds a dex number, 0x7E02 1 for a shiny. You start on the TOWER
+// Chamber test (9.4.0, chambertest.py): SRAM 0x7E00 holds a dex number, 0x7E02 1 for a shiny. You start on the TOWER
 // SUMMIT facing its SUMMONING STONE, on a challenge, with that legendary already called. The address of game_state
 // goes to 0x7E20 (map, x, y are its first fields). An assert writes "CRSH" at 0x7E10.
 static void crash_mark()

@@ -53,7 +53,7 @@ function svgPixels(svg){
   if(/scaleX\(-1\)/.test(svg)) px.forEach(r=>r.reverse());
   return {w, h, px};
 }
-// 9.3.5: the overworld art approved in the art rounds (gba/data/overworld, drawn by plans/9.3.5-overworld/*/): each
+// 9.4.0: the overworld art approved in the art rounds (gba/data/overworld, drawn by plans/9.3.5-overworld/*/): each
 // area draws with its own layers (lookOf, useLayers), first found wins. <layer>/<name>.png replaces a tile and the
 // ground layer's ground_map.json recolours the old pieces. ART_OVERRIDE=<dir> goes on top (the rounds' previews).
 const OVERRIDE = process.env.ART_OVERRIDE, ART_DIR = path.join(__dirname, '..', 'data', 'overworld'), overridden = new Map();
@@ -117,7 +117,7 @@ function writePng(file, w, h, rgb){
 }
 function crop(c, x0, y0, w, h){ const out = new Canvas(w, h); for(let y=0; y<h; y++) c.d.copy(out.d, y*w*3, ((y0+y)*c.w + x0)*3, ((y0+y)*c.w + x0 + w)*3); return out; }
 const savePng = (name, c)=>writePng(path.join(OUT, name), c.w, c.h, c.d);
-// 9.3.4: hand-drawn art in gba/data (tools/art/*.py), 8-bit RGB or RGBA, as {w, h, px} (null = transparent).
+// 9.4.0: hand-drawn art in gba/data (tools/art/*.py), 8-bit RGB or RGBA, as {w, h, px} (null = transparent).
 function readPng(name, dir=path.join(__dirname, '..', 'data')){
   const b = fs.readFileSync(path.join(dir, name)), w = b.readUInt32BE(16), h = b.readUInt32BE(20), n = b[25]===6 ? 4 : 3;
   if(b[24]!==8 || ![2,6].includes(b[25]) || b[28]) throw new Error(name + ': only 8-bit RGB(A) PNGs');
@@ -135,12 +135,12 @@ function readPng(name, dir=path.join(__dirname, '..', 'data')){
   return {w, h, px:Array.from({length:h}, (_,y)=>Array.from({length:w}, (_,x)=>{ const i = y*st+x*n;
     return n===4 && out[i+3]<128 ? null : [out[i], out[i+1], out[i+2]]; }))};
 }
-// 9.3.4: the three POKéMON CENTERS (tools/art/centers.py, center_rooms.py), taken in turn by the towns that have one,
+// 9.4.0: the three POKéMON CENTERS (tools/art/centers.py, center_rooms.py), taken in turn by the towns that have one,
 // in area order, so each region gets all three.
 const CENTER_ROOMS = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data', 'center_rooms.json'), 'utf8'));
 const CENTER_FRONT = Object.fromEntries(Object.keys(CENTER_ROOMS).map(k=>[k, readPng(`center_${k}.png`)]));
 const centerTowns = G.LOCATIONS.filter(l=>l.center);
-// 9.3.4: the CHALLENGE TOWER's front and a SUMMONING CHAMBER for each legendary (tools/art/chambers/build.py).
+// 9.4.0: the CHALLENGE TOWER's front and a SUMMONING CHAMBER for each legendary (tools/art/chambers/build.py).
 const TOWER_FRONT = readPng('tower_front.png');
 const CHAMBERS = fs.readdirSync(path.join(__dirname, '..', 'data')).map(f=>f.match(/^chamber_(\d+)(_shiny)?\.png$/)).filter(Boolean)
   .map(m=>({num:+m[1], shiny:!!m[2], art:m[0].slice(0, -4)})).sort((a, b)=>a.num-b.num || a.shiny-b.shiny);
@@ -152,7 +152,7 @@ for(const loc of G.LOCATIONS){
   liOfMap.set(map, G.LOCATIONS.indexOf(loc));
 }
 
-// 9.3.4: every gym its own challenge (tools/gym/gym_rooms.py draws them; tools/gym/solver.py tests them): the room's
+// 9.4.0: every gym its own challenge (tools/gym/gym_rooms.py draws them; tools/gym/solver.py tests them): the room's
 // tiles, people and rules. Its juniors keep their #gym0/#gym1 ids; any more get ids after everyone else's.
 const GYM_PUZZLES = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data', 'gym_puzzles.json'), 'utf8'));
 function puzzleRoom(room, loc, li){
@@ -212,7 +212,7 @@ function ellipse(c, cx, cy, rx, ry, col, a){
 // filters on the view, so a neighbour seen across a connection takes them from where you are.
 // opts: frameB draws water and flowers in their second animation frame; noItems leaves the item balls out
 // (what's under one once it's picked up); noAsh leaves the settled ash off (where you've walked).
-// 9.3.5: where a neighbour looks different (another ground, tint or a cave), the three rows or columns along that
+// 9.4.0: where a neighbour looks different (another ground, tint or a cave), the three rows or columns along that
 // edge fade toward the neighbour's look, more of it nearer the edge, so the two meet without a straight seam. Colours
 // blend; trees of another kind (or cave rock against a forest) can't blend, so some of them are swapped for the
 // neighbour's instead. Both sides do it, so nothing changes as you cross.
@@ -309,7 +309,7 @@ function drawPlain(map, view, opts={}){
       c.draw(CENTER_FRONT[map.centerStyle], b.x*16, b.y*16 - 8);
       continue;
     }
-    // 9.3.5: a gym in its town's style and its type's colours (tools/art/gym_fronts.py), doorway over the door.
+    // 9.4.0: a gym in its town's style and its type's colours (tools/art/gym_fronts.py), doorway over the door.
     const gymFront = b.kind==='gym' && b.w===6 && b.h===4 && `gym_${map.look.style}_${map.look.gym}_d${b.door.x-b.x}.png`;
     if(gymFront && fs.existsSync(path.join(__dirname, '..', 'data', gymFront))){ c.draw(readPng(gymFront), b.x*16, b.y*16 - 8); continue; }
     if(b.kind==='tower'){
@@ -649,10 +649,10 @@ for(const li of AREAS){
   const doors = map.buildings.map((b, bi)=>{
     if(b.kind==='tower') return towerRooms(li, bi, b);
     let room = G.getInterior(loc, bi);
-    // 9.3.4: each CENTER style has its own room, drawn by hand, with its own tile rows.
+    // 9.4.0: each CENTER style has its own room, drawn by hand, with its own tile rows.
     if(room.interior==='center') room = {...room, style:map.centerStyle, tiles:CENTER_ROOMS[map.centerStyle].rows.map(r=>[...r])};
     if(room.interior==='gym' && GYM_PUZZLES[li]) room = puzzleRoom(room, loc, li);
-    // 9.3.5: houses and MARTs are furnished in the town's style.
+    // 9.4.0: houses and MARTs are furnished in the town's style.
     if(room.interior==='house' || room.interior==='mart') room = {...room, look:map.look.style};
     const art = room.interior==='gym' ? `gym_${room.theme}_${li}` : room.style ? `center_${room.style}` : room.look ? `${room.interior}_${room.look}` : room.interior;    // 9.3.0: each gym its own layout
     if(!roomArts.has(art)) roomArts.set(art, {area:li, building:bi, room});
@@ -693,7 +693,7 @@ for(const li of AREAS){
     extras:loc.extras || [], twin:loc.twin ?? loc.twinOf ?? -1, mirror:!!(loc.mirror || (loc.twin!==undefined && G.LOCATIONS[loc.twin].mirror))});
   if(legend) trainerSpecies.add(legend.legend);
 }
-// 9.3.4: one SUMMONING CHAMBER per legendary, after every region's rooms (`late`) so no saved map index moves.
+// 9.4.0: one SUMMONING CHAMBER per legendary, after every region's rooms (`late`) so no saved map index moves.
 // The art is the whole room; you walk the stone path from the mat up to the dais.
 if(towerAt){
   const {li, bi, b} = towerAt;

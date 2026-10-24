@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Gym test (9.3.4): plays each gym in mGBA along the shortest route tools/gym/solver.py finds (juniors already
+"""Gym test (9.4.0): plays each gym in mGBA along the shortest route tools/gym/solver.py finds (juniors already
 beaten, so no battles), then checks you ended up beside the leader where the solver did. A gym whose engine and
 solver disagree (or that crashes) fails; the last frame of each is left in OUT/g<area>.ppm.
 With --fight the juniors start unbeaten: each must spot you where the solver says, walk up and battle (A is mashed

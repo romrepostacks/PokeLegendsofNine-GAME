@@ -1,4 +1,4 @@
-# Overworld art (9.3.5)
+# Overworld art (9.4.0)
 
 The overworld overhaul's art, approved round by round in the art review. It was drawn by the scripts in the project
 folder's `plans/9.3.5-overworld/<round>/` (ground1, trees1, water1, props1, caves1, weather1, buildings1, interiors1,

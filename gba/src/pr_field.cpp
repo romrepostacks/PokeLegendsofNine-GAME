@@ -3315,7 +3315,7 @@ void overworld::tower_stone()
     upper(text, game_data::species_list[g.tower.legend].name);
     text.append(" answers the call!");
     say(text);
-    // 9.3.4: its own chamber (Kyogre's shiny has its own picture); the type chambers are left as a fallback.
+    // 9.4.0: its own chamber (Kyogre's shiny has its own picture); the type chambers are left as a fallback.
     int chamber = -1;
     for(int i = 0; i < wd::maps_count && chamber < 0; ++i)
     {

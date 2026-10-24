@@ -426,7 +426,7 @@ void overworld::animate_tiles()
     }
 }
 
-// 9.3.5: the tall grass in front of you matches the area's ground.
+// 9.4.0: the tall grass in front of you matches the area's ground.
 static const bn::sprite_item& grass_item()
 {
     switch(map_look(state().map))
@@ -508,7 +508,7 @@ void overworld::make_sprite(actor& a)
         a.sprite = s.front.create_sprite(0, 0);
         apply_shiny(*a.sprite, int(a.legend_species), a.legend_shiny, mon_view::FRONT);
         a.sprite->set_bg_priority(1);
-        // 9.3.4: in its own SUMMONING CHAMBER it's drawn as the art has it (or is part of the art).
+        // 9.4.0: in its own SUMMONING CHAMBER it's drawn as the art has it (or is part of the art).
         if(const room_info* r = _map->room; r && r->legend >= 0)
         {
             a.sprite->set_visible(! r->baked);
@@ -601,7 +601,7 @@ void overworld::load_actors()
         a.legend_species = species_id(g.tower.legend);
         a.legend_shiny = g.tower.legend_shiny;
         a.x = a.home_x = 7;
-        a.y = a.home_y = _map->room->legend >= 0 ? 4 : 3;     // 9.3.4: its own chamber: you face it from the path
+        a.y = a.home_y = _map->room->legend >= 0 ? 4 : 3;     // 9.4.0: its own chamber: you face it from the path
         _actors.push_back(a);
     }
     // People in the connected areas, standing where they are (nbNpcs).
@@ -901,7 +901,7 @@ void overworld::update_weather(bool smooth)
     if(_map->is_room())
     {
         // The Ghost gym: dark but for a circle around you that grows with every junior beaten.
-        // 9.3.4: a gym's challenge says whether it's dark (any type) or foggy.
+        // 9.4.0: a gym's challenge says whether it's dark (any type) or foggy.
         const gym_puzzle* pz = puzzle();
         if(pz ? pz->dark == 1 : _map->room && _map->room->kind == room_kind::GYM && _map->room->theme == gym_theme::GHOST)
         {

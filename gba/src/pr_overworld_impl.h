@@ -158,7 +158,7 @@ public:
     void tower_legend_battle(species_id s, int level);
     void hold_until_released();
 
-    // ----- 9.3.4: a gym's own challenge (pr_gym.cpp) -----
+    // ----- 9.4.0: a gym's own challenge (pr_gym.cpp) -----
     [[nodiscard]] const gym_puzzle* puzzle() const;              // the room's challenge, or nullptr
     [[nodiscard]] char puzzle_cell(int tx, int ty) const;
     [[nodiscard]] bool puzzle_solid(int tx, int ty) const;

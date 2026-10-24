@@ -1,4 +1,4 @@
-# 9.3.4: draws every gym room from gba/data/gym_layouts.json (tested by solver.py) and writes what the ROM needs:
+# 9.4.0: draws every gym room from gba/data/gym_layouts.json (tested by solver.py) and writes what the ROM needs:
 #   gba/data/gym_<area>_<state>.png        the room in each state (era, tide, season...), without people
 #   gba/data/gym_<area>_<state>_alt.png    the same with every changing tile switched (fences down, pits filled,
 #                                          cracked floor broken, gas cleared, vines and jets open, fans off)

@@ -313,7 +313,7 @@ struct area_info
     int8_t fish_count;
     const uint16_t* clean;          // ash areas: metatiles once the ash is swept off
     int16_t twin;                   // 6.0.0: its twin (map index): AETERNA's other era, the HOLLOW LANDS' other side; or -1
-    uint8_t look;                   // 9.3.5: the ground's look, 0 meadow, 1 deep green, 2 golden (tall grass, battle backdrop)
+    uint8_t look;                   // 9.4.0: the ground's look, 0 meadow, 1 deep green, 2 golden (tall grass, battle backdrop)
 };
 
 enum class room_kind : uint8_t
@@ -360,7 +360,7 @@ struct league_gate
     int8_t elite;
 };
 
-// 9.3.4: a gym's own challenge (tools/gym/solver.py is its spec and test; src/pr_gym.cpp plays it): the room's tile
+// 9.4.0: a gym's own challenge (tools/gym/solver.py is its spec and test; src/pr_gym.cpp plays it): the room's tile
 // letters in each of its states (era, tide, season...), each tile's metatile as drawn, switched (fence down, pit
 // filled, crack broken, gas gone, vines open, fans off) and with a boulder on it, and the room's rules.
 namespace puzzle_flag
@@ -402,8 +402,8 @@ struct room_info
     int16_t gate_metatile;          // the floor shown in an open gate
     bool home;
     int8_t floor;                   // CHALLENGE TOWER floors: 0-4, else -1
-    const gym_puzzle* puzzle;       // 9.3.4: the gym's challenge, or nullptr
-    int16_t legend;                 // 9.3.4: the SUMMONING CHAMBER's own legendary (species index), or -1
+    const gym_puzzle* puzzle;       // 9.4.0: the gym's challenge, or nullptr
+    int16_t legend;                 // 9.4.0: the SUMMONING CHAMBER's own legendary (species index), or -1
     bool legend_shiny;              // ... the room for a shiny one (Kyogre's, drawn into the art)
     bool baked;                     // the legendary is part of the picture: no sprite
     int8_t legend_dx, legend_dy;    // its sprite's centre, from the usual legend spot

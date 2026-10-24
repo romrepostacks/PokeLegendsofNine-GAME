@@ -1,4 +1,4 @@
-"""9.3.4: the CHALLENGE TOWER's front and one SUMMONING CHAMBER per legendary (all 92), as Kyle approved them in
+"""9.4.0: the CHALLENGE TOWER's front and one SUMMONING CHAMBER per legendary (all 92), as Kyle approved them in
 the art review. Writes gba/data/tower_front.png (112x144, 7x9 tiles) and gba/data/chamber_<dex number>.png
 (240x208, the 15x13 chamber); Kyogre's is drawn with it resting in its pool (chamber_382.png, and
 chamber_382_shiny.png for a shiny one), every other legendary is its front sprite on the dais (place.py's rule,

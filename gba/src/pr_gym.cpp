@@ -1,4 +1,4 @@
-// 9.3.4: every gym its own challenge, played the way tools/gym/solver.py plays it (that file is the spec, and
+// 9.4.0: every gym its own challenge, played the way tools/gym/solver.py plays it (that file is the spec, and
 // tests every gym): ice, fences and their switches, boulders and pits, fans and currents, pads, bogs, wrong notes,
 // vines, flame jets, gas and its valves, high ground and ledges, cracked floor, tesla coils, magnets, dive spots,
 // and rooms that change state (era, tide, season, the clock).

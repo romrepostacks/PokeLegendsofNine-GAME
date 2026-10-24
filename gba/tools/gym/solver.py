@@ -1,5 +1,5 @@
 # Plays every gym's mechanic and checks it (the gyms' smoke test): python3 gba/tools/gym/solver.py [areas...]
-# Rules (the engine's, src/pr_gym.cpp, follows them; 9.3.4 gyms):
+# Rules (the engine's, src/pr_gym.cpp, follows them; 9.4.0 gyms):
 #  - Start on the rug 'o'. Goal: stand next to the leader 'L'. Leaving by the mat resets the room.
 #  - Solid: walls x, statues u, people L j g, pylons P, generators E, pedestals S, pearls Q, braziers T, rocks r, fans n,
 #    windmill W, lava K, invisible walls X. Illusions I are walkable. Juniors see 5 tiles in the way they face

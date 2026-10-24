@@ -179,7 +179,7 @@ namespace
         }
     }
 
-    // 9.3.5: the backdrop matches the ground you're on (meadow, forest edge, golden hour).
+    // 9.4.0: the backdrop matches the ground you're on (meadow, forest edge, golden hour).
     const bn::regular_bg_item& battle_bg_item()
     {
         switch(map_look(state().map))

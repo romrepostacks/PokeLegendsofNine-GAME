@@ -377,7 +377,7 @@ def build_world(exp, data, out_inc):
     for rg in regions:
         map_order += [('area', ai) for ai, a in enumerate(areas) if a['region'] == rg]
         map_order += [('room', ri) for ri, r in enumerate(rooms) if region_of[r['area']] == rg and not r.get('late')]
-    # 9.3.4: rooms added later than every region (the SUMMONING CHAMBERS) go last.
+    # 9.4.0: rooms added later than every region (the SUMMONING CHAMBERS) go last.
     map_order += [('room', ri) for ri, r in enumerate(rooms) if r.get('late')]
     map_index = {k: mi for mi, k in enumerate(map_order)}
     by_index = {a['index']: map_index[('area', ai)] for ai, a in enumerate(areas)}
@@ -417,7 +417,7 @@ def build_world(exp, data, out_inc):
         if r['kind'] == 'league':
             info['gate'] = ts.add(png(exp, 'league_floor.png'))
         if r.get('puzzle'):
-            # 9.3.4: each state of the gym as drawn, switched and with boulders (tools/gym/gym_rooms.py).
+            # 9.4.0: each state of the gym as drawn, switched and with boulders (tools/gym/gym_rooms.py).
             pz = r['puzzle']
             info['pz'] = [[ts.add(png(DATA, 'gym_%d_%d%s.png' % (pz['area'], k, suf))) for suf in ('', '_alt', '_rock')]
                           for k in range(len(pz['states']))]
@@ -496,11 +496,11 @@ def build_world(exp, data, out_inc):
             ids[(kind, i, ti)] = next_id
             next_id += 1
         if kind == 'room' and rooms[i].get('puzzle'):
-            # 9.3.4: a gym keeps its leader's and two juniors' ids even with a single junior now.
+            # 9.4.0: a gym keeps its leader's and two juniors' ids even with a single junior now.
             next_id += max(0, 3 - sum(1 for t in own if not t.get('extra')))
     if kai_next is None:
         kai_next, next_id = next_id, next_id + kai_count
-    # 9.3.4: the juniors the new gyms added come after everyone else, so no older id moves.
+    # 9.4.0: the juniors the new gyms added come after everyone else, so no older id moves.
     for key in extra:
         ids[key] = next_id
         next_id += 1
@@ -539,7 +539,7 @@ def build_world(exp, data, out_inc):
             '{0, 0, person_kind::player, direction::DOWN, trainer_role::ROUTE, "", nullptr, 0, nullptr, 0, nullptr, 0, nullptr, 0, false, 0, -1, 0, false}')))
 
     def puzzle_rows(p, pz, info):
-        """9.3.4: a gym's challenge (gym_puzzle): its tiles in each state, their metatiles, and its rules."""
+        """9.4.0: a gym's challenge (gym_puzzle): its tiles in each state, their metatiles, and its rules."""
         cells = ''.join(''.join(state) for state in pz['states'])
         L.append('constexpr char %scells[] = {%s};' % (p, ', '.join(str(ord(c)) for c in cells)))
         L.append('constexpr uint16_t %smetas[] = {%s};' % (p, ', '.join(str(m) for pics in info['pz_meta'] for meta in pics for m in meta)))
@@ -785,7 +785,7 @@ def build_world(exp, data, out_inc):
         people = r['people']
         if r['kind'] == 'center' and not any(n.get('role') == 'tutor' for n in people):
             # GBA 1.8: the MOVE TUTOR in every POKéMON CENTER, by the right-hand wall.
-            # 9.3.4: each CENTER style says where its tutor stands.
+            # 9.4.0: each CENTER style says where its tutor stands.
             tx, ty = r.get('tutor') or (11, 6)
             people.append({'kind': 'gentleman', 'x': tx, 'y': ty, 'facing': 'left', 'role': 'tutor', 'wander': False,
                            'lines': ['MOVE TUTOR: "I can help POKéMON remember moves."']})
@@ -943,7 +943,7 @@ def save_bg(img, gfx, name, bpp='bpp_4'):
     pal, idx = quantize_rgba(img, 15 if bpp == 'bpp_4' else 255)
     save_indexed_bmp(os.path.join(gfx, name + '.bmp'), pal, idx, {'type': 'regular_bg', 'bpp_mode': bpp})
 
-# 9.3.5: the people restyled for the new world (plans/9.3.5-overworld/people1/people.py, style B): the silhouette takes the
+# 9.4.0: the people restyled for the new world (plans/9.3.5-overworld/people1/people.py, style B): the silhouette takes the
 # world's #262638 outline, lines inside a figure a dark shade of the colour beside them, and each shape's top catches light.
 def restyle_person(px):
     O = (38, 38, 56)
@@ -1061,7 +1061,7 @@ def mon_sprite(path, box_of=None):
     return out
 
 def chamber_placement(num):
-    """9.3.4: a SUMMONING CHAMBER's legendary as the approved art shows it (tools/art/chambers/place.py: the 96 px
+    """9.4.0: a SUMMONING CHAMBER's legendary as the approved art shows it (tools/art/chambers/place.py: the 96 px
     sprite at 64 px, centred on x 120, feet on y 66). The game's 64x64 frame (mon_sprite) is drawn centred on
     (120, 36); this is the affine scale and the offset of that centre that puts it there."""
     path = os.path.join(ROOT, 'sprites', 'pokemon', '%d.png' % num)
@@ -1809,7 +1809,7 @@ def build_weather(gfx):
 
 def build_grass_front(data, gfx):
     # The bottom half of a tall-grass tile, drawn over whoever stands in it (the web game's .tg-front), one per ground
-    # look (9.3.5: meadow, deep green, golden).
+    # look (9.4.0: meadow, deep green, golden).
     for look, name in zip('ABC', ('grass_front', 'grass_front_b', 'grass_front_c')):
         img = Image.new('RGBA', (16, 8), (0, 0, 0, 0))
         px = img.load()
@@ -1823,7 +1823,7 @@ def build_grass_front(data, gfx):
 # ---------------------------------------------------------------------------------------------------
 # Full-screen backgrounds (256x256 so Butano can use them as regular BGs; the screen shows 240x160).
 def build_backgrounds(data, gfx):
-    # 9.3.5: the backdrop per ground look (meadow, forest edge, golden hour; plans/9.3.5-overworld/battle1/battle.py),
+    # 9.4.0: the backdrop per ground look (meadow, forest edge, golden hour; plans/9.3.5-overworld/battle1/battle.py),
     # platforms where they always were.
     for look, name in zip('ABC', ('battle_bg', 'battle_bg_b', 'battle_bg_c')):
         save_bg(Image.open(os.path.join(HERE, '..', 'data', 'overworld', 'battle_bg_%s.png' % look)).convert('RGBA'), gfx, name, 'bpp_8')
@@ -1883,7 +1883,7 @@ def add_statue(data):
             return 0
         l = (c[0] * 3 + c[1] * 6 + c[2]) // 10
         return [min(255, 72 + l * 3 // 4)] * 2 + [min(255, 80 + l * 3 // 4)]
-    # 9.3.5: from the waist up on a plinth, so it reads as carved stone and not as someone standing there.
+    # 9.4.0: from the waist up on a plinth, so it reads as carved stone and not as someone standing there.
     O, P = [38, 38, 56], {'o': [38, 38, 56], 'l': [208, 208, 216], 'm': [168, 168, 180], 'd': [124, 124, 140]}
     plinth = ['..oooooooooooo..', '..olllllllllll..'.replace('l', 'l'), '..ommmmmmmmmmd..', '..ommmmmmmmmmd..', '.oooooooooooooo.',
               '.olllllllllllld.', '.ommmmmmmmmmmmd.', '.oooooooooooooo.']
@@ -1935,7 +1935,7 @@ def add_specials(data):
     data['people']['shadow'] = {d: [frame(shadow, grey)] * 3 for d in ('down', 'up', 'left')}
 
 def free_spot(a, x, y, also=(), off_path=False):
-    """The nearest open path tile to (x, y) in an area: nobody on it, and not right below a door. 9.3.5: kept two tiles
+    """The nearest open path tile to (x, y) in an area: nobody on it, and not right below a door. 9.4.0: kept two tiles
     from other people and the spawn where the area has room, so a town's people don't bunch up; `off_path`: a statue
     or shrine stands beside the path, not on it, where it can."""
     beh = a['behaviour']
