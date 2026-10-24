@@ -1894,7 +1894,7 @@ STATUES = os.path.join(HERE, '..', 'data', 'statues')
 
 def add_statues(data):
     """9.4.1: the landmarks' looks, 32x32 each (tools/art/statues.py): person kinds statue_<look>, built 32x32."""
-    for f in sorted(os.listdir(STATUES)):
+    for f in sorted(glob.glob('*.png', root_dir=STATUES)):
         data['people']['statue_' + f[:-4]] = {'big': os.path.join(STATUES, f)}
         w, h = Image.open(os.path.join(STATUES, f)).size
         FOOT['statue_' + f[:-4]] = (w // 16, 2 if w >= 64 and h >= 64 else 1)
@@ -2228,7 +2228,7 @@ def inputs_hash():
     files.append(os.path.join(HERE, '..', 'news_gba.json'))
     files.append(os.path.join(HERE, '..', 'data', 'extras.json'))
     files += [os.path.join(HERE, '..', 'data', 'title_%s.png' % n) for n in ('sky', 'logo', 'spark', 'hooh')]
-    files += [os.path.join(STATUES, f) for f in sorted(os.listdir(STATUES))]
+    files += sorted(glob.glob(os.path.join(STATUES, '**', '*.png'), recursive=True))   # gym/ too: export.js draws those
     files += sorted(glob.glob(os.path.join(HERE, '..', 'data', '*.png')) + glob.glob(os.path.join(HERE, '..', 'data', '*.json')))
     for f in files:
         h.update(open(f, 'rb').read())

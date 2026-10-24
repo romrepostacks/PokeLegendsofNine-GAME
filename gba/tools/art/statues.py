@@ -467,6 +467,29 @@ def flower_grave():
         s.set(x, 24, c); s.set(x - 1, 25, c); s.set(x + 1, 25, c); s.set(x, 26, c); s.set(x, 25, (255, 248, 200))
     return s
 
+# ---------------------------------------------------------------- gym statues (16x24, drawn into the gym room art)
+GYM_MON = {'normal': 133, 'fire': 59, 'water': 131, 'grass': 3, 'electric': 25, 'ice': 471, 'fighting': 68, 'poison': 24,
+           'ground': 232, 'flying': 18, 'psychic': 65, 'bug': 212, 'rock': 95, 'ghost': 94, 'dragon': 149, 'steel': 208,
+           'fairy': 36}
+TYPE_COL = {'normal': '#A8A878', 'fire': '#F08030', 'water': '#6890F0', 'electric': '#F8D030', 'grass': '#78C850',
+            'ice': '#98D8D8', 'fighting': '#C03028', 'poison': '#A040A0', 'ground': '#E0C068', 'flying': '#A890F0',
+            'psychic': '#F85888', 'bug': '#A8B820', 'rock': '#B8A038', 'ghost': '#705898', 'dragon': '#7038F8',
+            'steel': '#B8B8D0', 'fairy': '#EE99AC'}
+
+def gym_statue(t):
+    """The gym's type in stone: its Pokémon carved on a plinth with a band of the type's colour."""
+    def f():
+        s = S(16, 24)
+        s.box(1, 15, 14, 22, STONE)
+        c = tuple(int(TYPE_COL[t][i:i + 2], 16) for i in (1, 3, 5))
+        s.rect(2, 18, 13, 19, c); s.rect(2, 18, 13, 18, tuple(min(255, v + 40) for v in c))
+        im = mon(GYM_MON[t], 16)
+        paste(s, im, (16 - im.width) // 2, 16 - im.height, STONE[1:])
+        return s
+    return f
+
+GYM_LOOKS = {t: gym_statue(t) for t in GYM_MON}
+
 LOOKS = {
     'wren': wren, 'hooh_figurehead': hooh_figurehead, 'emerald_carving': emerald_carving, 'launch_board': launch_board,
     'meteor_shard': meteor_shard, 'arden': arden, 'lab_terminal': lab_terminal, 'pickup_truck': pickup_truck,
@@ -484,6 +507,10 @@ if __name__ == '__main__':
     for name, fn in LOOKS.items():
         ims[name] = fn().outline().image()
         ims[name].save(os.path.join(OUT, name + '.png'))
+    os.makedirs(os.path.join(OUT, 'gym'), exist_ok=True)
+    for name, fn in GYM_LOOKS.items():
+        ims['gym_' + name] = fn().outline().image()
+        ims['gym_' + name].save(os.path.join(OUT, 'gym', name + '.png'))
     if len(sys.argv) < 2:
         sys.exit()
     # A contact sheet on meadow grass, 4x, for review.
