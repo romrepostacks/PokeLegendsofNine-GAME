@@ -144,10 +144,12 @@ const centerTowns = G.LOCATIONS.filter(l=>l.center);
 const TOWER_FRONT = readPng('tower_front.png');
 const CHAMBERS = fs.readdirSync(path.join(__dirname, '..', 'data')).map(f=>f.match(/^chamber_(\d+)(_shiny)?\.png$/)).filter(Boolean)
   .map(m=>({num:+m[1], shiny:!!m[2], art:m[0].slice(0, -4)})).sort((a, b)=>a.num-b.num || a.shiny-b.shiny);
+const liOfMap = new Map();
 for(const loc of G.LOCATIONS){
   const own = loc.twinOf!==undefined ? G.LOCATIONS[loc.twinOf] : loc, map = G.getMap(loc);
   if(map.buildings.some(b=>b.kind==='center')) map.centerStyle = Object.keys(CENTER_ROOMS)[Math.max(0, centerTowns.indexOf(own)) % 3];
   map.look = lookOf(loc, map);
+  liOfMap.set(map, G.LOCATIONS.indexOf(loc));
 }
 
 // 9.3.4: every gym its own challenge (tools/gym/gym_rooms.py draws them; tools/gym/solver.py tests them): the room's
@@ -210,7 +212,45 @@ function ellipse(c, cx, cy, rx, ry, col, a){
 // filters on the view, so a neighbour seen across a connection takes them from where you are.
 // opts: frameB draws water and flowers in their second animation frame; noItems leaves the item balls out
 // (what's under one once it's picked up); noAsh leaves the settled ash off (where you've walked).
+// 9.3.5: where a neighbour looks different (another ground, tint or a cave), the three rows or columns along that
+// edge fade toward the neighbour's look, more of it nearer the edge, so the two meet without a straight seam. Colours
+// blend; trees of another kind (or cave rock against a forest) can't blend, so some of them are swapped for the
+// neighbour's instead. Both sides do it, so nothing changes as you cross.
+const styleKey = m=>JSON.stringify([m.look.layers.filter(l=>!l.startsWith('buildings_')), m.tint || '', !!m.cave, !!m.deep, !!m.volcano]);
+const treeKey = m=>JSON.stringify([m.look.layers.filter(l=>/^(trees|weather|caves)_/.test(l)), !!m.cave, !!m.deep]);
+const BLEND = [0.46, 0.38, 0.3, 0.22, 0.14, 0.06], SWAP = [70, 40, 15];   // blend by half tile, swap by tile
 function drawArea(map, view, opts={}){
+  const c = drawPlain(map, view, opts), li = liOfMap.get(map);
+  if(li===undefined) return c;
+  const blocked = (x, y)=>map.buildings.some(b=>x>=b.x && x<b.x+b.w && y>=b.y-1 && y<b.y+b.h);
+  const tall = (x, y)=>y<map.h && (map.tiles[y][x]==='T' || map.tiles[y][x]==='^');   // rises 8 px into the tile above
+  for(const n of G.neighbours(li)){
+    if(styleKey(n.map)===styleKey(map)) continue;
+    const alt = drawPlain({...map, look:n.map.look, tint:n.map.tint, cave:n.map.cave, deep:n.map.deep, volcano:n.map.volcano}, view, opts);
+    const swapTrees = treeKey(n.map)!==treeKey(map), d = n.exit.dir, vert = d==='up' || d==='down';
+    // A cave draws rocks, signs and grass as its floor: only the ground itself can blend with the outside.
+    const caveEdge = !!n.map.cave!==!!map.cave || !!n.map.deep!==!!map.deep;
+    const lo = vert ? Math.max(0, n.ox) : Math.max(0, n.oy), hi = vert ? Math.min(map.w, n.ox + n.map.w) : Math.min(map.h, n.oy + n.map.h);
+    const band = (x, y)=>{   // how far (x, y) is from this edge, if it's on it
+      const i = vert ? x : y, k = d==='up' ? y : d==='down' ? map.h-1-y : d==='left' ? x : map.w-1-x;
+      return i>=lo && i<hi && k<3 && !blocked(x, y) ? k : -1;
+    };
+    // A pixel belongs to the tile whose art is on top there: a tree's crown to the tree below.
+    for(let py=0; py<c.h; py++) for(let px=0; px<c.w; px++){
+      const x = px>>4, ty = py>>4, y = (py&15)>=8 && tall(x, ty+1) ? ty+1 : ty, k = band(x, y);
+      if(k<0) continue;
+      if(swapTrees && map.tiles[y][x]==='T'){
+        if((((x*2654435761) ^ (y*40503) ^ (li*97)) >>> 8) % 100 < SWAP[k]) c.set(px, py, alt.get(px, py));
+      } else if(!caveEdge || ['grass', 'path', 'exit'].includes(G.TILE_CLS[map.tiles[y][x]])){
+        const j = (d==='up' ? py : d==='down' ? c.h-1-py : d==='left' ? px : c.w-1-px) >> 3;
+        if(j<6) c.set(px, py, blend(c.get(px, py), alt.get(px, py), BLEND[j]));
+      }
+    }
+    useLayers(map.look.layers);
+  }
+  return c;
+}
+function drawPlain(map, view, opts={}){
   useLayers(map.look.layers);
   const c = new Canvas(map.w*16, map.h*16, grassFill()), tallGrass = tallArt();
   const at = (x,y)=>{ const ch = map.tiles[y][x]; return opts.noItems && ch==='I' ? '.' : ch; };
