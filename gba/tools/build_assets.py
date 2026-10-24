@@ -764,13 +764,13 @@ def build_world(exp, data, out_inc):
         if a['own_pool']:
             flags.append('area_flag::OWN_POOL')
         L.append('constexpr area_info %sarea = {area_kind::%s, area_theme::%s, area_weather::%s, %s, %d, %d, %d, %d, %d, %d, %s, '
-                 '%sdive, %d, %sshafts, %d, %s, %d, %d, %d, %d, %s, %d};' % (
+                 '%sdive, %d, %sshafts, %d, %s, %d, %d, %d, %d, %s, %d, %d};' % (
             p, kind, theme, weather, ' | '.join(flags) or '0', a['tier'], a['region'], a['at'][0], a['at'][1],
             by_index.get(a['dive'], -1) if a['dive'] >= 0 else -1, by_index.get(a['surface'], -1) if a['surface'] >= 0 else -1,
             c_text(a['scene']), p, nd, p, ns,
             'species_id::%s' % enum_name(legend['name']) if legend else 'species_id::PIDGEY', legend['x'] if legend else -1,
             legend['y'] if legend else -1, nw, nf, '%sclean' % p if info['clean_meta'] is not None else 'nullptr',
-            by_index[a['twin']] if a['twin'] >= 0 else -1))
+            by_index[a['twin']] if a['twin'] >= 0 else -1, 'ABC'.index(a['look'])))
         map_rows[by_index[a['index']]] = ('{%s, %d, %d, %d, %smap, %sbehaviour, %ssigns, %d, %sdoors, %d, %speople, %d, %strainers, %d, %sitems, %d, '
                         'nullptr, 0, %slinks, %d, %spool, %d, %d, %d, %d, -1, 0, 0, %d, gate_kind::%s, %s, %s, &%sarea, %swater, %sfish, %s, nullptr}' % (
             c_text(a['name'].upper()), info['ts'], a['w'], a['h'], p, p, p, len(a['signs']), p, len(a['doors']), p, len(a['people']),
@@ -942,6 +942,32 @@ def save_sprite(gfx, name, frames, fw, fh):
 def save_bg(img, gfx, name, bpp='bpp_4'):
     pal, idx = quantize_rgba(img, 15 if bpp == 'bpp_4' else 255)
     save_indexed_bmp(os.path.join(gfx, name + '.bmp'), pal, idx, {'type': 'regular_bg', 'bpp_mode': bpp})
+
+# 9.3.5: the people restyled for the new world (plans/9.3.5-overworld/people1/people.py, style B): the silhouette takes the
+# world's #262638 outline, lines inside a figure a dark shade of the colour beside them, and each shape's top catches light.
+def restyle_person(px):
+    O = (38, 38, 56)
+    h, w = len(px), len(px[0])
+    line = lambda c: c and sum(c) < 60
+    get = lambda x, y: px[y][x] if 0 <= x < w and 0 <= y < h else 0
+    out = [[tuple(c) if c else 0 for c in r] for r in px]
+    for y in range(h):
+        for x in range(w):
+            if not line(px[y][x]):
+                continue
+            nb = [get(x + dx, y + dy) for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))]
+            fill = [n for n in nb if not line(n)]
+            if any(not n for n in nb) or not fill:
+                out[y][x] = O
+            else:
+                d = min(fill, key=sum)
+                out[y][x] = tuple(int(v * .55 + o * .15) for v, o in zip(d, O))
+    for y in range(1, h):
+        for x in range(w):
+            c = out[y][x]
+            if c and c != O and out[y - 1][x] == O and not line(px[y][x]):
+                out[y][x] = tuple(min(255, int(v * 1.12 + 10)) for v in c)
+    return [[list(c) if c else 0 for c in r] for r in out]
 
 def person_frame(f, scale=1):
     img = Image.new('RGBA', (16, 21), (0, 0, 0, 0))
@@ -1782,36 +1808,25 @@ def build_weather(gfx):
         save_bg(img, gfx, 'wx_ghost_%d' % k)
 
 def build_grass_front(data, gfx):
-    # The bottom half of a tall-grass tile, drawn over whoever stands in it (the web game's .tg-front).
-    img = Image.new('RGBA', (16, 8), (0, 0, 0, 0))
-    px = img.load()
-    for y in range(8):
-        for x in range(16):
-            c = data['tall_grass'][y + 8][x]
-            if c:
-                px[x, y] = tuple(c) + (255,)
-    save_sprite(gfx, 'grass_front', [img], 16, 8)
+    # The bottom half of a tall-grass tile, drawn over whoever stands in it (the web game's .tg-front), one per ground
+    # look (9.3.5: meadow, deep green, golden).
+    for look, name in zip('ABC', ('grass_front', 'grass_front_b', 'grass_front_c')):
+        img = Image.new('RGBA', (16, 8), (0, 0, 0, 0))
+        px = img.load()
+        for y in range(8):
+            for x in range(16):
+                c = data['tall_grass_looks'][look][y + 8][x]
+                if c:
+                    px[x, y] = tuple(c) + (255,)
+        save_sprite(gfx, name, [img], 16, 8)
 
 # ---------------------------------------------------------------------------------------------------
 # Full-screen backgrounds (256x256 so Butano can use them as regular BGs; the screen shows 240x160).
 def build_backgrounds(data, gfx):
-    a = data['art']
-    # Battle: the sky/hedge backdrop repeated sideways over its fill, and the two platforms.
-    img = Image.new('RGBA', (256, 256), (0xd4, 0xf2, 0xc4, 255))
-    bg = art_image(a['battle_bg'])
-    for x in range(0, 256, bg.size[0]):
-        img.alpha_composite(bg, (x, 0))
-    def platform(l, m, r, x, y, mids):
-        Lp, M, R = art_image(a[l]), art_image(a[m]), art_image(a[r])
-        img.alpha_composite(Lp, (x, y))
-        cx = x + Lp.size[0]
-        for _ in range(mids):
-            img.alpha_composite(M, (cx, y))
-            cx += M.size[0]
-        img.alpha_composite(R, (cx, y))
-    platform('plat_enemy_l', 'plat_enemy_m', 'plat_enemy_r', 132, 50, 6)     # 24 + 48 + 24 = 96 wide
-    platform('plat_player_l', 'plat_player_m', 'plat_player_r', 0, 84, 5)    # 32 + 40 + 32 = 104 wide
-    save_bg(img, gfx, 'battle_bg', 'bpp_8')
+    # 9.3.5: the backdrop per ground look (meadow, forest edge, golden hour; plans/9.3.5-overworld/battle1/battle.py),
+    # platforms where they always were.
+    for look, name in zip('ABC', ('battle_bg', 'battle_bg_b', 'battle_bg_c')):
+        save_bg(Image.open(os.path.join(HERE, '..', 'data', 'overworld', 'battle_bg_%s.png' % look)).convert('RGBA'), gfx, name, 'bpp_8')
 
     # Intro stage: the web game's dark radial spotlight (.intro-stage).
     img = Image.new('RGBA', (256, 256), (0x10, 0x18, 0x20, 255))
@@ -2197,6 +2212,10 @@ def main():
             os.remove(os.path.join(inc, f))
     subprocess.run(['node', os.path.join(HERE, 'export.js'), EXP], check=True)
     data = json.load(open(os.path.join(EXP, 'data.json'), encoding='utf8'))
+    for dirs in data['people'].values():
+        for frames in dirs.values():
+            for f in frames:
+                f['px'] = restyle_person(f['px'])
     add_extras(data)
     add_statue(data)
     add_specials(data)

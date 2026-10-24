@@ -711,6 +711,16 @@ int map_region(int map)
     return m.is_room() ? world_data::maps[m.exit_map].area->region : m.area->region;
 }
 
+int map_look(int map)
+{
+    if(map < 0 || map >= world_data::maps_count)
+    {
+        return 0;
+    }
+    const map_def& m = world_data::maps[map];
+    return m.is_room() ? world_data::maps[m.exit_map].area->look : m.area->look;
+}
+
 int calderra_level(int badges)
 {
     return region_level(2, badges);

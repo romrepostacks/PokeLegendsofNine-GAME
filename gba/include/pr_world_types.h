@@ -313,6 +313,7 @@ struct area_info
     int8_t fish_count;
     const uint16_t* clean;          // ash areas: metatiles once the ash is swept off
     int16_t twin;                   // 6.0.0: its twin (map index): AETERNA's other era, the HOLLOW LANDS' other side; or -1
+    uint8_t look;                   // 9.3.5: the ground's look, 0 meadow, 1 deep green, 2 golden (tall grass, battle backdrop)
 };
 
 enum class room_kind : uint8_t

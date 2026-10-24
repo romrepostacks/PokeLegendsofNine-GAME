@@ -20,6 +20,8 @@
 #include "bn_sprite_items_dust.h"
 #include "bn_sprite_items_glint.h"
 #include "bn_sprite_items_grass_front.h"
+#include "bn_sprite_items_grass_front_b.h"
+#include "bn_sprite_items_grass_front_c.h"
 #include "bn_sprite_items_surf.h"
 #include "bn_regular_bg_items_wx_ash_1.h"
 #include "bn_regular_bg_items_wx_ash_2.h"
@@ -424,6 +426,17 @@ void overworld::animate_tiles()
     }
 }
 
+// 9.3.5: the tall grass in front of you matches the area's ground.
+static const bn::sprite_item& grass_item()
+{
+    switch(map_look(state().map))
+    {
+    case 1: return bn::sprite_items::grass_front_b;
+    case 2: return bn::sprite_items::grass_front_c;
+    default: return bn::sprite_items::grass_front;
+    }
+}
+
 void overworld::load_map(int index, bool keep_bg)
 {
     game_state& g = state();
@@ -451,6 +464,11 @@ void overworld::load_map(int index, bool keep_bg)
     _grass_x = g.x;
     _grass_y = g.y;
     _from_x = _from_y = -1000;
+    if(_grass_here)
+    {
+        _grass_here->set_item(grass_item());
+        _grass_from->set_item(grass_item());
+    }
     if(_map->is_room() || ! _map->area || area_weather_now(_map->area) != area_weather::CAVE)
     {
         _flash = false;     // FLASH lasts until you leave the cave
@@ -731,8 +749,8 @@ void overworld::refresh(bool force)
         _player = person_sprites[int(person_kind::player)]->create_sprite(0, 0, 0);
         _player->set_bg_priority(1);
         set_player_frame(_player_step, _player_run);
-        _grass_here = bn::sprite_items::grass_front.create_sprite(0, 0);
-        _grass_from = bn::sprite_items::grass_front.create_sprite(0, 0);
+        _grass_here = grass_item().create_sprite(0, 0);
+        _grass_from = grass_item().create_sprite(0, 0);
         for(bn::sprite_ptr* s : { &*_grass_here, &*_grass_from })
         {
             s->set_bg_priority(1);
