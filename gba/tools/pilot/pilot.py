@@ -408,6 +408,9 @@ class Pilot:
                     return False
                 self.walk(path)
                 continue
+            gm = self.gym_of(cm)
+            if gm is not None and (x, y) != gm.start and not self.gym_run(cm, leave=True):
+                return False        # a puzzle gym's way out is the solver's, not a straight walk to the mat
             route = self.area_route(cm, mi)
             if not route:
                 return False
@@ -728,8 +731,9 @@ class Pilot:
             self._gyms = {area_maps[int(a)]: Gym(int(a), dict(g, states=[tuple(x) for x in g['states']])) for a, g in L.items()}
         return self._gyms.get(lead[0]['area'])
 
-    def gym_run(self, mi):
-        """From the rug, plays the solver's shortest way to the leader with the juniors as they are now."""
+    def gym_run(self, mi, leave=False):
+        """From the rug, plays the solver's shortest way to the leader with the juniors as they are now
+        (or, with leave, from wherever the last run ended back to the rug, as the door's mat is beside it)."""
         from collections import deque
         from solver import D4
         gm = self.gym_of(mi)
@@ -742,10 +746,14 @@ class Pilot:
         # (Off the rug, after a loss or a reload, it starts from where we stand with the room as it began.)
         b0 = beaten()
         st0 = (tuple(self.pos()[1:]), 0, b0, gm.boulders0, gm.pits0, 1 if gm.cfg['gate'] == 'juniors' and b0 == (1 << len(ids)) - 1 else 0, 0)
+        last = getattr(self, '_gym_last', None)
+        if last and last[0] == mi and last[1][0] == st0[0]:
+            st0 = last[1][:2] + (b0,) + last[1][3:]      # the room as the last run left it (boulders, switches)
+        done = (lambda st: st[0] == gm.start) if leave else gm.at_goal
         prev, q, path = {st0: None}, deque([st0]), None
         while q:
             st = q.popleft()
-            if gm.at_goal(st):
+            if done(st):
                 path = []
                 while prev[st]:
                     st, keys, after = prev[st][0], prev[st][1], st
@@ -778,7 +786,10 @@ class Pilot:
             if tuple(self.pos()[1:]) != after[0]:
                 self.log('gym_off_route', area=gm.area, step=n, at=self.pos()[1:], want=after[0]); self.shot('gym_off')
                 return False
-        self.log('gym_route', area=gm.area, steps=len(path))
+            self._gym_last = (mi, after)
+        if leave:
+            self._gym_last = None       # out by the mat, the room resets
+        self.log('gym_leave' if leave else 'gym_route', area=gm.area, steps=len(path))
         return True
 
     def play(self, max_frames, checkpoint=None):
