@@ -3,6 +3,7 @@
 // water and flowers that sway, weather and the time of day, Emerald step timing (16 frames a step, 8
 // running), SURF and DIVE, ledges, tall grass, people who wander and trainers who spot you.
 // Talking, places, the story and the START menu are in pr_field.cpp.
+#include "bn_size.h"
 #include "bn_bg_palettes.h"
 #include "bn_bg_tiles.h"
 #include "bn_blending.h"
@@ -87,6 +88,20 @@ namespace
 
     walk_back pending_walk;
     int shown_place = -1;       // owShownLoc: the plank shows each time you arrive somewhere new
+
+    constexpr int perch_lift = 14;     // a perched guardian's rise above the landmark's base row (half-size sprite)
+
+    // 9.4.1: a landmark (a statue_<look> kind) is wider than a person (32 or 64 px) and stands on its tile and the
+    // ones to its right; a 64x64 one also on the row above. Returns its base in tiles (1 x 1 for anyone else).
+    bn::size footprint(const actor& a)
+    {
+        if(a.legend)
+        {
+            return bn::size(1, 1);
+        }
+        bn::sprite_shape_size s = person_sprites[int(a.kind)]->shape_size();
+        return s.width() > 16 ? bn::size(s.width() / 16, s.width() >= 64 && s.height() >= 64 ? 2 : 1) : bn::size(1, 1);
+    }
 
     // Sprite sheet frames: down 0-2, up 3-5, left 6-8 (right is left mirrored); 0 stands, 1 and 2 step.
     void set_frame(bn::sprite_ptr& sprite, person_kind kind, direction d, int step)
@@ -265,16 +280,19 @@ behaviour overworld::behaviour_at(int tx, int ty) const
 
 int overworld::actor_at(int tx, int ty) const
 {
+    int found = -1;
     for(int i = 0; i < _actors.size(); ++i)
     {
         const actor& a = _actors[i];
-        // A stepping actor already holds the tile it's moving to.
-        if(a.x == tx && a.y == ty)
+        // A stepping actor already holds the tile it's moving to; a landmark holds its whole base (but a guardian
+        // perched on it answers for its own tile).
+        bn::size f = footprint(a);
+        if(tx >= a.x && tx < a.x + f.width() && ty <= a.y && ty > a.y - f.height() && (a.legend || found < 0))
         {
-            return i;
+            found = i;
         }
     }
-    return -1;
+    return found;
 }
 
 bool overworld::walkable(int tx, int ty) const
@@ -500,6 +518,21 @@ void overworld::show_place_name()
     gui().show_place(name);
 }
 
+// 9.4.1: the landmark a guardian stands on (its tile is in the landmark's base), or -1.
+int overworld::perch(const actor& a) const
+{
+    for(int i = 0; a.legend && i < _actors.size(); ++i)
+    {
+        const actor& l = _actors[i];
+        bn::size f = footprint(l);
+        if(! l.legend && f.width() > 1 && a.x >= l.x && a.x < l.x + f.width() && a.y <= l.y && a.y > l.y - f.height())
+        {
+            return i;
+        }
+    }
+    return -1;
+}
+
 void overworld::make_sprite(actor& a)
 {
     if(a.legend)
@@ -508,6 +541,11 @@ void overworld::make_sprite(actor& a)
         a.sprite = s.front.create_sprite(0, 0);
         apply_shiny(*a.sprite, int(a.legend_species), a.legend_shiny, mon_view::FRONT);
         a.sprite->set_bg_priority(1);
+        // 9.4.1: perched on a landmark (DIALGA's and PALKIA's altars), it's drawn at half size on top.
+        if(perch(a) >= 0)
+        {
+            a.sprite->set_scale(bn::fixed(0.5));
+        }
         // 9.4.0: in its own SUMMONING CHAMBER it's drawn as the art has it (or is part of the art).
         if(const room_info* r = _map->room; r && r->legend >= 0)
         {
@@ -787,11 +825,21 @@ void overworld::refresh(bool force)
                 lx = r->legend_dx;
                 ly = r->legend_dy;
             }
+            if(int k = perch(a); k >= 0)
+            {
+                // Standing on the landmark's top, centred on it, in front of it.
+                const actor& l = _actors[k];
+                bob = 0;
+                lx = (l.x - a.x) * 16 + footprint(l).width() * 8 - 8;
+                ly = (l.y - a.y) * 16 - perch_lift;
+            }
             a.sprite->set_position(sx(a.x * 16 - _cam_x + 8 + lx), sy(a.y * 16 - _cam_y - 12 + bob + ly));
-            a.sprite->set_z_order(-bn::clamp((a.y * 16 - _cam_y + 8 + 32) >> 4, 0, 16) - 2);
+            a.sprite->set_z_order(-bn::clamp((a.y * 16 - _cam_y + 8 + 32) >> 4, 0, 16) - 3);
             continue;
         }
-        place_actor(*a.sprite, a.x * 16 + ox, a.y * 16 + oy);
+        bn::size f = footprint(a);
+        int h = person_sprites[int(a.kind)]->shape_size().height();
+        place_actor(*a.sprite, a.x * 16 + ox + (f.width() - 1) * 8, a.y * 16 + oy, a.legend ? 0 : (h - 32) / 2);
     }
     auto place_grass = [&](bn::sprite_ptr& s, int tx, int ty)
     {

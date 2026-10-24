@@ -1412,6 +1412,15 @@ function buildTown(loc){
     const edge = x===0 || y===0 || x===row.length-1 || y===TOWN_ROWS.length-1;
     tiles[y+OY][P(x)] = edge ? '.' : ch;
   }));
+  // 9.4.1: a town with a landmark in its middle (loc.plaza, the landmark's look) paves its pond into a square for it;
+  // map.plaza is the 4x2 spot the landmark's base is centred on (gba/tools/build_assets.py).
+  let plaza = null;
+  if(loc.plaza){
+    for(let y=8; y<=12; y++) for(let x=10; x<=15; x++) tiles[y+OY][P(x)] = ':';
+    plaza = {x:R(11,4), y:OY+11};
+  }
+  // 9.4.1: open ground for a landmark (map tiles x0,y0 to x1,y1): its trees cleared.
+  if(loc.yard){ const [x0,y0,x1,y1] = loc.yard; for(let y=y0; y<=y1; y++) for(let x=x0; x<=x1; x++) if(tiles[y][x]==='T') tiles[y][x] = '.'; }
   // Roads: west/east on the centre's road rows, a 3-wide lane north/south; openings in the border.
   // Side openings span the 2 rows above the road and the road (rows 3-4 of the opening), the same as a
   // route's entrance, so the roads meet in a straight line at the border.
@@ -1452,6 +1461,7 @@ function buildTown(loc){
   npcs.push({kind:TOWNSFOLK[Math.floor(rnd()*TOWNSFOLK.length)], x:OX+24, y:OY+15, facing:'left', wander:true, lines:TOWN_TALK[Math.floor(rnd()*TOWN_TALK.length)], home:{x:OX+24, y:OY+15}});
   if(loc.storyNpc) npcs.push({kind:loc.storyNpc.kind, x:P(9), y:OY+12, facing:'down', lines:loc.storyNpc.lines, home:{x:P(9), y:OY+12}});
   const map = finishMap(tiles, b, npcs, exits, {x:P(5), y:7+OY}, signs);
+  map.plaza = plaza;
   // Trees and flowers in the outskirts, kept two tiles clear of roads, buildings and people, and
   // undone if they'd cut anything off.
   const near = (x,y)=>{
@@ -6420,7 +6430,7 @@ const ECLIPSE_TEAM = {cls:'ECLIPSE GRUNT', kind:'gruntEclipse', pool:['Maschiff'
   after:["The light... it's too bright...", "Boss NYX won't like this one bit.", "Go on, then. The tower will rise without me."]};
 const CALDERRA = [
   // 0: the start
-  {type:'town', name:"Port Calder", at:[0,1], desc:"Gulls wheel over a harbour of black volcanic stone. Three roads leave town: north, west and east.", center:true},
+  {type:'town', name:"Port Calder", plaza:'wren', at:[0,1], desc:"Gulls wheel over a harbour of black volcanic stone. Three roads leave town: north, west and east.", center:true},
   // 1-7: Stormreach (Raikou): Electric, Flying and Normal gyms
   {type:'route', name:"Galeward Plains", at:[1,-1], desc:"Open grass bends under a constant wind. Thunderheads gather to the north.", pool:['Yamper','Wattrel','Pawmi','Rookidee','Lechonk','Skwovet']},
   {type:'gym', name:"Voltaine City", at:[2,-1], desc:"Lightning rods crown every roof. Leader Arc's gym hums with Electric Pokémon.", center:true, leaderName:"Arc", leaderTeam:['Boltund','Bellibolt','Toxtricity','Pawmot']},
@@ -6556,7 +6566,7 @@ const ELITES_SUNDERED = [
    intro:"Below the waves it's always night. Can you see?", after:"...Bright as a lighthouse. The CHAMPION waits."}];
 const SUNDERED = [
   // 0: the hub
-  {type:'town', name:"Port Keel", at:[2,0], center:true, desc:"A busy harbour on the central island. MT. KEEL rises behind the town, and sea routes run out in every direction."},
+  {type:'town', name:"Port Keel", plaza:'hooh_figurehead', at:[2,0], center:true, desc:"A busy harbour on the central island. MT. KEEL rises behind the town, and sea routes run out in every direction."},
   // 1-3: the spokes out to the ring
   {type:'route', name:"Sea Route 1", at:[1,0], theme:'sea', desc:"Open water west of PORT KEEL, toward a rock where fighters train.", pool:['Wingull','Pelipper','Corphish-Sunder'], water:['Tentacool','Wailmer-Sunder','Finneon','Mantyke','Remoraid','Corphish-Sunder']},
   {type:'route', name:"Sea Route 2", at:[2,1], theme:'sea', desc:"Fog drifts over the water south of PORT KEEL. Old wreckage bobs in the swell.", pool:['Wingull','Pelipper','Carvanha-Sunder'], water:['Carvanha-Sunder','Frillish','Tentacool','Wishiwashi','Finneon','Mantyke']},
@@ -6683,11 +6693,11 @@ const ELITES_SKYREACH = [
    intro:"Dragons ride the winds around the pillar. Can you ride them too?", after:"You've earned the crown's door. The CHAMPION waits."}];
 const SKYREACH = [
   // 0-8: the CANYON FLOOR, west to east
-  {type:'town', name:"Windward", at:[4,3], center:true, tint:'mesa', desc:"A trading town at the foot of the SKY PILLAR, where the airship docks. Wind sings through the canyon all day."},
+  {type:'town', name:"Windward", plaza:'launch_board', yard:[22,2,32,8], at:[4,3], center:true, tint:'mesa', desc:"A trading town at the foot of the SKY PILLAR, where the airship docks. Wind sings through the canyon all day."},
   {type:'route', name:"Canyon Route 1", at:[3,3], theme:'rocky', tint:'mesa', wind:true, desc:"A dry canyon west of WINDWARD. Gusts race along the riverbed.", pool:['Sandile','Trapinch','Geodude-Sky','Rhyhorn-Sky','Diglett','Mudbray']},
   {type:'gym', name:"Cascade Gorge", at:[2,3], center:true, tint:'mesa', desc:"Waterfalls pour down the canyon walls into a green gorge. Leader Rill's gym is a raft dock.", leaderName:"Rill", leaderTeam:['Ludicolo','Swampert','Tangrowth','Kingler']},
   {type:'route', name:"Canyon Route 2", at:[1,3], theme:'rocky', tint:'mesa', wind:true, treasure:['stoneplate'], desc:"Old mine carts rust beside the trail to OCHRE GULCH. Something hums deep in a side tunnel.", pool:['Geodude-Sky','Rolycoly','Onix','Drilbur','Sandile','Roggenrola']},
-  {type:'gym', name:"Ochre Gulch", at:[0,3], center:true, tint:'mesa', desc:"A mining town cut into ochre cliffs. Leader Dusty's gym is the old mine itself.", leaderName:"Dusty", leaderTeam:['Golem','Saurhorn','Gliscor','Lycanroc']},
+  {type:'gym', name:"Ochre Gulch", plaza:'meteor_shard', at:[0,3], center:true, tint:'mesa', desc:"A mining town cut into ochre cliffs. Leader Dusty's gym is the old mine itself.", leaderName:"Dusty", leaderTeam:['Golem','Saurhorn','Gliscor','Lycanroc']},
   {type:'route', name:"Canyon Route 3", at:[5,3], theme:'rocky', tint:'mesa', wind:true, desc:"The road east to STARFALL. At night the sky here is full of shooting stars.", pool:['Ponyta-Sky','Baltoy','Elgyem','Solrock','Lunatone','Cleffa']},
   {type:'gym', name:"Starfall", at:[6,3], center:true, tint:'mesa', desc:"A town of observatories beside the SPACE CENTER. Leader Selene's gym has a glass roof open to the stars.", leaderName:"Selene", leaderTeam:['Clefable','Gardevoir','Hatterene','Bronzong']},
   {type:'trainer', kind:'boss', name:"Meteor Crater", at:[7,3], boss:true, shrine:true, legend:'Deoxys', grunts:3, theme:'rocky', tint:'mesa', gruntTeam:ZENITH_TEAM, bossKind:'adminZenith',
@@ -6698,7 +6708,7 @@ const SKYREACH = [
    pool:['Clefairy','Cleffa','Lunatone','Solrock','Elgyem','Beldum']},
   // 9-14: the MESA TOPS: west (updraft from OCHRE GULCH) and east (updraft from STARFALL)
   {type:'route', name:"Mesa Route 4", at:[0,2], badges:3, theme:'rocky', tint:'mesa', wind:true, desc:"An updraft carries you up the cliff to the mesa tops. Up here the wind never stops.", pool:['Hawlucha','Swablu-Sky','Ponyta-Sky','Tauros','Rufflet','Vullaby']},
-  {type:'gym', name:"Gale Mesa", at:[0,1], center:true, tint:'mesa', desc:"Windmills line the mesa's edge. Leader Brisa's gym is the tallest of them.", leaderName:"Brisa", leaderTeam:['Staraptor','Braviary','Altaria-Sky','Swellow']},
+  {type:'gym', name:"Gale Mesa", plaza:'meteor_shard', at:[0,1], center:true, tint:'mesa', desc:"Windmills line the mesa's edge. Leader Brisa's gym is the tallest of them.", leaderName:"Brisa", leaderTeam:['Staraptor','Braviary','Altaria-Sky','Swellow']},
   {type:'trainer', kind:'rival', name:"Mesa Route 5", at:[1,1], theme:'rocky', tint:'mesa', wind:true, desc:"A glider lands in front of you. \"An off-lander? Up here? Let's see if you can keep up!\"",
    leaderName:"Sora", rivalKind:'rivalSora', leaderTeam:['Talonflame','Noivern','Graveler-Sky','Rapidash-Sky','Salamence'], pool:['Swablu-Sky','Rufflet','Vullaby','Gligar']},
   {type:'gym', name:"Kiln Mesa", at:[2,1], center:true, tint:'mesa', desc:"Adobe houses climb the cliff, and pottery kilns glow at every door. Leader Pyra's gym is the great kiln.", leaderName:"Pyra", leaderTeam:['Infernape','Blaziken','Rapidash-Sky','Emboar']},
@@ -6709,7 +6719,7 @@ const SKYREACH = [
    leaderName:"Admin Orion", leaderTeam:['Porygon-Z','Metagross','Magnezone','Reuniclus','Beheeyem','Bronzong'], pool:['Porygon','Magnemite','Elgyem','Beldum']},
   // 15-21: CLOUD LEVEL: updrafts from KILN MESA and THUNDERHEAD, joined over the top of the SKY PILLAR
   {type:'route', name:"Cloud Route 7", at:[2,0], badges:6, theme:'rocky', tint:'cloud', wind:true, desc:"An updraft lifts you through the clouds. Rocks float in the wind, and you walk from one to the next.", pool:['Swablu-Sky','Altaria-Sky','Snorunt','Vanillite','Noibat','Tropius']},
-  {type:'gym', name:"Frostcrown", at:[2,-1], center:true, tint:'cloud', desc:"A snowy spire above the clouds. Leader Rime's gym is carved out of the ice.", leaderName:"Rime", leaderTeam:['Mamoswine','Aurorus','Avalugg','Glalie']},
+  {type:'gym', name:"Frostcrown", plaza:'meteor_shard', at:[2,-1], center:true, tint:'cloud', desc:"A snowy spire above the clouds. Leader Rime's gym is carved out of the ice.", leaderName:"Rime", leaderTeam:['Mamoswine','Aurorus','Avalugg','Glalie']},
   {type:'route', name:"Cloud Route 9", at:[3,-1], theme:'rocky', tint:'cloud', wind:true, desc:"A causeway of floating rock toward the top of the SKY PILLAR. The wind is fierce.", pool:['Altaria-Sky','Noivern','Shelgon','Snover','Bergmite','Amaura']},
   {type:'trainer', kind:'boss', name:"Sky Pillar", at:[4,-1], boss:true, shrine:true, legend:'Rayquaza', grunts:3, theme:'rocky', tint:'cloud', gruntTeam:ZENITH_TEAM, bossKind:'bossZenith',
    desc:"The top of the SKY PILLAR, above the clouds. Director HALLEY waits by the old altar. \"Rayquaza will fall, and my perfect POKéMON will rule the sky!\"",
@@ -6806,7 +6816,7 @@ const ELITES_GENOVA = [
    intro:"MEWTWO's mind is still echoing through this city. Can you hear it?", after:"It's quiet now. You did that. The CHAMPION waits."}];
 const GENOVA = [
   // 0-9: the inner wards, open when you land
-  {type:'town', name:"Genova Central", at:[4,2], center:true, tint:'city', desc:"The heart of GENOVA: glass towers, monorail lines overhead, and the statue of FOUNDER ARDEN in the plaza."},
+  {type:'town', name:"Genova Central", plaza:'arden', at:[4,2], center:true, tint:'city', desc:"The heart of GENOVA: glass towers, monorail lines overhead, and the statue of FOUNDER ARDEN in the plaza."},
   {type:'route', name:"Monorail Line West", at:[3,2], tint:'city', desc:"A walkway under the monorail, west to the FOUNDRY WARD. Escaped experiments nest in the planters.", pool:['Chimurr','Voltadpole','Rattata','Grimer','Trubbish','Pawmi']},
   {type:'gym', name:"Foundry Ward", at:[2,2], center:true, tint:'city', desc:"Smokestacks and steelworks. Leader Cobalt's gym is a working forge.", leaderName:"Cobalt", leaderTeam:['Metagross','Kingambit','Copperajah','Graftree']},
   {type:'route', name:"Sewer Run", at:[2,3], theme:'cave', treasure:['ironplate'], desc:"The sewers under the FOUNDRY WARD. Something metal is wedged in a grate, humming.", pool:['Grimer','Koffing','Chimurr','Specterra','Trubbish','Zubat']},
@@ -6867,15 +6877,15 @@ Object.assign(WEATHER, {"Sewer Run":'cave', "Arcology Spire":'cave', "Sealed Cav
   Object.assign(GENOVA[0], {storyNpc:{kind:'rivalKai', lines:["KAI: \"CHAMPION! This city's something else. Everything's made in a lab. Even the trees.\"", "KAI: \"See that statue? FOUNDER ARDEN. Everyone loves him. I read the plaque... he was a geneticist.\"", "KAI: \"People say MEWTWO was made here. If that's true, I bet it's still around somewhere.\""]},
     extras:[
       {kind:'pilot', role:'guide_back', dx:2, dy:1, lines:[]},
-      {kind:'statue', dx:-3, dy:-3, lines:["A bronze statue of FOUNDER ARDEN. The plaque reads: \"He built GENOVA from a single lab. SCIENCE WITHOUT LIMITS.\"", "Someone has scratched underneath: \"HE MADE MEWTWO. ASK HIM WHY IT CRIED.\""]},
+      {kind:'statue', look:'arden', at:'plaza', lines:["A bronze statue of FOUNDER ARDEN. The plaque reads: \"He built GENOVA from a single lab. SCIENCE WITHOUT LIMITS.\"", "Someone has scratched underneath: \"HE MADE MEWTWO. ASK HIM WHY IT CRIED.\""]},
       {kind:'prof', dx:4, dy:1, lines:["PROF. LINNEA: \"Welcome to GENOVA. I study the escaped experiments: CHIMURR, VOLTADPOLE, GRAFTLING...\"", "PROF. LINNEA: \"The Corp. spliced them from two POKéMON each. They're nothing like anything else, and they're happy out there.\"", "PROF. LINNEA: \"There's a rumour of a pink POKéMON, too. People keep seeing it for a second, then it's gone.\""]},
       {kind:'sparkle', role:'mew', dx:-6, dy:4}]});
   Object.assign(GENOVA[8], {rivalAfter:["The new clone's DNA is gone? Chairman VOSS took it to the SEALED CAVE!", "He's going to find MEWTWO and make it obey. Or make a copy that will."],
-    extras:[{kind:'statue', at:'mid', dx:-3, dy:2, lines:["A lab terminal, still on. LOG 1: \"CINNABAR ISLAND. July 5. A new POKéMON was discovered deep in a jungle.\"", "LOG 2: \"Feb. 6. MEW gave birth. We named the newborn MEWTWO.\" The rest of the file is corrupted."]}]});
+    extras:[{kind:'statue', look:'lab_terminal', at:'mid', dx:-3, dy:2, lines:["A lab terminal, still on. LOG 1: \"CINNABAR ISLAND. July 5. A new POKéMON was discovered deep in a jungle.\"", "LOG 2: \"Feb. 6. MEW gave birth. We named the newborn MEWTWO.\" The rest of the file is corrupted."]}]});
   Object.assign(GENOVA[15], {rivalAfter:["MEWTWO... it looked at me like I was nothing. Like we made it, and it owes us nothing.", "...Maybe it's right. Take it, then. If it'll go with anyone, it's you."]});
   Object.assign(GENOVA[18], {rivalAfter:["Fine! Keep your pink rumour. The Corp. has bigger problems now."],
-    extras:[{kind:'statue', at:'mid', dx:3, dy:1, lines:["An old pickup truck, parked at the very end of the pier. Nobody knows how it got here, or why it never left.", "Kids in GENOVA say if you push it, something pink is underneath. Nobody's ever managed to push it."]}]});
-  Object.assign(GENOVA[9], {extras:[{kind:'statue', dx:3, dy:-2, lines:["A tank of green fluid. Inside floats a copy of the very first POKéMON you were ever given. It opens one eye.", "A label: \"SUBJECT 001-B. DO NOT WAKE.\" You tap the glass. It taps back."]}]});
+    extras:[{kind:'statue', look:'pickup_truck', at:'mid', dx:3, dy:1, lines:["An old pickup truck, parked at the very end of the pier. Nobody knows how it got here, or why it never left.", "Kids in GENOVA say if you push it, something pink is underneath. Nobody's ever managed to push it."]}]});
+  Object.assign(GENOVA[9], {extras:[{kind:'statue', look:'clone_tank', dx:3, dy:-2, lines:["A tank of green fluid. Inside floats a copy of the very first POKéMON you were ever given. It opens one eye.", "A label: \"SUBJECT 001-B. DO NOT WAKE.\" You tap the glass. It taps back."]}]});
   // MEW, seen in ten places (CENTRAL's is above).
   for(const i of [1, 3, 5, 7, 10, 12, 13, 16, 19]) (GENOVA[i].extras ||= []).push({kind:'sparkle', role:'mew', at:'mid', dx:(i % 3) * 2 - 2, dy:(i % 2) * 2 - 1});
   // The way down from the SKYREACH: the shuttle at WINDWARD.
@@ -6931,13 +6941,13 @@ const ELITES_AETERNA = [
    intro:"Eclipses come back every eighteen years. I come back every battle.", after:"The sun returns. Go to the CHAMPION."}];
 const AETERNA = [
   // 0-11: the valley now
-  {type:'town', name:"Aeterna Village", at:[4,2], center:true, desc:"A quiet farming village in the middle of the valley. The church clock has two faces, and they never agree."},
+  {type:'town', name:"Aeterna Village", plaza:'church_clock', at:[4,2], center:true, desc:"A quiet farming village in the middle of the valley. The church clock has two faces, and they never agree."},
   {type:'route', name:"Millstream Road", at:[3,2], desc:"West past the old water mill. A rift hangs in the air by the mill wheel.", pool:['Iron Treads','Bidoof','Stantler','Wooper','Bronzor','Hoppip']},
   {type:'gym', name:"Harvest", at:[2,2], center:true, desc:"Golden fields and a grain silo. Leader Barley's gym is the big red barn.", leaderName:"Barley", leaderTeam:['Hippowdon','Ursaluna','Clodsire','Iron Treads']},
   {type:'route', name:"Orchard Lane", at:[2,3], desc:"Apple trees in neat rows, south toward BLOOMFIELD. Some of the trees are older than the village.", pool:['Applin','Combee','Skwovet','Iron Moth','Smoliv','Cherubi']},
   {type:'gym', name:"Bloomfield", at:[3,3], center:true, desc:"A town of flower beds. Leader Posy's gym is a glasshouse full of roses.", leaderName:"Posy", leaderTeam:['Florges','Whimsicott','Lilligant','Iron Leaves']},
   {type:'route', name:"Riverbend Road", at:[5,2], desc:"East along the river. A bare patch of earth on the bank, where nothing has ever grown.", pool:['Iron Bundle','Marill','Psyduck','Stantler','Bibarel','Chatot']},
-  {type:'gym', name:"Clocktower", at:[6,2], center:true, desc:"A town built around a huge clock that runs backwards. Leader Horatio's gym is inside it.", leaderName:"Horatio", leaderTeam:['Bronzong','Metagross','Iron Valiant','Gholdengo']},
+  {type:'gym', name:"Clocktower", plaza:'town_clock', at:[6,2], center:true, desc:"A town built around a huge clock that runs backwards. Leader Horatio's gym is inside it.", leaderName:"Horatio", leaderTeam:['Bronzong','Metagross','Iron Valiant','Gholdengo']},
   {type:'trainer', kind:'rival', name:"Lakeshore Path", at:[6,1], badges:4, desc:"Along the shore of the great lake. Someone with a notebook stands in the path. \"Wait! You came through a rift, didn't you? Battle me!\"",
    leaderName:"Tess", rivalKind:'rivalTess', leaderTeam:['Wyrdeer','Kleavor','Iron Jugulis','Basculegion','Lucario'], pool:['Iron Jugulis','Buizel','Lotad','Shellos']},
   {type:'gym', name:"Mirelake", at:[6,0], center:true, desc:"Stilt houses over the lake. Leader Undine's gym floats on rafts.", leaderName:"Undine", leaderTeam:['Palafin','Quagsire','Dondozo','Walking Wake']},
@@ -6985,18 +6995,18 @@ Object.assign(WEATHER, {"Wildwood Path":'fog', "Old Lakeshore":'fog', "Mirelake"
     extras:[
       {kind:'gentleman', role:'guide_back', dx:2, dy:1, lines:[]},
       {kind:'rift', role:'twin', dx:-3, dy:2},
-      {kind:'statue', dx:-3, dy:-3, lines:["The church clock. Its two faces show different times, and both hands move.", "A plaque: \"TIME IS A RIVER. THE VALLEY IS ITS BED.\""]},
+      {kind:'statue', look:'church_clock', at:'plaza', lines:["The church clock. Its two faces show different times, and both hands move.", "A plaque: \"TIME IS A RIVER. THE VALLEY IS ITS BED.\""]},
       {kind:'oldwoman', dx:4, dy:2, lines:["Tomorrow I'll tell you about yesterday. Or did I tell you tomorrow already?", "Every day here is the same day, you know. I've said that before. I'll say it again."]}]});
   Object.assign(AETERNA[12], {extras:[{kind:'boy', dx:4, dy:2, lines:["A rift opened by the well and a stranger came out! He bought an apple. He said he was a CHAMPION.", "I'm going to plant the core. Maybe it'll be a whole orchard someday."]}]});
   for(const i of [3, 5, 8]) (AETERNA[i].extras ||= []).push({kind:'rift', role:'twin', at:'mid', dx:-2, dy:1});
-  Object.assign(AETERNA[15], {extras:[{kind:'statue', at:'mid', dx:3, dy:-1, lines:["A tiny wooden shrine, freshly carved. Leaves swirl around it with no wind.", "For a moment you see a small green POKéMON peek out... then it's gone. Back to its own time, maybe."]}]});
+  Object.assign(AETERNA[15], {extras:[{kind:'statue', look:'wooden_shrine', at:'mid', dx:-3, dy:-6, lines:["A tiny wooden shrine, freshly carved. Leaves swirl around it with no wind.", "For a moment you see a small green POKéMON peek out... then it's gone. Back to its own time, maybe."]}]});
   Object.assign(AETERNA[17], {extras:[{kind:'sparkle', role:'seed', at:'mid', dx:2, dy:0, lines:[]}]});
-  Object.assign(AETERNA[5], {extras:[...AETERNA[5].extras, {kind:'statue', role:'tree', at:'mid', dx:2, dy:0, lines:[]}]});
+  Object.assign(AETERNA[5], {extras:[...AETERNA[5].extras, {kind:'statue', look:'ancient_tree', role:'tree', at:'mid', dx:2, dy:0, lines:[]}]});
   Object.assign(AETERNA[9], {rivalAfter:["DIALGA... it's furious. The clock's not ours to stop.", "CHRONARCH VEX went back. Way back, to the SPATIAL TEMPLE, before this spire was even built."],
-    extras:[{kind:'statue', role:'form', at:'mid', dx:-3, dy:1, lines:["An altar of blue stone, carved with a diamond. It glows faintly."]}]});
+    extras:[{kind:'statue', look:'altar_diamond', role:'form', at:'legend', lines:["An altar of blue stone, carved with a diamond. It glows faintly."]}]});
   Object.assign(AETERNA[21], {rivalAfter:["PALKIA... broke the moment. It's moving again. Everything's moving again.", "I only wanted to stay. Just once, to stay. Go on. The future's yours."],
-    extras:[{kind:'statue', role:'form', at:'mid', dx:3, dy:1, lines:["An altar of pink stone, carved with a pearl. It glows faintly."]}]});
-  Object.assign(AETERNA[6], {extras:[{kind:'statue', dx:-4, dy:3, lines:["The town clock, running backwards. A note pinned to it: \"BRASS TOWER, 2 MILES. ASHEN TOWER, BURNED. ASK THE THREE BEASTS.\"", "Huge paw prints in the dust under the clock. Three different kinds."]}]});
+    extras:[{kind:'statue', look:'altar_pearl', role:'form', at:'legend', lines:["An altar of pink stone, carved with a pearl. It glows faintly."]}]});
+  Object.assign(AETERNA[6], {extras:[{kind:'statue', look:'town_clock', at:'plaza', lines:["The town clock, running backwards. A note pinned to it: \"BRASS TOWER, 2 MILES. ASHEN TOWER, BURNED. ASK THE THREE BEASTS.\"", "Huge paw prints in the dust under the clock. Three different kinds."]}]});
   // The way on from GENOVA: the conductor at GENOVA CENTRAL.
   (LOCATIONS.find(l=>l.name==='Genova Central').extras ||= []).push({kind:'gentleman', role:'guide_on', dx:-2, dy:2, lines:[]});
   for(const loc of AETERNA) getMap(loc);
@@ -7115,12 +7125,12 @@ Object.assign(WEATHER, {"Pale Way":'fog', "Hushed Road":'fog', "Lost Road":'fog'
   Object.assign(HOLLOW[0], {storyNpc:{kind:'rivalKai', lines:["KAI: \"CHAMPION... it's so quiet here. Even my footsteps sound sad.\"", "KAI: \"I stepped on a shadow by the road and everything went backwards. Left was right. My own reflection waved first.\"", "KAI: \"There's a grave in the churchyard with no name. Just a bunch of question marks. Creepy.\""]},
     extras:[
       {kind:'gentleman', role:'guide_back', dx:2, dy:1, lines:[]},
-      {kind:'statue', dx:-4, dy:-3, lines:["A grave with no name. The stone just says: \"?????????\" The date is \"MISSING\".", "Someone has left a RARE CANDY on it. And another. And another. Hundreds of them."]},
+      {kind:'statue', look:'nameless_grave', at:'corner', lines:["A grave with no name. The stone just says: \"?????????\" The date is \"MISSING\".", "Someone has left a RARE CANDY on it. And another. And another. Hundreds of them."]},
       {kind:'oldwoman', dx:4, dy:2, lines:["Lost someone? Everyone here has. That's why we came.", "They say the HOLLOW LANDS are as close as you can get without going over."]}]});
   Object.assign(HOLLOW[19], {rivalAfter:["The tower didn't open. The reverse side is too strong here.", "Dr. LORNE has gone through himself. Past DUSKFALL, the far side. The DISTORTION WORLD."],
-    extras:[{kind:'statue', at:'mid', dx:-3, dy:2, lines:["A grave with fresh flowers. \"CUBONE'S MOTHER. SHE PROTECTED HER CHILD.\"", "A faint tune is playing from somewhere. It sounds like an old town you've never been to."]}]});
+    extras:[{kind:'statue', look:'flower_grave', at:'mid', dx:-3, dy:2, lines:["A grave with fresh flowers. \"CUBONE'S MOTHER. SHE PROTECTED HER CHILD.\"", "A faint tune is playing from somewhere. It sounds like an old town you've never been to."]}]});
   Object.assign(HOLLOW[28], {rivalAfter:["She's not here. She was never here. I see it now.", "GIRATINA only keeps the balance. It doesn't keep people. I'm... I'm going home."],
-    extras:[{kind:'statue', role:'form', at:'mid', dx:3, dy:1, lines:["A shard of the reverse side, floating in the air. Your reflection in it has wings."]}]});
+    extras:[{kind:'statue', look:'reverse_shard', role:'form', at:'mid', dx:3, dy:1, lines:["A shard of the reverse side, floating in the air. Your reflection in it has wings."]}]});
   // The one who only lives on the reverse side: you.
   (HOLLOW[23].extras ||= []).push({kind:'player', at:'mid', dx:-4, dy:-1, lines:["...", "Your reflection just looks at you. Then it smiles, and waves goodbye."]});
   HOLLOW[26].treasure = ['toxicplate'];
@@ -7177,7 +7187,7 @@ const ELITES_TEMPESTA = [
    intro:"TEAM SOLSTICE loved spring. I love it too, but only because it ends.", after:"And so it ends. Go see the CHAMPION."}];
 const TEMPESTA = [
   // 0: FAIRHAVEN; 1-5: the west spoke to FROST PEAK; 6-10: the east spoke to THUNDER PEAK; 11-15: the north spoke to EMBER PEAK
-  {type:'town', name:"Fairhaven", at:[4,1], center:true, desc:"A round city in the middle of TEMPESTA, all bunting and lanterns. The festival here never stops, and the flowers never wilt."},
+  {type:'town', name:"Fairhaven", plaza:'three_birds', at:[4,1], center:true, desc:"A round city in the middle of TEMPESTA, all bunting and lanterns. The festival here never stops, and the flowers never wilt."},
   {type:'route', name:"Frostwind Path", at:[3,1], desc:"West toward the snow peaks. The air should be cold here. It isn't.", pool:['Snover','Swinub','Sneasel','Deerling','Snom','Cubchoo']},
   {type:'gym', name:"Rimehold", at:[2,1], center:true, desc:"A town of ice houses, slowly melting in the endless spring. Leader Bryony is worried.", leaderName:"Bryony", leaderTeam:['Weavile','Abomasnow','Frosmoth','Chien-Pao']},
   {type:'route', name:"Snowdrift Trail", at:[1,1], desc:"Up into the hills. Patches of snow cling on in the shade.", pool:['Bergmite','Snorunt','Cryogonal','Vanillite','Delibird','Snover']},
@@ -7235,9 +7245,9 @@ Object.assign(WEATHER, {"Frost Peak":'snow', "Thunder Peak":'rain', "Ember Peak"
       {kind:'gentleman', role:'guide_back', dx:2, dy:1, lines:[]},
       {kind:'oldwoman', role:'season', dx:-3, dy:2, lines:[]},
       {kind:'clerk', role:'post', dx:4, dy:2, lines:[]},
-      {kind:'statue', dx:-4, dy:-3, lines:["A statue of three birds around a fourth, much larger one, rising from the sea.", "The plaque: \"THE WORLD SHALL TURN TO RUIN IF THE BALANCE OF FIRE, ICE AND LIGHTNING IS DISTURBED.\""]}]});
+      {kind:'statue', look:'three_birds', at:'plaza', lines:["A statue of three birds around a fourth, much larger one, rising from the sea.", "The plaque: \"THE WORLD SHALL TURN TO RUIN IF THE BALANCE OF FIRE, ICE AND LIGHTNING IS DISTURBED.\""]}]});
   // The three peaks' orbs, and the old man who saw MOLTRES.
-  for(const [i, orb] of [[5, 'ICE'], [10, 'LIGHTNING'], [14, 'FIRE']]) (TEMPESTA[i].extras ||= []).push({kind:'statue', at:'mid', dx:-3, dy:2,
+  for(const [i, orb] of [[5, 'ICE'], [10, 'LIGHTNING'], [14, 'FIRE']]) (TEMPESTA[i].extras ||= []).push({kind:'statue', look:'orb_'+orb.toLowerCase(), at:'mid', dx:-3, dy:2,
     lines:[`A glass orb on a stone stand: the ${orb} ORB. It's dim.`, "Words carved on the stand: \"GATHER THE THREE TREASURES, AND THE BEAST OF THE SEA SHALL SING.\""]});
   (TEMPESTA[13].extras ||= []).push({kind:'gentleman', at:'spawn', dx:2, dy:-2, lines:["I saw MOLTRES once, as a boy. It flew so close, a feather fell right in my hand.", "I've kept it all these years. It's still warm. See?"]});
   Object.assign(TEMPESTA[5], {rivalAfter:["The lamp's off... ARTICUNO's free. Feel that? Snow.", "HELIOS says the cold killed his crops. I just wanted to help him."]});
@@ -7245,7 +7255,7 @@ Object.assign(WEATHER, {"Frost Peak":'snow', "Thunder Peak":'rain', "Ember Peak"
   Object.assign(TEMPESTA[14], {rivalAfter:["My village burned every autumn. I thought if I stopped autumn...", "But the fields need the fire. The seed needs the winter. I see that now. Go on. Let the year turn."]});
   Object.assign(TEMPESTA[21], {rivalAfter:["My fortress! My collection! Bah. The beast doesn't even want me.", "It only rises for TEMPESTA's CHAMPION, they say. Hmph."]});
   // The mirror at the festival: the three birds' Galarian forms, once you're CHAMPION.
-  (TEMPESTA[19].extras ||= []).push({kind:'statue', role:'form', at:'spawn', dx:3, dy:-2, lines:["A tall festival mirror. In it, the three birds look different: darker, stranger."]});
+  (TEMPESTA[19].extras ||= []).push({kind:'statue', look:'festival_mirror', role:'form', at:'spawn', dx:3, dy:-2, lines:["A tall festival mirror. In it, the three birds look different: darker, stranger."]});
   TEMPESTA[13].treasure = ['insectplate'];
   TEMPESTA[8].treasure = ['fistplate'];
   // The way on from the HOLLOW LANDS: the balloonist at GLOAMING.
@@ -7283,7 +7293,7 @@ const ELITES_ORIGIN = [
   {kind:'bossHelios', title:'ELITE FOUR HELIOS', team:['Moltres','Volcarona','Ninetales','Torkoal','Florges','Cetitan'],
    intro:"Every season, every land, every story leads here. Let's end this one well.", after:"The year turns. The CHAMPION waits. You know who."}];
 const ORIGIN = [
-  {type:'town', name:"Origin Gate", at:[4,3], center:true, tint:'origin', desc:"A village of pilgrims at the foot of the mountain. From here you can see all eight lands spread out below, and the light at the peak."},
+  {type:'town', name:"Origin Gate", plaza:'plate_ring', at:[4,3], center:true, tint:'origin', desc:"A village of pilgrims at the foot of the mountain. From here you can see all eight lands spread out below, and the light at the peak."},
   {type:'route', name:"Path of Firsts", at:[3,3], tint:'origin', desc:"West, to the first hall. The path is paved with stones from every town in VELLORIN.", pool:['Pidgeot','Arcanine','Gyarados','Snorlax','Lapras','Dragonite']},
   {type:'gym', name:"Vellorin Hall", at:[2,3], center:true, tint:'origin', desc:"The first hall, built of DUSKMERE stone. WREN, VELLORIN's CHAMPION, waits inside.", leaderName:"Wren", leaderTeam:['Pidgeot','Espeon','Arcanine','Raichu','Honchkrow','Gyarados']},
   {type:'route', name:"Ember Path", at:[2,2], tint:'origin', desc:"Up past warm springs, like CALDERRA's.", pool:['Magcargo','Volcarona','Magmortar','Houndoom','Camerupt','Coalossal']},
@@ -7328,15 +7338,15 @@ const ORIGIN = [
   Object.assign(ORIGIN[0], {storyNpc:{kind:'rivalKai', lines:["KAI: \"CHAMPION. We made it. Look down there... you can see every land we've been to.\"", "KAI: \"The pilgrims say every CHAMPION we beat is waiting up the mountain. All eight of them. Again.\"", "KAI: \"I'm going on ahead. Meet me at the top. I mean it this time.\""]},
     extras:[
       {kind:'gentleman', role:'guide_back', dx:2, dy:1, lines:[]},
-      {kind:'statue', dx:-4, dy:-3, lines:["A great stone ring with eighteen empty sockets, one for each plate.", "Carved under it: \"FROM THE ORIGINAL ONE CAME ALL THINGS. RETURN WHAT WAS SCATTERED.\""]},
+      {kind:'statue', look:'plate_ring', at:'plaza', lines:["A great stone ring with eighteen empty sockets, one for each plate.", "Carved under it: \"FROM THE ORIGINAL ONE CAME ALL THINGS. RETURN WHAT WAS SCATTERED.\""]},
       {kind:'monkOrigin', dx:4, dy:2, lines:["Eighteen plates, scattered over eight lands. Two in each.", "The first three lands' plates were never found. Look for the plate shrines in their oldest towns."]}]});
   Object.assign(ORIGIN[17], {rivalAfter:["You've earned it. All eight lands, and every one of their CHAMPIONS.", "If you hold every plate, ARCEUS will answer you. If not... it will wait. It's very patient."],
-    extras:[{kind:'statue', role:'altar', at:'mid', dx:3, dy:1, lines:["The altar of origin. Eighteen grooves, each the shape of a plate."]}]});
+    extras:[{kind:'statue', look:'origin_altar', role:'altar', at:'mid', dx:3, dy:1, lines:["The altar of origin. Eighteen grooves, each the shape of a plate."]}]});
   ORIGIN[11].treasure = ['pixieplate'];
   ORIGIN[15].treasure = ['blankplate'];
   // VELLORIN's, CALDERRA's and the ISLES' plates, at shrines in their first towns.
   for(const [town, a, b] of [["Duskmere Hollow", 'FLAME', 'SPLASH'], ["Port Calder", 'MEADOW', 'ICICLE'], ["Port Keel", 'EARTH', 'DREAD']])
-    (LOCATIONS.find(l=>l.name===town).extras ||= []).push({kind:'statue', role:'plate', dx:-2, dy:4, lines:[`A small, very old shrine. Two hollows in its stone are shaped like plates: the ${a} PLATE and the ${b} PLATE.`]});
+    (LOCATIONS.find(l=>l.name===town).extras ||= []).push({kind:'statue', look:'plate_shrine', role:'plate', dx:-2, dy:4, lines:[`A small, very old shrine. Two hollows in its stone are shaped like plates: the ${a} PLATE and the ${b} PLATE.`]});
   // The way up from TEMPESTA: the mountain guide at FAIRHAVEN.
   (LOCATIONS.find(l=>l.name==='Fairhaven').extras ||= []).push({kind:'hiker', role:'guide_on', dx:-2, dy:3, lines:[]});
   for(const loc of ORIGIN) getMap(loc);

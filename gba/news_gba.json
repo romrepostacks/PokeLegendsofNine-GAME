@@ -1,12 +1,16 @@
 {
   "_howto": "The game's WHAT'S NEW: the title screen's message of the day (motd) and the changelog, newest first. Player-facing only.",
-  "motd": "Version 9.5.0: abilities come alive in battle, POKéDEX tabs for every region, and a secret at the CRATER RIM.",
+  "motd": "Version 9.5.0: a new title screen, every landmark redrawn, and abilities come alive in battle.",
   "changelog": [
     {
       "version": "GBA 9.5.0",
       "date": "2026-10-24",
-      "title": "Abilities and region tabs",
+      "title": "Landmarks and abilities",
       "changes": [
+        "A new title screen: ARCEUS over the nine lands at dawn",
+        "Every statue and landmark is redrawn with its own look, and the big ones stand in their town's square",
+        "DIALGA and PALKIA stand on their altars",
+        "Each GYM type has its own statue",
         "About 75 abilities now work in battle: INTIMIDATE, STURDY, DRIZZLE, DROUGHT, SAND STREAM, SNOW WARNING, SWIFT SWIM, CHLOROPHYLL, GUTS, TECHNICIAN, THICK FAT, STATIC, FLAME BODY, POISON POINT, ROUGH SKIN, SPEED BOOST, CLEAR BODY, PRESSURE, MOLD BREAKER, BEAST BOOST, INSOMNIA, LIMBER and many more",
         "Trainers' POKéMON have them too, in every region",
         "The POKéDEX has a tab for each region you've seen POKéMON from, plus NATIONAL: press L or R to switch",

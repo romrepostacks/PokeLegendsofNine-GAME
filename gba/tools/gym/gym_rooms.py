@@ -530,6 +530,14 @@ class Room:
     def statue(s, x, y):
         X, Y = x * 16, y * 16 - 8
         s.darken(X + 2, X + 13, Y + 24, 0.6)
+        art = os.path.join(DATA, 'statues', 'gym', s.t + '.png')
+        if os.path.exists(art):   # 9.4.1: the type's own statue (tools/art/statues.py)
+            im = Image.open(art).convert('RGBA')
+            for v in range(im.height):
+                for u in range(im.width):
+                    r, g, b, a = im.getpixel((u, v))
+                    if a: s.set(X + u, Y + v, (r, g, b))
+            return
         s.rect(X + 2, Y + 14, X + 13, Y + 23, 'o'); s.rect(X + 3, Y + 15, X + 12, Y + 22, (224, 216, 200)); s.hl(X + 3, X + 12, Y + 15, (248, 248, 248))
         if s.t == 'dragon':   # a dragon's head on the plinth
             pts = ['....oo....oo', '...oaaooooaao', '..oaaaaaaaaao', '.oaawaaaaaaao', 'oaaaaaaaaaao.', 'ooaaaoaaaaao.', '..oo.oaaaao..', '.....oaaao...', '.....ooooo...']
