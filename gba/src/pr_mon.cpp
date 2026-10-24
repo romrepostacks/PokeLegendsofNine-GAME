@@ -380,12 +380,22 @@ int type_index(const char* name)
     return -1;
 }
 
+const ability& abil_against(const mon& user, const mon& target)
+{
+    static constexpr ability none = { "", "", ability_kind::FLAVOR, -1 };
+    return user.abil().kind == ability_kind::MOLD_BREAKER ? none : target.abil();
+}
+
 int move_effectiveness_x4(const mon& user, const move& mv, const mon& target)
 {
     int eff_x4 = effectiveness_x4(mv.type, target);
-    const ability& ta = target.abil();
+    const ability& ta = abil_against(user, target);
     const ability& ua = user.abil();
     if(ta.kind == ability_kind::IMMUNE && ta.type == mv.type)
+    {
+        eff_x4 = 0;
+    }
+    if(ta.kind == ability_kind::WONDER_GUARD && eff_x4 <= 4 && mv.category != move_category::STATUS)
     {
         eff_x4 = 0;
     }
@@ -424,9 +434,30 @@ damage_result calc_damage(const mon& user, const move& mv, const mon& target, bn
     bool physical = mv.category == move_category::PHYSICAL;
     double atk_stat = (physical ? user.atk : user.spa) * stage_x100(mods.atk_stage) / 100.0;
     double def_stat = bn::max(1, int(physical ? target.def : target.spd)) * stage_x100(mods.def_stage) / 100.0;
-    double stab = user.has_type(mv.type) ? 1.5 : 1;
-    int eff_x4 = wind_effectiveness_x4(move_effectiveness_x4(user, mv, target), mv, target, mods.weather);
     const ability& ua = user.abil();
+    const ability& ta = abil_against(user, target);
+    double stab = user.has_type(mv.type) ? ua.kind == ability_kind::ADAPTABILITY ? 2 : 1.5 : 1;
+    int eff_x4 = wind_effectiveness_x4(move_effectiveness_x4(user, mv, target), mv, target, mods.weather);
+    // 9.5.0: the abilities that change the stats the formula uses.
+    if(physical)
+    {
+        atk_stat *= ua.kind == ability_kind::HUGE_POWER ? 2 : ua.kind == ability_kind::HUSTLE ? 1.5 :
+                    ua.kind == ability_kind::GUTS && user.st != status::NONE ? 1.5 : 1;
+        def_stat *= ta.kind == ability_kind::FUR_COAT ? 2 : ta.kind == ability_kind::MARVEL_SCALE && target.st != status::NONE ? 1.5 : 1;
+    }
+    if(mods.weather == battle_weather::SUN)
+    {
+        // PROTOSYNTHESIS: its best stat (of the ones this move uses) x1.3.
+        auto best = [](const mon& m) { return bn::max(bn::max(int(m.atk), int(m.def)), bn::max(int(m.spa), bn::max(int(m.spd), int(m.spe)))); };
+        if(ua.kind == ability_kind::PROTOSYNTHESIS && (physical ? user.atk : user.spa) == best(user))
+        {
+            atk_stat *= 1.3;
+        }
+        if(ta.kind == ability_kind::PROTOSYNTHESIS && (physical ? target.def : target.spd) == best(target))
+        {
+            def_stat *= 1.3;
+        }
+    }
     static const int water = type_index("WATER"), fire = type_index("FIRE"), rock = type_index("ROCK");
     double weather = 1;
     if(mods.weather == battle_weather::RAIN)
@@ -451,14 +482,30 @@ damage_result calc_damage(const mon& user, const move& mv, const mon& target, bn
     {
         power *= 1.2;
     }
+    power *= ua.kind == ability_kind::TECHNICIAN && mv.power <= 60 ? 1.5 :
+             ua.kind == ability_kind::RECKLESS && mv.drain < 0 ? 1.2 :
+             ua.kind == ability_kind::SHEER_FORCE && (mv.secondary != status::NONE || (mv.stat_count && ! mv.stat_self)) ? 1.3 :
+             ua.kind == ability_kind::TOUGH_CLAWS && physical ? 1.3 :
+             ua.kind == ability_kind::TYPE_POWER && ua.type == mv.type ? 1.5 : 1;
+    static const int ice = type_index("ICE");
+    power *= ta.kind == ability_kind::THICK_FAT && (mv.type == fire || mv.type == ice) ? 0.5 :
+             ta.kind == ability_kind::FLUFFY ? (mv.type == fire ? 2 : 1) * (physical ? 0.5 : 1) : 1;
     double level = user.level;
     double base = (((2 * level / 5 + 2) * power * (atk_stat / def_stat)) / 50 + 2) * stab * (eff_x4 / 4.0) * rand * weather;
     if(mods.spread)
     {
         base *= 0.75;   // a move that hits more than one
     }
+    if(ta.kind == ability_kind::FILTER && eff_x4 > 4)
+    {
+        base *= 0.75;
+    }
+    if(ta.kind == ability_kind::MULTISCALE && target.hp == target.max_hp)
+    {
+        base *= 0.5;
+    }
     int dmg = int(base);
-    if(user.st == status::BURN && physical)
+    if(user.st == status::BURN && physical && ua.kind != ability_kind::GUTS)
     {
         dmg /= 2;
     }

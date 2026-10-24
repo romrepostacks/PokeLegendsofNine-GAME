@@ -104,7 +104,54 @@ enum class ability_kind : uint8_t
     PUNCH,          // punching moves x1.2 (Iron Fist)
     MERCILESS,      // x1.5 against a poisoned target
     CORROSION,      // Poison moves hit Steel and Poison types
-    DISGUISE        // the first hit does nothing
+    DISGUISE,       // the first hit does nothing
+    // 9.5.0: the common abilities. `type` holds their one setting where they have one (a weather, status or stat).
+    WEATHER_SPEED,  // SPEED x2 in its weather (Swift Swim, Chlorophyll, Sand Rush)
+    WEATHER_START,  // starts its weather when the battle does (Drizzle, Drought, Sand Stream, Snow Warning)
+    INTIMIDATE,     // the foes' ATTACK -1 when the battle starts
+    STURDY,         // holds on with 1 HP from full
+    THICK_FAT,      // Fire and Ice moves do half to it
+    FLUFFY,         // physical moves do half to it, Fire twice as much
+    GUTS,           // ATTACK x1.5 with a status, and a burn doesn't halve it
+    HUSTLE,         // ATTACK x1.5, its physical moves 80% as accurate
+    HUGE_POWER,     // ATTACK x2 (Huge Power, Pure Power)
+    TECHNICIAN,     // moves of 60 power or less x1.5
+    RECKLESS,       // recoil moves x1.2
+    SHEER_FORCE,    // moves with a side effect x1.3, without it
+    TOUGH_CLAWS,    // physical moves x1.3
+    ADAPTABILITY,   // STAB x2
+    TYPE_POWER,     // its type's moves x1.5 (Steelworker, Transistor, Dragon's Maw)
+    FILTER,         // super effective hits do 3/4 (Filter, Solid Rock, Prism Armor)
+    MULTISCALE,     // half damage at full HP (Multiscale, Shadow Shield)
+    MARVEL_SCALE,   // DEFENSE x1.5 with a status
+    FUR_COAT,       // DEFENSE x2
+    UNAWARE,        // ignores the other side's stat stages
+    NO_GUARD,       // its moves and the moves against it always hit
+    COMPOUND_EYES,  // its moves x1.3 as accurate
+    WEATHER_EVADE,  // moves against it 80% as accurate in its weather (Sand Veil, Snow Cloak)
+    ROCK_HEAD,      // no recoil
+    WONDER_GUARD,   // only super effective moves hurt it
+    NO_STATUS,      // can't get its status (Insomnia, Limber, Water Veil...), or any (status NONE: Purifying Salt)
+    CONTACT_STATUS, // a physical hit on it may give the attacker its status, 30% (Static, Flame Body, Poison Point)
+    ROUGH_SKIN,     // a physical hit on it costs the attacker 1/8 of its HP (Rough Skin, Iron Barbs)
+    SHED_SKIN,      // a 1 in 3 chance to cure its status each turn
+    SPEED_BOOST,    // SPEED +1 each turn
+    HYDRATION,      // cures its status at the end of a rainy turn
+    ICE_BODY,       // heals 1/16 at the end of a hail turn, and hail doesn't hurt it
+    MOXIE,          // its best stat +1 when it knocks a foe out (Beast Boost, Moxie)
+    DEFIANT,        // ATTACK +2 when a foe lowers its stats
+    JUSTIFIED,      // ATTACK +1 when a Dark move hits it
+    WEAK_ARMOR,     // a physical hit: DEFENSE -1, SPEED +2
+    STAMINA,        // DEFENSE +1 when it's hit
+    RATTLED,        // SPEED +1 when a Bug, Dark or Ghost move hits it
+    CLEAR_BODY,     // foes can't lower its stats (or one stat: Hyper Cutter, Big Pecks, Keen Eye)
+    PROTOSYNTHESIS, // its best stat x1.3 in harsh sunlight
+    PRESSURE,       // moves aimed at it use 2 PP
+    SYNCHRONIZE,    // a foe that gives it a status gets it too
+    MOLD_BREAKER,   // its moves ignore the target's ability
+    LIQUID_OOZE,    // draining it hurts instead
+    AFTERMATH,      // knocked out by a physical move: the attacker loses 1/4 of its HP
+    RIPEN           // its SITRUS BERRY heals twice as much
 };
 
 struct ability

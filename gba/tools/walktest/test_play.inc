@@ -532,6 +532,30 @@ static void test_setup()
             if(m.trainers[k].x == x && m.trainers[k].y == y) g.beaten.reset(m.trainers[k].id);
         break;
     }
+    case 16:    // 9.5.0: the beasts' footprints at the CRATER RIM
+    case 17:    // ... the POKéDEX's region tabs (VELLORIN and CALDERRA species seen)
+    case 18:    // ... the region map's pages
+    {
+        map = play::find_area("CRATER RIM");
+        const map_def& m = wd::maps[map];
+        for(int k = 0; k < m.people_count; ++k)
+            if(m.people[k].kind == person_kind::prints) { x = m.people[k].x; y = m.people[k].y; }
+        for(int i = 1; i < 160; ++i) g.seen.set(i);
+        for(int i = species_v1; i < species_v1 + 40; ++i) g.seen.set(i);
+        for(int i = 1; i < 60; i += 3) g.owned.set(i);
+        break;
+    }
+    case 19:    // 9.5.0: a battle with abilities (INTIMIDATE, DRIZZLE, SWIFT SWIM, STATIC, SPEED BOOST, STURDY)
+    {
+        constexpr species_id abil_team[] = { species_id::GYARADOS, species_id::KYOGRE, species_id::KABUTOPS,
+                                             species_id::AMPHAROS, species_id::NINJASK, species_id::DONPHAN };
+        for(int i = 0; i < 6; ++i) g.party[i] = mon::make(abil_team[i], 200);
+        map = play::find_trainer(2, trainer_role::ROUTE, 0, x, y);
+        const map_def& m = wd::maps[map];
+        for(int k = 0; k < m.trainers_count; ++k)
+            if(m.trainers[k].x == x && m.trainers[k].y == y) g.beaten.reset(m.trainers[k].id);
+        break;
+    }
     case 13:    // the first Sundered rival fight (MARLO)
         map = play::find_trainer(3, trainer_role::RIVAL, 0, x, y);
         break;

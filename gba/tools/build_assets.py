@@ -679,7 +679,7 @@ def build_world(exp, data, out_inc):
                 x, y = n['x'], n['y']
             else:
                 bx, by = (a['w'] // 2, a['h'] // 2) if n.get('at') == 'mid' else (a['spawn']['x'], a['spawn']['y'])
-                x, y = free_spot(a, bx + n.get('dx', 0), by + n.get('dy', 0), hid, n['kind'] == 'statue')
+                x, y = free_spot(a, bx + n.get('dx', 0), by + n.get('dy', 0), hid, n['kind'] in ('statue', 'prints'))
             a['people'].append({'kind': n['kind'], 'x': x, 'y': y, 'facing': n.get('facing', 'down'), 'role': n.get('role', ''),
                                 'wander': False, 'lines': n.get('lines', [])})
 
@@ -1871,6 +1871,40 @@ def build_backgrounds(data, gfx):
 # ---------------------------------------------------------------------------------------------------
 ABILITY_KIND = {'flavor': 'FLAVOR', 'boost': 'BOOST', 'immune': 'IMMUNE', 'punch': 'PUNCH', 'merciless': 'MERCILESS',
                 'corrosion': 'CORROSION', 'disguise': 'DISGUISE'}
+# 9.5.0: the abilities that had no battle effect, by name: (ability_kind, its setting). The setting goes in the
+# ability's `type`: a battle_weather (1 sun, 2 rain, 3 sand, 4 hail), a status (0 none = all, 1 poison, 2 burn,
+# 3 paralysis, 4 sleep, 5 freeze), a battle_stat (0 ATTACK, 1 DEFENSE, 5 accuracy; -1 all) or a type name.
+ABILITY_BY_NAME = {
+    'Swift Swim': ('WEATHER_SPEED', 2), 'Chlorophyll': ('WEATHER_SPEED', 1), 'Sand Rush': ('WEATHER_SPEED', 3),
+    'Slush Rush': ('WEATHER_SPEED', 4),
+    'Drizzle': ('WEATHER_START', 2), 'Drought': ('WEATHER_START', 1), 'Sand Stream': ('WEATHER_START', 3),
+    'Snow Warning': ('WEATHER_START', 4),
+    'Intimidate': ('INTIMIDATE', -1), 'Sturdy': ('STURDY', -1), 'Thick Fat': ('THICK_FAT', -1), 'Fluffy': ('FLUFFY', -1),
+    'Guts': ('GUTS', -1), 'Hustle': ('HUSTLE', -1), 'Huge Power': ('HUGE_POWER', -1), 'Pure Power': ('HUGE_POWER', -1),
+    'Technician': ('TECHNICIAN', -1), 'Reckless': ('RECKLESS', -1), 'Sheer Force': ('SHEER_FORCE', -1),
+    'Tough Claws': ('TOUGH_CLAWS', -1), 'Adaptability': ('ADAPTABILITY', -1),
+    'Steelworker': ('TYPE_POWER', 'Steel'), 'Transistor': ('TYPE_POWER', 'Electric'), 'Dragon’s Maw': ('TYPE_POWER', 'Dragon'),
+    'Filter': ('FILTER', -1), 'Solid Rock': ('FILTER', -1), 'Prism Armor': ('FILTER', -1),
+    'Multiscale': ('MULTISCALE', -1), 'Shadow Shield': ('MULTISCALE', -1), 'Marvel Scale': ('MARVEL_SCALE', -1),
+    'Fur Coat': ('FUR_COAT', -1), 'Unaware': ('UNAWARE', -1), 'No Guard': ('NO_GUARD', -1),
+    'Compound Eyes': ('COMPOUND_EYES', -1), 'Sand Veil': ('WEATHER_EVADE', 3), 'Snow Cloak': ('WEATHER_EVADE', 4),
+    'Rock Head': ('ROCK_HEAD', -1), 'Wonder Guard': ('WONDER_GUARD', -1),
+    'Insomnia': ('NO_STATUS', 4), 'Vital Spirit': ('NO_STATUS', 4), 'Sweet Veil': ('NO_STATUS', 4), 'Limber': ('NO_STATUS', 3),
+    'Immunity': ('NO_STATUS', 1), 'Water Veil': ('NO_STATUS', 2), 'Water Bubble': ('NO_STATUS', 2),
+    'Thermal Exchange': ('NO_STATUS', 2), 'Magma Armor': ('NO_STATUS', 5), 'Purifying Salt': ('NO_STATUS', 0),
+    'Comatose': ('NO_STATUS', 0),
+    'Static': ('CONTACT_STATUS', 3), 'Flame Body': ('CONTACT_STATUS', 2), 'Poison Point': ('CONTACT_STATUS', 1),
+    'Effect Spore': ('CONTACT_STATUS', 0), 'Rough Skin': ('ROUGH_SKIN', -1), 'Iron Barbs': ('ROUGH_SKIN', -1),
+    'Shed Skin': ('SHED_SKIN', -1), 'Speed Boost': ('SPEED_BOOST', -1), 'Hydration': ('HYDRATION', -1),
+    'Ice Body': ('ICE_BODY', -1), 'Beast Boost': ('MOXIE', -1), 'Moxie': ('MOXIE', -1), 'Defiant': ('DEFIANT', -1),
+    'Justified': ('JUSTIFIED', -1), 'Weak Armor': ('WEAK_ARMOR', -1), 'Stamina': ('STAMINA', -1), 'Rattled': ('RATTLED', -1),
+    'Clear Body': ('CLEAR_BODY', -1), 'White Smoke': ('CLEAR_BODY', -1), 'Full Metal Body': ('CLEAR_BODY', -1),
+    'Hyper Cutter': ('CLEAR_BODY', 0), 'Big Pecks': ('CLEAR_BODY', 1), 'Keen Eye': ('CLEAR_BODY', 5),
+    'Protosynthesis': ('PROTOSYNTHESIS', -1), 'Pressure': ('PRESSURE', -1), 'Synchronize': ('SYNCHRONIZE', -1),
+    'Mold Breaker': ('MOLD_BREAKER', -1), 'Liquid Ooze': ('LIQUID_OOZE', -1), 'Aftermath': ('AFTERMATH', -1),
+    'Ripen': ('RIPEN', -1),
+}
+
 HELD = ['none', 'leftovers', 'lifeorb', 'scarf', 'sash', 'sitrus']
 
 DAYCARE_TOWN = 'Cindergate Town'
@@ -1933,6 +1967,13 @@ def add_specials(data):
     data['people']['sparkle'] = {d: sparkle for d in ('down', 'up', 'left')}
     data['people']['rift'] = {d: [frame(rift, violet), frame(rift2, violet), frame(rift, violet)] for d in ('down', 'up', 'left')}
     data['people']['shadow'] = {d: [frame(shadow, grey)] * 3 for d in ('down', 'up', 'left')}
+    # 9.5.0: CALDERRA's hidden spot where the three beasts' tracks meet: a paw print each, in their colours.
+    paws = ['................'] * 6 + [
+        '...y.y..........', '..y.y.y.........', '...yyy..........', '..yyyy..........', '...yy....r.r....',
+        '........r.r.r...', '.........rrr....', '........rrrr....', '.........rr.....', '....b.b.........',
+        '...b.b.b........', '....bbb.........', '...bbbb.........', '....bb..........', '................']
+    tracks = {'y': [176, 144, 40], 'r': [144, 56, 40], 'b': [64, 104, 168]}
+    data['people']['prints'] = {d: [frame(paws, tracks)] * 3 for d in ('down', 'up', 'left')}
 
 def free_spot(a, x, y, also=(), off_path=False):
     """The nearest open path tile to (x, y) in an area: nobody on it, and not right below a door. 9.4.0: kept two tiles
@@ -2065,8 +2106,11 @@ def build_game_data(data, out_inc):
         if key not in abil_index:
             abil_index[key] = len(abil_rows)
             desc = a['desc'].replace('(No battle effect yet.)', '').strip()
-            abil_rows.append('{%s, %s, ability_kind::%s, %d}' % (c_text(a['n'].upper()), c_text(desc), ABILITY_KIND.get(a['type'], 'FLAVOR'),
-                                                              types.index(a['of']) if a['of'] in types else -1))
+            kind, of = ABILITY_KIND.get(a['type'], 'FLAVOR'), types.index(a['of']) if a['of'] in types else -1
+            if kind == 'FLAVOR' and a['n'] in ABILITY_BY_NAME:
+                kind, of = ABILITY_BY_NAME[a['n']]
+                of = types.index(of) if isinstance(of, str) else of
+            abil_rows.append('{%s, %s, ability_kind::%s, %d}' % (c_text(a['n'].upper()), c_text(desc), kind, of))
     L.append('constexpr ability abilities[] = {\n    %s\n};\n' % ',\n    '.join(abil_rows))
     for i, s in enumerate(data['species']):
         L.append('constexpr learn_entry learn_%d[] = {%s};' % (i, ', '.join('{%d, %d}' % (lv, mi) for lv, mi in s['learn']) or '{1, 0}'))

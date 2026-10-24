@@ -6489,6 +6489,8 @@ const CALDERRA = [
   for(const [from, side, dir] of [[2,26,'right'],[5,27,'left'],[9,28,'down'],[12,29,'left'],[16,30,'down'],[19,31,'right']]) join(from, side, dir);
   // From the rim, a branch opens once you've walked it from PORT CALDER; the tower, once all three beasts are free.
   for(const l of CALDERRA[22].links) l.need = l.to===C(23) ? 'shrines' : 'visited';
+  // 9.5.0: the Easter egg the 2.0.0 plan promised, a hidden spot where the three beasts' footprints meet.
+  Object.assign(CALDERRA[22], {extras:[{kind:'prints', at:'mid', dx:-9, dy:5, lines:["Three sets of paw prints meet here and circle each other, pressed deep into the ash.", "One crackles with static. One is still warm. One is wet, as if it just rained.", "Whatever made them stood here together, a long time ago, looking down at the tower."]}]});
   Object.assign(CALDERRA[22], {rivalAfter:["...You're the real deal. I've chased those beasts since I was a kid.", "TEAM ECLIPSE went into the ASHEN TOWER. Their boss NYX is up there.", "Go. I'll keep the grunts off your back."]});
   Object.assign(CALDERRA[0], {storyNpc:{kind:'hiker', lines:["See that statue? WREN and the GYM LEADERS of VELLORIN, sailed over to open our port.", "Folks say the three beasts of the crater are waking up. And TEAM ECLIPSE wants them."]}});
   Object.assign(CALDERRA[4], {rivalAfter:["Hmph. Keep the thunder beast, then. ECLIPSE has two more to catch."]});

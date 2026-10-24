@@ -631,7 +631,7 @@ for(const li of AREAS){
   pictureSet(map, V, null, itemsHere, `map_${li}`);
   if(V==='ash') savePng(`map_${li}_clean.png`, drawArea(map, V, {noAsh:true}));
   // 5.0.0: people the region's data adds (loc.extras: guides, Easter eggs, rifts...); build_assets.py finds them a spot.
-  for(const n of loc.extras || []) if(!['statue', 'sparkle', 'rift', 'shadow'].includes(n.kind)) peopleKinds.add(n.kind);
+  for(const n of loc.extras || []) if(!['statue', 'sparkle', 'rift', 'shadow', 'prints'].includes(n.kind)) peopleKinds.add(n.kind);
   const nb = G.neighbours(li);
   const people = map.npcs.filter(n=>!n.trainer && !n.legend), trainers = map.npcs.filter(n=>n.trainer && !n.legend);
   for(const n of map.npcs) if(!n.legend) peopleKinds.add(n.kind);

@@ -192,6 +192,8 @@ struct damage_mods
                                         const damage_mods& mods = damage_mods());
 // The type multiplier x4 with the target's ability (Levitate, Volt Absorb...) and the user's Corrosion.
 [[nodiscard]] int move_effectiveness_x4(const mon& user, const move& mv, const mon& target);
+// 9.5.0: the target's ability as the user's move meets it: none at all against MOLD BREAKER.
+[[nodiscard]] const ability& abil_against(const mon& user, const mon& target);
 [[nodiscard]] int type_index(const char* name);
 [[nodiscard]] const char* type_name(int type);
 // movesAt(): the four moves a species knows at a level.
