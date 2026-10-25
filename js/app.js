@@ -6891,6 +6891,10 @@ Object.assign(WEATHER, {"Sewer Run":'cave', "Arcology Spire":'cave', "Sealed Cav
   // The way down from the SKYREACH: the shuttle at WINDWARD.
   LOCATIONS.find(l=>l.name==='Windward').extras = [{kind:'pilot', role:'guide_on', dx:-2, dy:2, lines:[]}];
   for(const loc of GENOVA) getMap(loc);
+  // 9.6.1: the ARCOLOGY SPIRE's path in from GENOVA CENTRAL first ran along the border row (buildRoute carves only
+  // inside it), so the entrance was cut off from the stairs and nobody could reach the League. Open that stretch.
+  const spire = getMap(GENOVA.find(l=>l.name==='Arcology Spire'));
+  for(const y of [115, 116]) for(let x=26; x<=32; x++) if(spire.tiles[y][x]==='T') spire.tiles[y][x] = '.';
 }
 
 // ---------- Aeterna (6.0.0): the sixth region, one valley in two eras, reached by train from GENOVA CENTRAL ----------

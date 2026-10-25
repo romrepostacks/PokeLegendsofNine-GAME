@@ -399,6 +399,7 @@ namespace
             int damages[max_targets];   // -1: a status move
             int count;
             int move_index;
+            int effs[max_targets];      // effectiveness x4 (0 where not worked out): super effective hits land harder
         };
         static void used_hook(void* p)
         {
@@ -406,6 +407,7 @@ namespace
             c->self->used(*c);
         }
         void used(const used_ctx& c);
+        void impact(const used_ctx& c);
         bool can_act(fighter& f);
         void apply_status(fighter& target, status s, int chance, fighter* from = nullptr);
         void throw_ball(fighter& target, item_id ball);
@@ -2901,6 +2903,66 @@ namespace
         }
     }
 
+    // 9.6.1: a big hit lands with weight. Super effective: a 4-frame freeze, then the one hit jolts sideways and
+    // settles (trauma squared, so it eases out). A knockout also shakes the field. Ordinary hits only blink, as
+    // before, so long fights don't turn into noise. Only the picture moves: nothing about the battle changes.
+    void battle::impact(const used_ctx& c)
+    {
+        bool super = false, ko = false;
+        for(int i = 0; i < c.count; ++i)
+        {
+            if(c.damages[i] > 0)
+            {
+                super |= c.effs[i] > 4;
+                ko |= c.damages[i] >= c.targets[i]->m->hp;
+            }
+        }
+        if(! super && ! ko)
+        {
+            return;
+        }
+        wait(4);
+        bn::sprite_ptr* sprites[max_targets] = {};
+        bn::fixed_point homes[max_targets];
+        for(int i = 0; i < c.count; ++i)
+        {
+            fighter& t = *c.targets[i];
+            sprites[i] = c.damages[i] <= 0 ? nullptr : t.own ? (_own_sprite && _own_sprite_index == &t - _own ? &*_own_sprite : nullptr) :
+                                                      (t.sprite ? &*t.sprite : nullptr);
+            if(sprites[i])
+            {
+                homes[i] = sprites[i]->position();
+            }
+        }
+        bn::fixed_point bg_home = _bg.position();
+        constexpr int frames = 12;
+        for(int f = frames; f > 0; --f)
+        {
+            int trauma = f * f * 4 / (frames * frames);     // 4 down to 0
+            int side = f % 2 ? 1 : -1;
+            for(int i = 0; i < c.count; ++i)
+            {
+                if(sprites[i])
+                {
+                    sprites[i]->set_position(homes[i].x() + side * trauma, homes[i].y());
+                }
+            }
+            if(ko)
+            {
+                _bg.set_position(bg_home.x(), bg_home.y() + side * (trauma / 2));
+            }
+            frame();
+        }
+        for(int i = 0; i < c.count; ++i)
+        {
+            if(sprites[i])
+            {
+                sprites[i]->set_position(homes[i]);
+            }
+        }
+        _bg.set_position(bg_home);
+    }
+
     // After "X used MOVE!" is out: the web's atkFx (at the first target), then the hits and the HP bars.
     void battle::used(const used_ctx& c)
     {
@@ -2915,6 +2977,7 @@ namespace
         if(hit)
         {
             audio::play(audio::sfx::HIT);
+            impact(c);
             // Everyone hit blinks together.
             for(int k = 0; k < 4; ++k)
             {
@@ -3258,7 +3321,7 @@ namespace
                 sturdy[i] = true;
             }
             c.damages[i] = dmg;
-            effs[i] = r.effectiveness_x4;
+            effs[i] = c.effs[i] = r.effectiveness_x4;
         }
         gui().say(text, used_hook, &c);
         int dealt = 0;
@@ -3673,9 +3736,10 @@ namespace
     {
         hp = bn::clamp(hp, 0, int(f.m->max_hp));
         f.m->hp = uint16_t(hp);
-        int step = bn::max(1, bn::abs(hp - f.shown_hp) / 24);
+        // 9.6.1: the bar eases out, a quarter of what's left each frame: quick at first, then it settles.
         while(f.shown_hp != hp)
         {
+            int step = bn::max(1, bn::abs(hp - f.shown_hp) / 4);
             f.shown_hp += f.shown_hp < hp ? bn::min(step, hp - f.shown_hp) : -bn::min(step, f.shown_hp - hp);
             draw_hud(f);
             frame();

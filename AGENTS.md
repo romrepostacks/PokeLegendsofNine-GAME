@@ -65,6 +65,8 @@ sh tools/savetest/run.sh                     # old save converts and round-trips
 python3 tools/gym/solver.py                  # every gym's challenge solvable, no soft locks (gba/data/gym_layouts.json)
 python3 tools/walktest/gymtest.py OUT        # plays each gym's solver route in mGBA (when gyms or pr_gym.cpp change)
 python3 tools/walktest/gymtest.py --fight OUT  # the same with juniors unbeaten: each spots you and battles (~20 min)
+python3 tools/pilot/storycheck.py           # the whole story reachable in order on the map data, no one-way traps (~1 min)
+python3 tools/art/artlint.py                 # new or changed art: alpha, 8x8 colour budget, #262638 outline, stray pixels
 ```
 
 Tests need `libmgba-dev`. There is no unit test suite; walktest is the smoke test before any release.
