@@ -183,7 +183,16 @@ class Pilot:
             if b in (W.WALK, W.GRASS) or self.gate_open(m, nx, ny):
                 yield d, (nx, ny), b
             elif b in WIND:
-                yield d, (nx, ny), b
+                # The current carries you on until the next tile is blocked (pr_overworld.cpp): you land at its end.
+                cx, cy = nx, ny
+                while self.w.beh(mi, cx, cy) in WIND:
+                    wx, wy = DIRS[WIND[self.w.beh(mi, cx, cy)]]
+                    tx, ty = cx + wx, cy + wy
+                    if not (0 <= tx < m['w'] and 0 <= ty < m['h']) or (tx, ty) in actors or \
+                            m['beh'][ty * m['w'] + tx] not in (W.WALK, W.GRASS) and m['beh'][ty * m['w'] + tx] not in WIND:
+                        break
+                    cx, cy = tx, ty
+                yield d, (cx, cy), b
             elif b == W.WATER and surf:
                 yield d, (nx, ny), b
             elif b in LEDGE and LEDGE[b] == d:
@@ -248,7 +257,13 @@ class Pilot:
                 self.on_map_change(m0, p[0])
                 return False
             exp = (x0 + DIRS[d][0], y0 + DIRS[d][1])
-            if (p[1], p[2]) != exp and not (self.w.beh(m0, *exp) in LEDGE or self.w.beh(m0, *exp) in WIND):
+            if self.w.beh(m0, *exp) in WIND:
+                for _ in range(40):     # ride the current to its end before the next step
+                    q = self.pos(); self.e.wait(8)
+                    if self.pos() == q:
+                        break
+                continue
+            if (p[1], p[2]) != exp and not self.w.beh(m0, *exp) in LEDGE:
                 # A wind current, or something moved us.
                 self.after_screen()
                 return False
@@ -380,7 +395,7 @@ class Pilot:
             x, y = nx, ny
         return self.walk(path)
 
-    def goto_tile(self, mi, tx, ty, adjacent=True, tries=40):
+    def goto_tile(self, mi, tx, ty, adjacent=True, tries=100):     # each battle on the way costs a try
         """Gets to (tx, ty) on map mi (next to it, facing it, when adjacent). Returns True when there."""
         for attempt in range(tries):
             cm, x, y = self.pos()
