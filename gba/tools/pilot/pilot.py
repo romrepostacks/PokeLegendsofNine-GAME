@@ -430,6 +430,8 @@ class Pilot:
             if not route:
                 return False
             r = self.go_hop(route[0][1])
+            if r is None and self.pos()[0] != cm:
+                continue        # the last step's mat or door was still fading out: we're through
             if r is None:
                 # Can't reach that hop from here: treat the link as shut for now.
                 if route[0][1][0] == 'link':
@@ -720,7 +722,7 @@ class Pilot:
             return True
         if self.gym_of(mi) is not None:
             # 9.6.0: a puzzle gym (9.4.0): in at the door, then the solver's way to the leader, fighting the juniors.
-            if self.pos()[0] != mi and not self.goto_tile(mi, *self.w.maps[mi]['spawn'], adjacent=False, tries=8):
+            if self.pos()[0] != mi and not self.goto_tile(mi, *self.w.maps[mi]['spawn'], adjacent=False):
                 return False
             if not self.gym_run(mi):
                 return False
@@ -800,6 +802,9 @@ class Pilot:
                     break
                 self.e.press('B'); self.e.wait(30)
             if self.pos()[0] != mi:
+                if leave:
+                    self._gym_last = None
+                    return True     # out by the mat
                 self.log('gym_out', area=gm.area, step=n)      # lost a battle (or the floor gave way)
                 return False
             if tuple(self.pos()[1:]) != after[0]:
