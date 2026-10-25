@@ -181,6 +181,10 @@ struct damage_mods
     int def_stage = 0;
     battle_weather weather = battle_weather::NONE;
     bool spread = false;
+    // 9.6.0: what the rest of the battle adds (allies' and everyone's abilities, terrain, the user's charge).
+    int atk_x100 = 100;
+    int def_x100 = 100;
+    int power_x100 = 100;
 };
 // A stat stage's multiplier x100 (2/8 .. 8/2), and accuracy's (3/9 .. 9/3).
 [[nodiscard]] int stage_x100(int stage);
@@ -194,6 +198,24 @@ struct damage_mods
 [[nodiscard]] int move_effectiveness_x4(const mon& user, const move& mv, const mon& target);
 // 9.5.0: the target's ability as the user's move meets it: none at all against MOLD BREAKER.
 [[nodiscard]] const ability& abil_against(const mon& user, const mon& target);
+// 9.6.0: what a battle changes about a Pokémon for a while: its ability (Trace, Mummy), its types (Forecast,
+// Color Change) or its stats (Stance Change, Schooling). Cleared when a battle starts and ends.
+struct battle_look
+{
+    const mon* m = nullptr;
+    const ability* abil = nullptr;      // null: its own
+    int8_t type1 = -1, type2 = -1;      // with typed
+    bool typed = false;
+    uint16_t stats[5] = {};             // ATTACK .. SPEED; 0: its own
+};
+battle_look& look_of(const mon& m);
+void clear_looks();
+// Another form's stats for the battle, from that form's base stats (atk, def, spa, spd, spe).
+void look_form(const mon& m, const uint8_t (&base)[5]);
+// ATTACK .. SPEED (battle_stat::ATK .. SPE) as the battle has it.
+[[nodiscard]] int battle_stat_of(const mon& m, int stat);
+// The moves a move_flag ability stops (Soundproof, Bulletproof, Overcoat's powders, Wind Rider).
+[[nodiscard]] bool blocked_by_ability(const move& mv, const ability& ab);
 [[nodiscard]] int type_index(const char* name);
 [[nodiscard]] const char* type_name(int type);
 // movesAt(): the four moves a species knows at a level.

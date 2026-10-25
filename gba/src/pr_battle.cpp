@@ -55,10 +55,27 @@ namespace
         int hud_tx = 0, hud_ty = 0, hud_tw = 0, hud_th = 0;
         bool hud_big = false;
         int8_t stages[battle_stat::COUNT] = {};     // ATTACK .. evasiveness, -6 to 6
+        // 9.6.0: what the abilities keep track of.
+        bool loafing = false;       // TRUANT: false on the turns it loafs
+        bool acted = false;         // it has had its go this turn (a flinch only stops one that hasn't)
+        bool flinched = false;
+        bool infatuated = false;
+        uint8_t confused = 0;       // turns left
+        int8_t disabled = -1;       // CURSED BODY: this move slot can't be used for disabled_turns
+        uint8_t disabled_turns = 0;
+        bool charged = false;       // ELECTROMORPHOSIS, WIND POWER: its next Electric move x2
+        bool had_item = false;      // UNBURDEN
+        bool fled = false;          // WIMP OUT
+        bool counted = false;       // its fainting was seen (SOUL-HEART, RECEIVER)
+        bool gulp = false;          // GULP MISSILE: it has its catch
+        bool blade = false;         // STANCE CHANGE
+        bool schooled = false;      // SCHOOLING
+        uint8_t cud = 0;            // CUD CHEW: 2 when it eats, the second bite at 1
+        int illusion = -1;          // ILLUSION: the species it looks like
 
         [[nodiscard]] bool out() const
         {
-            return m->fainted() || caught;
+            return m->fainted() || caught || fled;
         }
     };
 
@@ -223,15 +240,110 @@ namespace
         int _foe_heals = 0;         // boss_heals: the foe's FULL RESTOREs spent
         battle_weather _weather = battle_weather::NONE;
         int _weather_turns = 0;
+        // 9.6.0
+        int _turn = 0;              // 1 on the first turn
+        int _terrain = 0;           // 1 electric, 2 grassy, 3 misty, 4 psychic
+        int _terrain_turns = 0;
+        bool _ball_fetched = false;
+        bool _copying = false;      // OPPORTUNIST is copying (it doesn't copy itself)
+        bool _dancing = false;
+        bool _mycelium = false;     // a MYCELIUM MIGHT status move is landing
+        int _slot = -1;             // the move slot being used (CURSED BODY)
+        struct theft
+        {
+            mon* m;
+            held_item item;
+        };
+        bn::vector<theft, max_own * 2> _thefts;     // MAGICIAN: held items to give back after the battle
         int _hint = -1;             // the foe being picked (it blinks)
         int _blinking = -1;
 
         [[nodiscard]] bn::string<32> label(const fighter& f) const
         {
             bn::string<32> s(f.own ? "" : (_s.opponent || _s.free) ? "Foe " : "Wild ");
-            s.append(f.m->name());
+            s.append(shown_name(f));
             return s;
         }
+        // ILLUSION: the name of the one it looks like.
+        [[nodiscard]] static const char* shown_name(const fighter& f)
+        {
+            return f.illusion >= 0 ? game_data::species_list[f.illusion].name : f.m->name();
+        }
+        // 9.6.0: the abilities around a Pokémon.
+        [[nodiscard]] const fighter* side_of(bool own) const
+        {
+            return own ? _own : _foes;
+        }
+        [[nodiscard]] fighter* side_of(bool own)
+        {
+            return own ? _own : _foes;
+        }
+        [[nodiscard]] int count_of(bool own) const
+        {
+            return own ? _own_count : _foe_count;
+        }
+        // Another Pokémon on its side, still fighting, with this ability.
+        [[nodiscard]] bool ally_has(const fighter& f, ability_kind k) const
+        {
+            const fighter* side = side_of(f.own);
+            for(int i = 0; i < count_of(f.own); ++i)
+            {
+                if(&side[i] != &f && ! side[i].out() && side[i].m->abil().kind == k)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+        // Anyone still fighting with this ability (and setting, unless -2).
+        [[nodiscard]] bool anyone_has(ability_kind k, int type = -2) const
+        {
+            for(bool own : { true, false })
+            {
+                for(int i = 0; i < count_of(own); ++i)
+                {
+                    const fighter& f = side_of(own)[i];
+                    if(! f.out() && f.m->abil().kind == k && (type == -2 || f.m->abil().type == type))
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+        // The weather as the moves and abilities feel it: none while AIR LOCK is out.
+        [[nodiscard]] battle_weather weather() const
+        {
+            return anyone_has(ability_kind::AIR_LOCK) ? battle_weather::NONE : _weather;
+        }
+        // On the ground, for the terrain: not Flying, not floating (Levitate).
+        [[nodiscard]] bool grounded(const fighter& f) const
+        {
+            static const int flying = type_index("FLYING"), ground = type_index("GROUND");
+            const ability& ab = f.m->abil();
+            return ! f.m->has_type(flying) && ! (ab.kind == ability_kind::IMMUNE && ab.type == ground);
+        }
+        // QUARK DRIVE: in Electric Terrain, and its first five turns.
+        [[nodiscard]] bool quark(const fighter& f) const
+        {
+            return f.m->abil().kind == ability_kind::QUARK_DRIVE && (_terrain == 1 || _turn <= 5);
+        }
+        // Its best stat (battle_stat::ATK .. SPE).
+        [[nodiscard]] static int best_stat(const mon& m)
+        {
+            int best = 0;
+            for(int k = 1; k < 5; ++k)
+            {
+                best = battle_stat_of(m, k) > battle_stat_of(m, best) ? k : best;
+            }
+            return best;
+        }
+        void set_terrain(int t);
+        void confuse(fighter& f);
+        void infatuate(fighter& f);
+        void eat_sitrus(fighter& f, bool again);
+        void look_changes(bool start);
+        void form(fighter& f, const uint8_t (&base)[5], const char* line);
         [[nodiscard]] int alive(bool own) const
         {
             int n = 0;
@@ -273,7 +385,8 @@ namespace
         int pick_bag_item();
         void party_view();
         void turn(choice* choices);
-        void use_move(fighter& user, int slot, fighter& target);
+        void use_move(fighter& user, int slot, fighter& target, int copied = -1);
+        void use_move_now(fighter& user, int slot, fighter& target, int copied);
         [[nodiscard]] fx_body body_of(fighter& f);
 
         // What plays once "X used MOVE!" is out (the web's atkFx, then the hit and the HP bar).
@@ -371,7 +484,8 @@ namespace
         if(_own_sprite_index != index || ! _own_sprite)
         {
             _own_sprite_index = index;
-            _own_sprite = f.m->data().back.create_sprite(sx(56), sy(80));
+            const species& look = f.illusion >= 0 ? game_data::species_list[f.illusion] : f.m->data();
+            _own_sprite = look.back.create_sprite(sx(56), sy(80));
             apply_shiny(*_own_sprite, *f.m, mon_view::BACK);
             _own_sprite->set_bg_priority(2);
             _own_sprite->set_z_order(-80);
@@ -431,7 +545,7 @@ namespace
 
     void battle::create_foe_sprite(fighter& f)
     {
-        const species& s = f.m->data();
+        const species& s = f.illusion >= 0 ? game_data::species_list[f.illusion] : f.m->data();
         f.sprite = s.front.create_sprite(sx(f.base_x), sy(f.base_y));
         apply_shiny(*f.sprite, *f.m, mon_view::FRONT);
         f.sprite->set_bg_priority(2);
@@ -461,7 +575,7 @@ namespace
         lv.append(bn::to_string<4>(f.m->level));
         if(f.hud_big)
         {
-            u.print_fit(x + 8, y + 3, f.m->name(), f.hud_tw * 8 - 20 - u.width(lv), text_color::HUD, f.hud_text);
+            u.print_fit(x + 8, y + 3, shown_name(f), f.hud_tw * 8 - 20 - u.width(lv), text_color::HUD, f.hud_text);
             u.print(x + f.hud_tw * 8 - 8 - u.width(lv), y + 3, lv, text_color::HUD, f.hud_text);
             if(f.m->st != status::NONE)
             {
@@ -480,7 +594,7 @@ namespace
         {
             // Compact (the web game's .dense HP boxes): name and level (or status) on one line, the bar under them.
             int room = f.hud_tw * 8 - 11;
-            bn::string<16> name(f.m->name());
+            bn::string<16> name(shown_name(f));
             bn::string<8> right = lv;
             bool st = f.m->st != status::NONE && ! f.m->fainted();
             if(st)
@@ -995,6 +1109,31 @@ namespace
                     u.say(_s.trial ? "There's no running from ARCEUS!" : "No! There's no running from a Trainer battle!");
                     continue;
                 }
+                // 9.6.0: SHADOW TAG and MAGNET PULL (against your STEEL types) hold you, unless a GHOST type or RUN AWAY
+                // of yours is out.
+                bool trapped = false, free_to_go = false;
+                static const int ghost = type_index("GHOST");
+                for(int i = 0; i < _own_count; ++i)
+                {
+                    free_to_go |= ! _own[i].out() && (_own[i].m->has_type(ghost) || _own[i].m->abil().kind == ability_kind::RUN_AWAY);
+                }
+                for(int i = 0; i < _foe_count && ! free_to_go; ++i)
+                {
+                    const ability& ab = _foes[i].m->abil();
+                    if(_foes[i].out() || ab.kind != ability_kind::TRAP)
+                    {
+                        continue;
+                    }
+                    for(int k = 0; k < _own_count; ++k)
+                    {
+                        trapped |= ! _own[k].out() && (ab.type < 0 || _own[k].m->has_type(ab.type));
+                    }
+                }
+                if(trapped)
+                {
+                    u.say("Can't escape!");
+                    continue;
+                }
                 audio::play(audio::sfx::SELECT);
                 u.say("Got away safely!");
                 ran = true;
@@ -1009,6 +1148,15 @@ namespace
     // ----- The turn (submitTurn) -----
     void battle::turn(choice* choices)
     {
+        ++_turn;
+        for(bool own : { true, false })
+        {
+            for(int i = 0; i < count_of(own); ++i)
+            {
+                side_of(own)[i].acted = false;
+                side_of(own)[i].flinched = false;
+            }
+        }
         bn::vector<action, max_own + max_foes> actions;
         for(int i = 0; i < _own_count; ++i)
         {
@@ -1033,11 +1181,27 @@ namespace
         // The BAG (medicine and POKé BALLS) first, then by speed (paralysis halves it); ties keep their order.
         auto speed = [this](const action& a)
         {
-            int spe = a.user->m->spe * stage_x100(a.user->stages[battle_stat::SPE]) / 100;
-            const ability& ab = a.user->m->abil();
-            spe = ab.kind == ability_kind::WEATHER_SPEED && int(_weather) == ab.type ? spe * 2 : spe;
-            spe = a.user->m->item == held_item::CHOICE_SCARF ? spe * 3 / 2 : spe;
-            return a.user->m->st == status::PARALYSIS ? spe / 2 : spe;
+            const mon& m = *a.user->m;
+            int spe = battle_stat_of(m, battle_stat::SPE) * stage_x100(a.user->stages[battle_stat::SPE]) / 100;
+            const ability& ab = m.abil();
+            spe = ab.kind == ability_kind::WEATHER_SPEED && int(weather()) == ab.type ? spe * 2 : spe;
+            spe = m.item == held_item::CHOICE_SCARF ? spe * 3 / 2 : spe;
+            // 9.6.0
+            spe = ab.kind == ability_kind::SLOW_START && _turn <= 5 ? spe / 2 :
+                  ab.kind == ability_kind::UNBURDEN && a.user->had_item && m.item == held_item::NONE ? spe * 2 :
+                  quark(*a.user) && best_stat(m) == battle_stat::SPE ? spe * 3 / 2 : spe;
+            return m.st == status::PARALYSIS ? spe / 2 : spe;
+        };
+        // PRANKSTER's status moves go first, MYCELIUM MIGHT's last.
+        auto priority = [](const action& a)
+        {
+            if(a.c.kind != choice_kind::MOVE || a.c.move < 0 ||
+               move_data(a.user->m->move(a.c.move)).category != move_category::STATUS)
+            {
+                return 0;
+            }
+            ability_kind k = a.user->m->abil().kind;
+            return k == ability_kind::PRANKSTER ? 1 : k == ability_kind::MYCELIUM_MIGHT ? -1 : 0;
         };
         for(int i = 1; i < actions.size(); ++i)
         {
@@ -1046,7 +1210,8 @@ namespace
                 const action& a = actions[j - 1];
                 const action& b = actions[j];
                 bool a_item = a.c.kind != choice_kind::MOVE, b_item = b.c.kind != choice_kind::MOVE;
-                bool swap = (b_item && ! a_item) || (a_item == b_item && speed(b) > speed(a));
+                int pa = priority(a), pb = priority(b);
+                bool swap = (b_item && ! a_item) || (a_item == b_item && (pb > pa || (pb == pa && speed(b) > speed(a))));
                 if(! swap)
                 {
                     break;
@@ -1062,6 +1227,7 @@ namespace
             {
                 continue;
             }
+            act.user->acted = true;
             if(act.c.kind == choice_kind::ITEM)
             {
                 // The medicine goes to the Pokémon that was told to use it.
@@ -1157,7 +1323,7 @@ namespace
                 }
                 const ability& ab = m.abil();
                 bool cure = m.st != status::NONE && ((ab.kind == ability_kind::SHED_SKIN && rng().get_int(3) == 0) ||
-                                                     (ab.kind == ability_kind::HYDRATION && _weather == battle_weather::RAIN));
+                                                     (ab.kind == ability_kind::HYDRATION && weather() == battle_weather::RAIN));
                 if(cure && ! m.fainted())
                 {
                     focus_on(f);
@@ -1168,7 +1334,7 @@ namespace
                     gui().say(text);
                     draw_hud(f);
                 }
-                if(ab.kind == ability_kind::ICE_BODY && _weather == battle_weather::HAIL && ! m.fainted() && m.hp < m.max_hp)
+                if(ab.kind == ability_kind::ICE_BODY && weather() == battle_weather::HAIL && ! m.fainted() && m.hp < m.max_hp)
                 {
                     focus_on(f);
                     announce(f);
@@ -1179,6 +1345,50 @@ namespace
                     focus_on(f);
                     announce(f);
                     ability_stat(f, battle_stat::SPE, 1, false);
+                }
+                // 9.6.0: HEALER cures its allies; BAD DREAMS hurts the sleeping foes; Grassy Terrain heals.
+                if(ab.kind == ability_kind::HEALER && ! m.fainted())
+                {
+                    for(int k = 0; k < n; ++k)
+                    {
+                        fighter& a = side[k];
+                        if(&a != &f && ! a.out() && a.m->st != status::NONE && rng().get_int(100) < 30)
+                        {
+                            focus_on(f);
+                            announce(f);
+                            a.m->st = status::NONE;
+                            bn::string<64> text(label(a));
+                            text.append(" is cured!");
+                            gui().say(text);
+                            draw_hud(a);
+                        }
+                    }
+                }
+                if(ab.kind == ability_kind::BAD_DREAMS && ! m.fainted())
+                {
+                    fighter* other = side_of(! f.own);
+                    for(int k = 0; k < count_of(! f.own); ++k)
+                    {
+                        fighter& o = other[k];
+                        if(! o.out() && o.m->st == status::SLEEP)
+                        {
+                            focus_on(o);
+                            announce(f);
+                            set_hp(o, o.m->hp - bn::max(1, o.m->max_hp / 8));
+                            bn::string<64> text(label(o));
+                            text.append(" is tormented!");
+                            gui().say(text);
+                            faint(o);
+                        }
+                    }
+                }
+                if(_terrain == 2 && ! m.fainted() && grounded(f) && m.hp < m.max_hp)
+                {
+                    focus_on(f);
+                    heal_by(f, bn::max(1, m.max_hp / 16));
+                    bn::string<64> text(label(f));
+                    text.append(" is healed by the grassy terrain!");
+                    gui().say(text);
                 }
                 if(m.item == held_item::LEFTOVERS && ! m.fainted())
                 {
@@ -1191,18 +1401,74 @@ namespace
                         gui().say(text);
                     }
                 }
-                if(m.item == held_item::SITRUS_BERRY && ! (m.flags & mon_flag::BERRY_USED) && ! m.fainted() && m.hp * 2 <= m.max_hp)
+                if(m.item == held_item::SITRUS_BERRY && ! (m.flags & mon_flag::BERRY_USED) && ! m.fainted() && m.hp * 2 <= m.max_hp &&
+                   ! [&]{
+                       // UNNERVE: not while a foe has it.
+                       const fighter* o = side_of(! f.own);
+                       for(int k = 0; k < count_of(! f.own); ++k)
+                       {
+                           if(! o[k].out() && o[k].m->abil().kind == ability_kind::UNNERVE)
+                           {
+                               return true;
+                           }
+                       }
+                       return false; }())
                 {
-                    int h = m.max_hp / (ab.kind == ability_kind::RIPEN ? 2 : 4);
-                    m.flags |= mon_flag::BERRY_USED;
-                    m.item = held_item::NONE;       // GBA 1.9: eaten (yours are held now too)
-                    set_hp(f, bn::min(int(m.max_hp), m.hp + h));
+                    eat_sitrus(f, false);
+                }
+                else if(f.cud && ! m.fainted() && --f.cud == 1)
+                {
+                    f.cud = 0;
+                    focus_on(f);
+                    announce(f);
+                    eat_sitrus(f, true);
+                }
+                if(f.disabled >= 0 && f.disabled_turns && --f.disabled_turns == 0)
+                {
                     bn::string<64> text(label(f));
-                    text.append(" restored HP with its SITRUS BERRY!");
+                    text.append(" is no longer disabled!");
+                    gui().say(text);
+                    f.disabled = -1;
+                }
+                if(ab.kind == ability_kind::SLOW_START && _turn == 5 && ! m.fainted())
+                {
+                    focus_on(f);
+                    bn::string<64> text(label(f));
+                    text.append(" finally got its act together!");
                     gui().say(text);
                 }
             }
         }
+        if(_terrain && --_terrain_turns <= 0)
+        {
+            constexpr const char* ends[] = { "", "The electricity disappeared from the battlefield.", "The grass disappeared from the battlefield.",
+                                             "The mist disappeared from the battlefield.", "The weirdness disappeared from the battlefield." };
+            gui().say(ends[_terrain]);
+            _terrain = 0;
+        }
+        look_changes(false);
+    }
+
+    // The SITRUS BERRY (CHEEK POUCH heals a third more; CUD CHEW eats it again next turn).
+    void battle::eat_sitrus(fighter& f, bool again)
+    {
+        mon& m = *f.m;
+        const ability& ab = m.abil();
+        int h = m.max_hp / (ab.kind == ability_kind::RIPEN ? 2 : 4);
+        if(ab.kind == ability_kind::CHEEK_POUCH)
+        {
+            h += m.max_hp / 3;
+        }
+        if(! again)
+        {
+            m.flags |= mon_flag::BERRY_USED;
+            m.item = held_item::NONE;       // GBA 1.9: eaten (yours are held now too)
+            f.cud = ab.kind == ability_kind::CUD_CHEW ? 2 : 0;
+        }
+        set_hp(f, bn::min(int(m.max_hp), m.hp + h));
+        bn::string<64> text(label(f));
+        text.append(again ? " ate its SITRUS BERRY again!" : " restored HP with its SITRUS BERRY!");
+        gui().say(text);
     }
 
     bool battle::can_act(fighter& f)
@@ -1210,6 +1476,28 @@ namespace
         bn::random& r = rng();
         mon& m = *f.m;
         bn::string<64> text(label(f));
+        // 9.6.0: TRUANT loafs every second turn.
+        if(m.abil().kind == ability_kind::TRUANT)
+        {
+            f.loafing = ! f.loafing;
+            if(! f.loafing)
+            {
+                text.append(" is loafing around!");
+                gui().say(text);
+                return false;
+            }
+        }
+        if(f.flinched)
+        {
+            text.append(" flinched and couldn't move!");
+            gui().say(text);
+            if(m.abil().kind == ability_kind::STEADFAST)
+            {
+                announce(f);
+                ability_stat(f, battle_stat::SPE, 1, false);
+            }
+            return false;
+        }
         if(m.st == status::PARALYSIS && r.get_int(4) == 0)
         {
             text.append(" is paralyzed! It can't move!");
@@ -1221,6 +1509,10 @@ namespace
             if(m.sleep_turns)
             {
                 --m.sleep_turns;
+            }
+            if(m.sleep_turns && m.abil().kind == ability_kind::EARLY_BIRD)
+            {
+                --m.sleep_turns;    // twice as fast
             }
             if(m.sleep_turns == 0)
             {
@@ -1252,7 +1544,65 @@ namespace
                 return false;
             }
         }
+        if(f.confused)
+        {
+            if(--f.confused == 0)
+            {
+                text.append(" snapped out of its confusion!");
+                gui().say(text);
+            }
+            else
+            {
+                text.append(" is confused!");
+                gui().say(text);
+                if(r.get_int(3) == 0)
+                {
+                    // It hurts itself: a 40 power typeless physical hit.
+                    int d = ((2 * m.level / 5 + 2) * 40 * bn::max(1, battle_stat_of(m, battle_stat::ATK)) /
+                             bn::max(1, battle_stat_of(m, battle_stat::DEF))) / 50 + 2;
+                    focus_on(f);
+                    set_hp(f, m.hp - d);
+                    gui().say("It hurt itself in its confusion!");
+                    faint(f);
+                    return false;
+                }
+            }
+        }
+        if(f.infatuated && r.get_int(2) == 0)
+        {
+            text = label(f);
+            text.append(" is immobilized by love!");
+            gui().say(text);
+            return false;
+        }
         return true;
+    }
+
+    void battle::confuse(fighter& f)
+    {
+        const ability& ab = f.m->abil();
+        if(f.out() || f.confused || (ab.kind == ability_kind::FOCUS && ab.type == 1))
+        {
+            return;
+        }
+        f.confused = uint8_t(2 + rng().get_int(4));
+        bn::string<64> text(label(f));
+        text.append(" became confused!");
+        gui().say(text);
+    }
+
+    void battle::infatuate(fighter& f)
+    {
+        const ability& ab = f.m->abil();
+        if(f.out() || f.infatuated || (ab.kind == ability_kind::FOCUS && ab.type == 2) || ab.kind == ability_kind::AROMA_VEIL ||
+           ally_has(f, ability_kind::AROMA_VEIL))
+        {
+            return;
+        }
+        f.infatuated = true;
+        bn::string<64> text(label(f));
+        text.append(" fell in love!");
+        gui().say(text);
     }
 
     void battle::apply_status(fighter& target, status s, int chance, fighter* from)
@@ -1261,8 +1611,16 @@ namespace
         {
             return;
         }
-        const ability& ab = from ? abil_against(*from->m, *target.m) : target.m->abil();
+        static constexpr ability none = { "", "", ability_kind::FLAVOR, -1 };
+        const ability& ab = _mycelium ? none : from ? abil_against(*from->m, *target.m) : target.m->abil();
         if(ab.kind == ability_kind::NO_STATUS && (ab.type == 0 || ab.type == int(s)))
+        {
+            return;
+        }
+        // 9.6.0: LEAF GUARD in the sun, SHIELDS DOWN above half HP, and the terrains.
+        if((ab.kind == ability_kind::LEAF_GUARD && weather() == battle_weather::SUN) ||
+           (ab.kind == ability_kind::SHIELDS_DOWN && target.m->hp * 2 > target.m->max_hp) ||
+           (grounded(target) && (_terrain == 3 || (_terrain == 1 && s == status::SLEEP))))
         {
             return;
         }
@@ -1280,6 +1638,11 @@ namespace
         {
             announce(target);
             apply_status(*from, s, 100);
+        }
+        if(from && s == status::POISON && from->m->abil().kind == ability_kind::POISON_PUPPETEER)
+        {
+            announce(*from);
+            confuse(target);
         }
     }
 
@@ -1303,7 +1666,7 @@ namespace
         change_stats(who, m, ! by_foe);     // (Intimidate says when it can't lower ATTACK, as in the games)
     }
 
-    // When the battle starts: the weather starters, then INTIMIDATE; yours first.
+    // When the battle starts: the weather and terrain starters, then INTIMIDATE and the rest; yours first.
     void battle::ability_battle_start()
     {
         for(fighter* side : { _own, _foes })
@@ -1313,31 +1676,350 @@ namespace
             {
                 fighter& f = side[i];
                 const ability& ab = f.m->abil();
-                if(! f.out() && ab.kind == ability_kind::WEATHER_START && int(_weather) != ab.type)
+                f.had_item = f.m->item != held_item::NONE;
+                if(f.out())
+                {
+                    continue;
+                }
+                if((ab.kind == ability_kind::WEATHER_START && int(_weather) != ab.type) ||
+                   (ab.kind == ability_kind::ORICHALCUM_PULSE && _weather != battle_weather::SUN))
                 {
                     focus_on(f);
                     announce(f);
-                    start_weather(battle_weather(ab.type));
+                    start_weather(ab.kind == ability_kind::ORICHALCUM_PULSE ? battle_weather::SUN : battle_weather(ab.type));
+                }
+                if((ab.kind == ability_kind::TERRAIN_START && _terrain != ab.type) || (ab.kind == ability_kind::HADRON_ENGINE && _terrain != 1))
+                {
+                    focus_on(f);
+                    announce(f);
+                    set_terrain(ab.kind == ability_kind::HADRON_ENGINE ? 1 : ab.type);
                 }
             }
+        }
+        if(anyone_has(ability_kind::AIR_LOCK) && _weather != battle_weather::NONE)
+        {
+            gui().say("The effects of the weather disappeared.");
         }
         for(fighter* side : { _own, _foes })
         {
             int n = side == _own ? _own_count : _foe_count;
+            fighter* other = side == _own ? _foes : _own;
+            int on = side == _own ? _foe_count : _own_count;
             for(int i = 0; i < n; ++i)
             {
                 fighter& f = side[i];
-                if(f.out() || f.m->abil().kind != ability_kind::INTIMIDATE)
+                if(f.out())
                 {
                     continue;
                 }
-                focus_on(f);
-                announce(f);
-                fighter* other = side == _own ? _foes : _own;
-                int on = side == _own ? _foe_count : _own_count;
-                for(int k = 0; k < on; ++k)
+                // TRACE: a foe's ability (not one that can't be copied).
+                if(f.m->abil().kind == ability_kind::TRACE)
                 {
-                    ability_stat(other[k], battle_stat::ATK, -1, true);
+                    int picks[max_targets], pn = 0;
+                    for(int k = 0; k < on; ++k)
+                    {
+                        ability_kind ok = other[k].m->abil().kind;
+                        if(! other[k].out() && ok != ability_kind::TRACE && ok != ability_kind::ILLUSION && ok != ability_kind::FORM_TYPE &&
+                           ok != ability_kind::STANCE_CHANGE && ok != ability_kind::SCHOOLING && ok != ability_kind::FORM_CHANGE &&
+                           ok != ability_kind::COMMANDER && ok != ability_kind::DISGUISE && ok != ability_kind::ICE_FACE)
+                        {
+                            picks[pn++] = k;
+                        }
+                    }
+                    if(pn)
+                    {
+                        fighter& o = other[picks[rng().get_int(pn)]];
+                        focus_on(f);
+                        announce(f);
+                        look_of(*f.m).abil = &o.m->abil();
+                        bn::string<80> text(label(f));
+                        text.append(" traced ");
+                        text.append(label(o));
+                        text.append("'s ");
+                        text.append(o.m->abil().name);
+                        text.append("!");
+                        gui().say(text);
+                    }
+                }
+                const ability& ab = f.m->abil();
+                switch(ab.kind)
+                {
+                case ability_kind::INTIMIDATE:
+                    focus_on(f);
+                    announce(f);
+                    for(int k = 0; k < on; ++k)
+                    {
+                        const ability& oa = other[k].m->abil();
+                        if(oa.kind == ability_kind::FOCUS && ! other[k].out())
+                        {
+                            announce(other[k]);
+                            bn::string<64> text(label(other[k]));
+                            text.append(" isn't affected!");
+                            gui().say(text);
+                            continue;
+                        }
+                        ability_stat(other[k], battle_stat::ATK, -1, true);
+                    }
+                    break;
+                case ability_kind::SUPERSWEET_SYRUP:
+                    focus_on(f);
+                    announce(f);
+                    for(int k = 0; k < on; ++k)
+                    {
+                        ability_stat(other[k], battle_stat::EVA, -1, true);
+                    }
+                    break;
+                case ability_kind::DOWNLOAD:
+                {
+                    // Against the foes' weaker defense.
+                    int def = 0, spd = 0;
+                    for(int k = 0; k < on; ++k)
+                    {
+                        if(! other[k].out())
+                        {
+                            def += battle_stat_of(*other[k].m, battle_stat::DEF);
+                            spd += battle_stat_of(*other[k].m, battle_stat::SPD);
+                        }
+                    }
+                    focus_on(f);
+                    announce(f);
+                    ability_stat(f, def < spd ? battle_stat::ATK : battle_stat::SPA, 1, false);
+                    break;
+                }
+                case ability_kind::ENTRY_STAT:
+                    focus_on(f);
+                    announce(f);
+                    ability_stat(f, ab.type, 1, false);
+                    break;
+                case ability_kind::HOSPITALITY:
+                {
+                    fighter* hurt = nullptr;
+                    for(int k = 0; k < n; ++k)
+                    {
+                        fighter& a = side[k];
+                        if(&a != &f && ! a.out() && a.m->hp < a.m->max_hp &&
+                           (! hurt || a.m->hp * hurt->m->max_hp < hurt->m->hp * a.m->max_hp))
+                        {
+                            hurt = &a;
+                        }
+                    }
+                    if(hurt)
+                    {
+                        focus_on(*hurt);
+                        announce(f);
+                        heal_by(*hurt, bn::max(1, hurt->m->max_hp / 4));
+                        bn::string<64> text(label(*hurt));
+                        text.append(" drank down all the matcha!");
+                        gui().say(text);
+                    }
+                    break;
+                }
+                case ability_kind::COMMANDER:
+                    for(int k = 0; k < n; ++k)
+                    {
+                        fighter& a = side[k];
+                        if(&a != &f && ! a.out() && bn::string_view(a.m->species_name()) == "Dondozo")
+                        {
+                            focus_on(a);
+                            announce(f);
+                            bn::string<64> text(label(f));
+                            text.append(" goes into DONDOZO's mouth!");
+                            gui().say(text);
+                            for(int st = battle_stat::ATK; st <= battle_stat::SPE; ++st)
+                            {
+                                ability_stat(a, st, 2, false);
+                            }
+                            break;
+                        }
+                    }
+                    break;
+                case ability_kind::FRISK:
+                    for(int k = 0; k < on; ++k)
+                    {
+                        if(! other[k].out() && other[k].m->item != held_item::NONE)
+                        {
+                            focus_on(f);
+                            bn::string<96> text(label(f));
+                            text.append(" frisked ");
+                            text.append(label(other[k]));
+                            text.append(" and found its ");
+                            text.append(game_data::held_items[int(other[k].m->item)].name);
+                            text.append("!");
+                            gui().say(text);
+                        }
+                    }
+                    break;
+                case ability_kind::ANTICIPATION:
+                {
+                    bool shudder = false;
+                    for(int k = 0; k < on && ! shudder; ++k)
+                    {
+                        const mon& o = *other[k].m;
+                        for(int q = 0; q < o.move_count && ! other[k].out(); ++q)
+                        {
+                            const move& om = move_data(o.move(q));
+                            shudder |= om.category != move_category::STATUS && move_effectiveness_x4(o, om, *f.m) > 4;
+                        }
+                    }
+                    if(shudder)
+                    {
+                        focus_on(f);
+                        announce(f);
+                        bn::string<64> text(label(f));
+                        text.append(" shuddered!");
+                        gui().say(text);
+                    }
+                    break;
+                }
+                case ability_kind::FOREWARN:
+                {
+                    const fighter* who = nullptr;
+                    int best = -1, power = -1;
+                    for(int k = 0; k < on; ++k)
+                    {
+                        const mon& o = *other[k].m;
+                        for(int q = 0; q < o.move_count && ! other[k].out(); ++q)
+                        {
+                            if(move_data(o.move(q)).power > power)
+                            {
+                                power = move_data(o.move(q)).power;
+                                best = o.move(q);
+                                who = &other[k];
+                            }
+                        }
+                    }
+                    if(who)
+                    {
+                        focus_on(f);
+                        announce(f);
+                        bn::string<96> text("It was alerted to ");
+                        text.append(label(*who));
+                        text.append("'s ");
+                        text.append(move_data(best).name);
+                        text.append("!");
+                        gui().say(text);
+                    }
+                    break;
+                }
+                case ability_kind::SLOW_START:
+                {
+                    focus_on(f);
+                    bn::string<64> text(label(f));
+                    text.append(" can't get it going!");
+                    gui().say(text);
+                    break;
+                }
+                case ability_kind::QUARK_DRIVE:
+                {
+                    focus_on(f);
+                    announce(f);
+                    bn::string<80> text(label(f));
+                    text.append(" used its BOOSTER ENERGY to activate QUARK DRIVE!");
+                    gui().say(text);
+                    break;
+                }
+                default:
+                    break;
+                }
+            }
+        }
+        look_changes(true);
+    }
+
+    void battle::set_terrain(int t)
+    {
+        constexpr const char* starts[] = { "", "An electric current ran across the battlefield!", "Grass grew to cover the battlefield!",
+                                           "Mist swirled around the battlefield!", "The battlefield got weird!" };
+        _terrain = t;
+        _terrain_turns = 5;
+        gui().say(starts[t]);
+    }
+
+    // Another form's stats for the rest of the battle.
+    void battle::form(fighter& f, const uint8_t (&base)[5], const char* line)
+    {
+        look_form(*f.m, base);
+        focus_on(f);
+        announce(f);
+        bn::string<80> text(label(f));
+        text.append(line);
+        gui().say(text);
+    }
+
+    // The abilities that change a Pokémon's type or form as the battle goes (start: as it begins).
+    void battle::look_changes(bool start)
+    {
+        static const int fire = type_index("FIRE"), water = type_index("WATER"), ice = type_index("ICE"), normal = type_index("NORMAL");
+        // Wishiwashi's School Form, Palafin's Hero Form and Terapagos's Terastal Form (atk, def, spa, spd, spe).
+        static constexpr uint8_t school[5] = { 140, 130, 140, 135, 30 };
+        static constexpr uint8_t hero[5] = { 160, 97, 106, 87, 100 };
+        static constexpr uint8_t terastal[5] = { 95, 110, 105, 110, 85 };
+        for(bool own : { true, false })
+        {
+            for(int i = 0; i < count_of(own); ++i)
+            {
+                fighter& f = side_of(own)[i];
+                if(f.out())
+                {
+                    continue;
+                }
+                const ability& ab = f.m->abil();
+                switch(ab.kind)
+                {
+                case ability_kind::FORECAST:
+                {
+                    battle_weather w = weather();
+                    int t = w == battle_weather::SUN ? fire : w == battle_weather::RAIN ? water : w == battle_weather::HAIL ? ice : normal;
+                    battle_look& l = look_of(*f.m);
+                    if(l.typed ? l.type1 != t : t != normal)
+                    {
+                        l.typed = true;
+                        l.type1 = int8_t(t);
+                        l.type2 = -1;
+                        focus_on(f);
+                        announce(f);
+                        bn::string<64> text(label(f));
+                        text.append(" transformed!");
+                        gui().say(text);
+                    }
+                    break;
+                }
+                case ability_kind::SCHOOLING:
+                {
+                    bool school_now = f.m->level >= 20 && f.m->hp * 4 > f.m->max_hp;
+                    if(school_now != f.schooled)
+                    {
+                        f.schooled = school_now;
+                        if(school_now)
+                        {
+                            form(f, school, " formed a school!");
+                        }
+                        else
+                        {
+                            for(uint16_t& v : look_of(*f.m).stats)
+                            {
+                                v = 0;
+                            }
+                            focus_on(f);
+                            bn::string<64> text(label(f));
+                            text.append(" stopped schooling!");
+                            gui().say(text);
+                        }
+                    }
+                    break;
+                }
+                case ability_kind::FORM_CHANGE:
+                    if(ab.type == 1 && start)
+                    {
+                        form(f, terastal, " transformed into its Terastal Form!");
+                    }
+                    else if(ab.type == 0 && ! start && _turn == 1)
+                    {
+                        form(f, hero, " underwent a heroic transformation!");
+                    }
+                    break;
+                default:
+                    break;
                 }
             }
         }
@@ -1346,12 +2028,34 @@ namespace
     // What the target's ability does to a damaging hit's user, and what being hit does to the target.
     void battle::ability_after_hit(fighter& user, const move& mv, fighter& target, int damage)
     {
-        static const int dark = type_index("DARK"), bug = type_index("BUG"), ghost = type_index("GHOST");
+        static const int dark = type_index("DARK"), bug = type_index("BUG"), ghost = type_index("GHOST"), fire = type_index("FIRE"),
+                         water = type_index("WATER"), electric = type_index("ELECTRIC");
         const ability& ab = abil_against(*user.m, *target.m);
+        const ability& ua = user.m->abil();
         bool physical = mv.category == move_category::PHYSICAL;
         if(damage <= 0)
         {
             return;
+        }
+        int hp_before = target.m->hp + damage;
+        bool halved = hp_before * 2 > target.m->max_hp && target.m->hp * 2 <= target.m->max_hp;
+        if(target.illusion >= 0)
+        {
+            // ILLUSION: the hit shows who it really is.
+            target.illusion = -1;
+            if(! target.own)
+            {
+                create_foe_sprite(target);
+            }
+            else
+            {
+                _own_sprite.reset();
+                focus_on(target);
+            }
+            draw_hud(target);
+            bn::string<64> text(label(target));
+            text.append("'s illusion wore off!");
+            gui().say(text);
         }
         if(! target.out())
         {
@@ -1370,9 +2074,163 @@ namespace
             case ability_kind::WEAK_ARMOR:
                 if(physical) { announce(target); ability_stat(target, battle_stat::DEF, -1, false); ability_stat(target, battle_stat::SPE, 2, false); }
                 break;
+            // 9.6.0
+            case ability_kind::STEAM_ENGINE:
+                if(mv.type == fire || mv.type == water) { announce(target); ability_stat(target, battle_stat::SPE, 6, false); }
+                break;
+            case ability_kind::WATER_COMPACTION:
+                if(mv.type == water) { announce(target); ability_stat(target, battle_stat::DEF, 2, false); }
+                break;
+            case ability_kind::BERSERK:
+                if(halved) { announce(target); ability_stat(target, battle_stat::SPA, 1, false); }
+                break;
+            case ability_kind::ANGER_SHELL:
+                if(halved)
+                {
+                    announce(target);
+                    ability_stat(target, battle_stat::ATK, 1, false);
+                    ability_stat(target, battle_stat::SPA, 1, false);
+                    ability_stat(target, battle_stat::SPE, 1, false);
+                    ability_stat(target, battle_stat::DEF, -1, false);
+                    ability_stat(target, battle_stat::SPD, -1, false);
+                }
+                break;
+            case ability_kind::COTTON_DOWN:
+                announce(target);
+                for(bool own : { true, false })
+                {
+                    for(int i = 0; i < count_of(own); ++i)
+                    {
+                        if(&side_of(own)[i] != &target)
+                        {
+                            ability_stat(side_of(own)[i], battle_stat::SPE, -1, true);
+                        }
+                    }
+                }
+                break;
+            case ability_kind::SAND_SPIT:
+                if(_weather != battle_weather::SAND && _weather != battle_weather::WIND)
+                {
+                    announce(target);
+                    start_weather(battle_weather::SAND);
+                }
+                break;
+            case ability_kind::SEED_SOWER:
+                if(_terrain != 2)
+                {
+                    announce(target);
+                    set_terrain(2);
+                }
+                break;
+            case ability_kind::CHARGE_UP:
+                if(! target.charged && (ab.type == 0 || (mv.flags & move_flag::WIND)))
+                {
+                    target.charged = true;
+                    announce(target);
+                    bn::string<64> text(label(target));
+                    text.append(" is charged with power!");
+                    gui().say(text);
+                }
+                break;
+            case ability_kind::COLOR_CHANGE:
+                if(! target.m->has_type(mv.type) || target.m->data().type2 >= 0)
+                {
+                    battle_look& l = look_of(*target.m);
+                    if(! (l.typed && l.type1 == mv.type && l.type2 < 0))
+                    {
+                        l.typed = true;
+                        l.type1 = mv.type;
+                        l.type2 = -1;
+                        announce(target);
+                        bn::string<64> text(label(target));
+                        text.append(" became the ");
+                        text.append(type_name(mv.type));
+                        text.append(" type!");
+                        gui().say(text);
+                    }
+                }
+                break;
+            case ability_kind::CURSED_BODY:
+                if(_slot >= 0 && user.disabled < 0 && ! user.out() && rng().get_int(100) < 30 &&
+                   user.m->abil().kind != ability_kind::AROMA_VEIL && ! ally_has(user, ability_kind::AROMA_VEIL))
+                {
+                    user.disabled = int8_t(_slot);
+                    user.disabled_turns = 4;
+                    announce(target);
+                    bn::string<80> text(label(user));
+                    text.append("'s ");
+                    text.append(mv.name);
+                    text.append(" was disabled!");
+                    gui().say(text);
+                }
+                break;
+            case ability_kind::GULP_MISSILE:
+                if(target.gulp && ! user.out())
+                {
+                    // It spits out its catch: a ARROKUDA (DEFENSE -1) above half HP, a PIKACHU (paralysis) below.
+                    target.gulp = false;
+                    announce(target);
+                    focus_on(user);
+                    set_hp(user, user.m->hp - bn::max(1, user.m->max_hp / 4));
+                    bn::string<64> text(label(user));
+                    text.append(" was hit by the catch!");
+                    gui().say(text);
+                    if(target.m->hp * 2 > target.m->max_hp)
+                    {
+                        ability_stat(user, battle_stat::DEF, -1, true);
+                    }
+                    else
+                    {
+                        apply_status(user, status::PARALYSIS, 100);
+                    }
+                }
+                break;
+            case ability_kind::WIMP_OUT:
+                if(halved && ! target.own && ! _s.opponent && ! _s.free && ! _s.legendary && ! _s.trial)
+                {
+                    announce(target);
+                    target.fled = true;
+                    if(target.sprite)
+                    {
+                        target.sprite->set_visible(false);
+                    }
+                    draw_hud(target);
+                    bn::string<64> text(label(target));
+                    text.append(" fled!");
+                    gui().say(text);
+                }
+                break;
             default:
                 break;
             }
+        }
+        // The user's own ability on the hit: STENCH flinches (not one that's had its go), TOXIC CHAIN poisons.
+        const ability& ta = target.m->abil();
+        bool dusted = ta.kind == ability_kind::SHIELD_DUST && ua.kind != ability_kind::MOLD_BREAKER;
+        int odds = ua.kind == ability_kind::SERENE_GRACE ? 2 : 1;
+        if(ua.kind == ability_kind::STENCH && ! target.out() && ! target.acted && ! dusted && ! (ta.kind == ability_kind::FOCUS && ta.type == 0) &&
+           rng().get_int(100) < 10 * odds)
+        {
+            target.flinched = true;
+        }
+        if(ua.kind == ability_kind::TOXIC_CHAIN && ! target.out() && ! dusted && rng().get_int(100) < 30)
+        {
+            announce(user);
+            apply_status(target, status::POISON, 100, &user);
+        }
+        if(mv.type == electric)
+        {
+            user.charged = false;
+        }
+        bool innards = ab.kind == ability_kind::INNARDS_OUT && target.m->fainted();
+        if(innards && ! user.out())
+        {
+            focus_on(user);
+            announce(target);
+            set_hp(user, user.m->hp - hp_before);
+            bn::string<64> line(label(user));
+            line.append(" was hurt!");
+            gui().say(line);
         }
         if(! physical || user.out())
         {
@@ -1386,7 +2244,40 @@ namespace
             announce(target);
             apply_status(user, st, 100);
         }
-        bool aftermath = ab.kind == ability_kind::AFTERMATH && target.m->fainted();
+        if(ab.kind == ability_kind::CUTE_CHARM && rng().get_int(100) < 30 && ! user.infatuated)
+        {
+            announce(target);
+            infatuate(user);
+        }
+        if(ab.kind == ability_kind::GOOEY)
+        {
+            announce(target);
+            ability_stat(user, battle_stat::SPE, -1, true);
+        }
+        if(ab.kind == ability_kind::TOXIC_DEBRIS && user.m->st == status::NONE)
+        {
+            announce(target);
+            gui().say("Poison spikes were scattered!");
+            apply_status(user, status::POISON, 100);
+        }
+        if((ab.kind == ability_kind::MUMMY || ab.kind == ability_kind::WANDERING_SPIRIT) && ua.kind != ab.kind &&
+           ua.kind != ability_kind::FORM_TYPE && ua.kind != ability_kind::STANCE_CHANGE && ua.kind != ability_kind::SCHOOLING &&
+           ua.kind != ability_kind::COMMANDER && ua.kind != ability_kind::FORM_CHANGE)
+        {
+            announce(target);
+            const ability* theirs = &user.m->abil();
+            look_of(*user.m).abil = &ab;
+            if(ab.kind == ability_kind::WANDERING_SPIRIT)
+            {
+                look_of(*target.m).abil = theirs;
+            }
+            bn::string<80> text(label(user));
+            text.append("'s ability became ");
+            text.append(ab.name);
+            text.append("!");
+            gui().say(text);
+        }
+        bool aftermath = ab.kind == ability_kind::AFTERMATH && target.m->fainted() && ! anyone_has(ability_kind::DAMP);
         if(ab.kind == ability_kind::ROUGH_SKIN || aftermath)
         {
             focus_on(user);
@@ -1439,6 +2330,12 @@ namespace
         {
             return user.m->hp >= user.m->max_hp;
         }
+        // 9.6.0: SOUNDPROOF and the like, and GOOD AS GOLD against the foes' status moves.
+        const ability& tab = abil_against(*user.m, *target.m);
+        if(&user != &target && (blocked_by_ability(mv, tab) || (tab.kind == ability_kind::GOOD_AS_GOLD && user.own != target.own)))
+        {
+            return true;
+        }
         if(mv.inflicts != status::NONE)
         {
             const mon& t = *target.m;
@@ -1448,8 +2345,14 @@ namespace
             {
                 return true;
             }
-            const ability& ab = abil_against(*user.m, t);
+            const ability& ab = user.m->abil().kind == ability_kind::MYCELIUM_MIGHT ? user.m->abil() : abil_against(*user.m, t);
             if(ab.kind == ability_kind::NO_STATUS && (ab.type == 0 || ab.type == int(mv.inflicts)))
+            {
+                return true;
+            }
+            if((ab.kind == ability_kind::LEAF_GUARD && weather() == battle_weather::SUN) ||
+               (ab.kind == ability_kind::SHIELDS_DOWN && t.hp * 2 > t.max_hp) ||
+               (grounded(target) && (_terrain == 3 || (_terrain == 1 && mv.inflicts == status::SLEEP))))
             {
                 return true;
             }
@@ -1484,7 +2387,7 @@ namespace
     text_color battle::rating(const fighter& user, int slot, const fighter& target) const
     {
         const move& mv = move_data(user.m->move(slot));
-        if(! user.m->pp(slot))
+        if(! user.m->pp(slot) || user.disabled == slot)
         {
             return text_color::GRAY;
         }
@@ -1492,7 +2395,7 @@ namespace
         {
             return would_fail(user, mv, target) ? text_color::GRAY : text_color::YELLOW;
         }
-        int eff = wind_effectiveness_x4(move_effectiveness_x4(*user.m, mv, *target.m), mv, *target.m, _weather);
+        int eff = wind_effectiveness_x4(move_effectiveness_x4(*user.m, mv, *target.m), mv, *target.m, weather());
         if(eff == 0 || (target.m->abil().kind == ability_kind::DISGUISE && ! (target.m->flags & mon_flag::DISGUISE_USED)))
         {
             return eff == 0 ? text_color::GRAY : text_color::YELLOW;
@@ -1514,8 +2417,108 @@ namespace
         {
             d.def_stage = 0;
         }
-        d.weather = _weather;
+        d.weather = weather();
         d.spread = spread;
+        // 9.6.0: the abilities on the field, the terrain and the user's charge.
+        const mon& u = *user.m;
+        const mon& t = *target.m;
+        const ability& ua = u.abil();
+        const ability& ta = abil_against(u, t);
+        int atk_stat = physical ? battle_stat::ATK : battle_stat::SPA, def_stat = physical ? battle_stat::DEF : battle_stat::SPD;
+        auto times = [](int& v, int num, int den) { v = v * num / den; };
+        if(ua.kind == ability_kind::SLOW_START && _turn <= 5 && physical)
+        {
+            times(d.atk_x100, 1, 2);
+        }
+        if(quark(user) && best_stat(u) == atk_stat)
+        {
+            times(d.atk_x100, 13, 10);
+        }
+        if(ta.kind == ability_kind::QUARK_DRIVE && quark(target) && best_stat(t) == def_stat)
+        {
+            times(d.def_x100, 13, 10);
+        }
+        if(ua.kind == ability_kind::PLUS_MINUS && ! physical && ally_has(user, ability_kind::PLUS_MINUS))
+        {
+            times(d.atk_x100, 3, 2);
+        }
+        if(d.weather == battle_weather::SUN)
+        {
+            if(physical && (ua.kind == ability_kind::FLOWER_GIFT || ally_has(user, ability_kind::FLOWER_GIFT)))
+            {
+                times(d.atk_x100, 3, 2);
+            }
+            if(! physical && (ta.kind == ability_kind::FLOWER_GIFT || ally_has(target, ability_kind::FLOWER_GIFT)))
+            {
+                times(d.def_x100, 3, 2);
+            }
+            if(physical && ua.kind == ability_kind::ORICHALCUM_PULSE)
+            {
+                times(d.atk_x100, 4, 3);
+            }
+        }
+        if(! physical && ua.kind == ability_kind::HADRON_ENGINE && _terrain == 1)
+        {
+            times(d.atk_x100, 4, 3);
+        }
+        // The Ruin abilities: everyone else's stat x0.75 (once each).
+        bool ruin_atk = false, ruin_def = false;
+        for(bool own : { true, false })
+        {
+            for(int i = 0; i < count_of(own); ++i)
+            {
+                const fighter& f = side_of(own)[i];
+                const ability& fa = f.m->abil();
+                if(f.out() || fa.kind != ability_kind::RUIN)
+                {
+                    continue;
+                }
+                ruin_atk |= &f != &user && fa.type == (physical ? 0 : 2);
+                ruin_def |= &f != &target && fa.type == (physical ? 1 : 3) && ua.kind != ability_kind::MOLD_BREAKER;
+            }
+        }
+        if(ruin_atk)
+        {
+            times(d.atk_x100, 3, 4);
+        }
+        if(ruin_def)
+        {
+            times(d.def_x100, 3, 4);
+        }
+        static const int electric = type_index("ELECTRIC"), grass = type_index("GRASS"), psychic = type_index("PSYCHIC"),
+                         dragon = type_index("DRAGON");
+        if(ua.kind == ability_kind::STAKEOUT && _turn == 1)
+        {
+            times(d.power_x100, 2, 1);
+        }
+        if(user.charged && mv.type == electric)
+        {
+            times(d.power_x100, 2, 1);
+        }
+        if(! physical && ally_has(user, ability_kind::BATTERY))
+        {
+            times(d.power_x100, 13, 10);
+        }
+        if(ally_has(user, ability_kind::POWER_SPOT))
+        {
+            times(d.power_x100, 13, 10);
+        }
+        if(ally_has(target, ability_kind::FRIEND_GUARD) && ua.kind != ability_kind::MOLD_BREAKER)
+        {
+            times(d.power_x100, 3, 4);
+        }
+        if(grounded(user) && ((_terrain == 1 && mv.type == electric) || (_terrain == 2 && mv.type == grass) || (_terrain == 4 && mv.type == psychic)))
+        {
+            times(d.power_x100, 13, 10);
+        }
+        if(_terrain == 3 && mv.type == dragon && grounded(target))
+        {
+            times(d.power_x100, 1, 2);
+        }
+        if(anyone_has(ability_kind::AURA, mv.type))
+        {
+            times(d.power_x100, anyone_has(ability_kind::AURA_BREAK) ? 3 : 4, anyone_has(ability_kind::AURA_BREAK) ? 4 : 3);
+        }
         return d;
     }
 
@@ -1532,7 +2535,20 @@ namespace
         int chance = mv.accuracy * accuracy_stage_x100(stage) / 100;
         chance = ua.kind == ability_kind::COMPOUND_EYES ? chance * 13 / 10 :
                  ua.kind == ability_kind::HUSTLE && mv.category == move_category::PHYSICAL ? chance * 8 / 10 : chance;
-        return ta.kind == ability_kind::WEATHER_EVADE && int(_weather) == ta.type ? chance * 8 / 10 : chance;
+        // 9.6.0
+        if(ua.kind == ability_kind::VICTORY_STAR || ally_has(user, ability_kind::VICTORY_STAR))
+        {
+            chance = chance * 11 / 10;
+        }
+        if(ta.kind == ability_kind::WONDER_SKIN && mv.category == move_category::STATUS && user.own != target.own)
+        {
+            chance = bn::min(chance, 50);
+        }
+        if(ta.kind == ability_kind::TANGLED_FEET && target.confused)
+        {
+            chance /= 2;
+        }
+        return ta.kind == ability_kind::WEATHER_EVADE && int(weather()) == ta.type ? chance * 8 / 10 : chance;
     }
 
     // A move's stat changes on whoever they're for. Says what happened; false if nothing changed.
@@ -1543,11 +2559,15 @@ namespace
             return false;
         }
         bool any = false;
+        static const int grass = type_index("GRASS");
         for(int i = 0; i < mv.stat_count; ++i)
         {
             int stat = mv.stats[i].stat, delta = mv.stats[i].delta;
             const ability& ab = who.m->abil();
-            if(delta < 0 && ! mv.stat_self && ab.kind == ability_kind::CLEAR_BODY && (ab.type < 0 || ab.type == stat))
+            // 9.6.0: CONTRARY turns it round, SIMPLE doubles it.
+            delta = ab.kind == ability_kind::CONTRARY ? -delta : ab.kind == ability_kind::SIMPLE ? delta * 2 : delta;
+            bool veiled = who.m->has_type(grass) && (ab.kind == ability_kind::FLOWER_VEIL || ally_has(who, ability_kind::FLOWER_VEIL));
+            if(delta < 0 && ! mv.stat_self && ((ab.kind == ability_kind::CLEAR_BODY && (ab.type < 0 || ab.type == stat)) || veiled))
             {
                 if(! side_effect)
                 {
@@ -1578,6 +2598,27 @@ namespace
                 text.append(d >= 3 ? " rose drastically!" : d == 2 ? " rose sharply!" : d == 1 ? " rose!" :
                             d == -1 ? " fell!" : d == -2 ? " harshly fell!" : " severely fell!");
                 any = true;
+                if(d > 0 && ! _copying)
+                {
+                    // OPPORTUNIST: a foe's rise is copied.
+                    fighter* other = side_of(! who.own);
+                    for(int k = 0; k < count_of(! who.own); ++k)
+                    {
+                        if(! other[k].out() && other[k].m->abil().kind == ability_kind::OPPORTUNIST)
+                        {
+                            gui().say(text);
+                            text.clear();
+                            _copying = true;
+                            announce(other[k]);
+                            ability_stat(other[k], stat, d, false);
+                            _copying = false;
+                        }
+                    }
+                    if(text.empty())
+                    {
+                        continue;
+                    }
+                }
                 if(d < 0 && ! mv.stat_self && ab.kind == ability_kind::DEFIANT)
                 {
                     gui().say(text);
@@ -1599,6 +2640,21 @@ namespace
         }
         _weather = w;
         _weather_turns = 5;
+        if(w == battle_weather::HAIL)
+        {
+            // ICE FACE comes back.
+            for(bool own : { true, false })
+            {
+                for(int i = 0; i < count_of(own); ++i)
+                {
+                    mon& m = *side_of(own)[i].m;
+                    if(m.abil().kind == ability_kind::ICE_FACE)
+                    {
+                        m.flags = uint8_t(m.flags & ~mon_flag::DISGUISE_USED);
+                    }
+                }
+            }
+        }
         constexpr const char* starts[] = { "", "The sunlight turned harsh!", "It started to rain!", "A sandstorm kicked up!",
                                            "It started to hail!", "Strong winds are blowing! FLYING POKéMON are shielded!" };
         gui().say(starts[int(w)]);
@@ -1624,9 +2680,9 @@ namespace
         constexpr const char* goes_on[] = { "", "The sunlight is strong.", "Rain continues to fall.", "The sandstorm rages.",
                                             "Hail continues to fall." };
         gui().say(goes_on[w]);
-        if(_weather != battle_weather::SAND && _weather != battle_weather::HAIL)
+        if(weather() != battle_weather::SAND && weather() != battle_weather::HAIL)
         {
-            return;
+            return;     // (AIR LOCK)
         }
         static const int rock = type_index("ROCK"), ground = type_index("GROUND"), steel = type_index("STEEL"),
                          ice = type_index("ICE");
@@ -1641,8 +2697,10 @@ namespace
                     continue;
                 }
                 const mon& m = *f.m;
-                bool safe = _weather == battle_weather::SAND ? m.has_type(rock) || m.has_type(ground) || m.has_type(steel) :
+                bool safe = _weather == battle_weather::SAND ? m.has_type(rock) || m.has_type(ground) || m.has_type(steel) ||
+                                                               m.abil().kind == ability_kind::SAND_FORCE :
                                                                m.has_type(ice) || m.abil().kind == ability_kind::ICE_BODY;
+                safe |= m.abil().kind == ability_kind::OVERCOAT;
                 if(safe)
                 {
                     continue;
@@ -1817,7 +2875,7 @@ namespace
                         damage_mods dm;
                         if(_s.tier >= 8)
                         {
-                            dm.weather = _weather;
+                            dm.weather = weather();
                         }
                         int dmg = calc_damage(*f.m, mv, t, r, dm).damage * mv.accuracy / 100;
                         bool ko = dmg >= t.hp;
@@ -1895,15 +2953,58 @@ namespace
 
     // A move (slot -1: Struggle): PP, then whoever it's for: the user (Swords Dance, Recover), the field
     // (weather), the chosen foe, or every foe (Earthquake, Growl).
-    void battle::use_move(fighter& user, int slot, fighter& chosen)
+    void battle::use_move(fighter& user, int slot, fighter& chosen, int copied)
     {
-        if(! can_act(user))
+        use_move_now(user, slot, chosen, copied);
+        int move_index = copied >= 0 ? copied : slot >= 0 ? user.m->move(slot) : 0;
+        if(_dancing || ! (move_data(move_index).flags & move_flag::DANCE))
         {
             return;
         }
-        bool struggle = slot < 0;
-        int move_index = struggle ? 0 : user.m->move(slot);
-        if(! struggle)
+        // 9.6.0: DANCER dances along (at one of its foes, if the dance is aimed at someone).
+        _dancing = true;
+        for(bool own : { true, false })
+        {
+            for(int i = 0; i < count_of(own); ++i)
+            {
+                fighter& d = side_of(own)[i];
+                if(&d == &user || d.out() || d.m->abil().kind != ability_kind::DANCER || ! alive(! d.own))
+                {
+                    continue;
+                }
+                fighter* foes = side_of(! d.own);
+                fighter* target = nullptr;
+                for(int k = 0; k < count_of(! d.own) && ! target; ++k)
+                {
+                    target = foes[k].out() ? nullptr : &foes[k];
+                }
+                focus_on(d);
+                announce(d);
+                use_move_now(d, -1, *target, move_index);
+            }
+        }
+        _dancing = false;
+    }
+
+    void battle::use_move_now(fighter& user, int slot, fighter& chosen, int copied)
+    {
+        _slot = copied >= 0 ? -1 : slot;
+        if(copied < 0 && ! can_act(user))
+        {
+            return;
+        }
+        bool struggle = slot < 0 && copied < 0;
+        int move_index = copied >= 0 ? copied : struggle ? 0 : user.m->move(slot);
+        if(! struggle && copied < 0 && slot == user.disabled)
+        {
+            bn::string<64> no(label(user));
+            no.append("'s ");
+            no.append(move_data(move_index).name);
+            no.append(" is disabled!");
+            gui().say(no);
+            return;
+        }
+        if(! struggle && copied < 0)
         {
             user.m->use_pp(slot);
             if(chosen.m->abil().kind == ability_kind::PRESSURE && ! chosen.out() && chosen.own != user.own)
@@ -1911,11 +3012,76 @@ namespace
                 user.m->use_pp(slot);     // (use_pp stops at none left)
             }
         }
-        const move& mv = move_data(move_index);
+        // 9.6.0: the abilities that change a move: REFRIGERATE, MULTITYPE's JUDGMENT, HUNGER SWITCH's AURA WHEEL.
+        move mv = move_data(move_index);
+        const ability& ua = user.m->abil();
+        static const int normal = type_index("NORMAL"), dark = type_index("DARK");
+        bn::string_view move_name(mv.name);
+        if(ua.kind == ability_kind::REFRIGERATE && mv.type == normal)
+        {
+            mv.type = ua.type;
+            mv.power = uint8_t(bn::min(255, mv.power * 6 / 5));
+        }
+        if(ua.kind == ability_kind::FORM_TYPE && (move_name == "JUDGMENT" || move_name == "MULTI-ATTACK"))
+        {
+            mv.type = user.m->data().type1;
+        }
+        if(ua.kind == ability_kind::HUNGER_SWITCH && move_name == "AURA WHEEL" && _turn % 2 == 0)
+        {
+            mv.type = dark;
+        }
         bn::string<64> text(label(user));
         text.append(" used ");
         text.append(mv.name);
         text.append("!");
+        // STANCE CHANGE: Blade Forme to attack, Shield Forme for a status move.
+        bool attack = mv.category != move_category::STATUS;
+        if(ua.kind == ability_kind::STANCE_CHANGE && user.blade != attack)
+        {
+            user.blade = attack;
+            battle_look& l = look_of(*user.m);
+            const mon& m = *user.m;
+            uint16_t blade[5] = { m.def, m.atk, m.spd, m.spa, 0 };
+            for(int i = 0; i < 4; ++i)
+            {
+                l.stats[i] = attack ? blade[i] : uint16_t(0);
+            }
+            focus_on(user);
+            announce(user);
+            gui().say(attack ? "Changed to Blade Forme!" : "Changed to Shield Forme!");
+        }
+        // DAMP: no exploding.
+        if((mv.flags & move_flag::EXPLODE) && anyone_has(ability_kind::DAMP))
+        {
+            gui().say(text);
+            bn::string<64> no(label(user));
+            no.append(" cannot use ");
+            no.append(mv.name);
+            no.append("!");
+            gui().say(no);
+            return;
+        }
+        // DAZZLING: a PRANKSTER's move that would go first fails against its side.
+        if(ua.kind == ability_kind::PRANKSTER && ! attack && (mv.target == move_target::ONE || mv.target == move_target::FOES) &&
+           [&]{
+               const fighter* o = side_of(! user.own);
+               for(int k = 0; k < count_of(! user.own); ++k)
+               {
+                   if(! o[k].out() && abil_against(*user.m, *o[k].m).kind == ability_kind::DAZZLING)
+                   {
+                       return true;
+                   }
+               }
+               return false; }())
+        {
+            gui().say(text);
+            gui().say("But it failed!");
+            return;
+        }
+        if(ua.kind == ability_kind::GULP_MISSILE && (move_name == "SURF" || move_name == "DIVE"))
+        {
+            user.gulp = true;
+        }
 
         if(mv.target == move_target::SELF || mv.target == move_target::FIELD)
         {
@@ -2019,6 +3185,16 @@ namespace
                     gui().say(line);
                     continue;
                 }
+                const ability& tab = abil_against(*user.m, *t.m);
+                if(blocked_by_ability(mv, tab) || (tab.kind == ability_kind::GOOD_AS_GOLD && user.own != t.own))
+                {
+                    announce(t);
+                    line = "It doesn't affect ";
+                    line.append(label(t));
+                    line.append("...");
+                    gui().say(line);
+                    continue;
+                }
                 if(would_fail(user, mv, t) && ! mv.stat_count)
                 {
                     if(spread)
@@ -2036,7 +3212,9 @@ namespace
                 }
                 if(mv.inflicts != status::NONE)
                 {
+                    _mycelium = ua.kind == ability_kind::MYCELIUM_MIGHT;
                     apply_status(t, mv.inflicts, 100, &user);
+                    _mycelium = false;
                 }
                 if(mv.stat_count)
                 {
@@ -2055,7 +3233,9 @@ namespace
             fighter& tf = *hit[i];
             mon& t = *tf.m;
             c.targets[i] = &tf;
-            if(t.abil().kind == ability_kind::DISGUISE && ! (t.flags & mon_flag::DISGUISE_USED))
+            ability_kind tk = abil_against(*user.m, t).kind;
+            if((tk == ability_kind::DISGUISE || (tk == ability_kind::ICE_FACE && mv.category == move_category::PHYSICAL)) &&
+               ! (t.flags & mon_flag::DISGUISE_USED))
             {
                 t.flags |= mon_flag::DISGUISE_USED;
                 disguised[i] = true;
@@ -2101,7 +3281,8 @@ namespace
             if(disguised[k])
             {
                 line = label(t);
-                line.append("'s Disguise absorbed the hit - no damage!");
+                line.append(t.m->abil().kind == ability_kind::ICE_FACE ? "'s ice face took the hit - no damage!" :
+                            "'s Disguise absorbed the hit - no damage!");
                 gui().say(line);
                 continue;
             }
@@ -2125,6 +3306,11 @@ namespace
                 line.append(label(t));
                 line.append("...");
                 gui().say(line);
+                if(blocked_by_ability(mv, abil_against(*user.m, *t.m)) && t.m->abil().kind == ability_kind::WIND_RIDER)
+                {
+                    announce(t);
+                    ability_stat(t, battle_stat::ATK, 1, false);
+                }
                 continue;
             }
             if(effs[k] != 4)
@@ -2138,12 +3324,15 @@ namespace
                 line.append(effs[k] > 4 ? "!" : "...");
                 gui().say(line);
             }
-            bool sheer = user.m->abil().kind == ability_kind::SHEER_FORCE;
+            // 9.6.0: SHIELD DUST stops the side effects, SERENE GRACE doubles their chance.
+            bool sheer = ua.kind == ability_kind::SHEER_FORCE ||
+                         abil_against(*user.m, *t.m).kind == ability_kind::SHIELD_DUST;
+            int odds = ua.kind == ability_kind::SERENE_GRACE ? 2 : 1;
             if(mv.secondary != status::NONE && ! sheer)
             {
-                apply_status(t, mv.secondary, mv.secondary_chance, &user);
+                apply_status(t, mv.secondary, mv.secondary_chance * odds, &user);
             }
-            if(mv.stat_count && ! mv.stat_self && ! sheer && rng().get_int(100) < mv.stat_chance)
+            if(mv.stat_count && ! mv.stat_self && ! sheer && rng().get_int(100) < mv.stat_chance * odds)
             {
                 change_stats(t, mv, true);
             }
@@ -2209,8 +3398,40 @@ namespace
             {
                 best = stats[k] > stats[best] ? k : best;
             }
+            best = user.m->abil().type >= 0 ? user.m->abil().type : best;     // (Chilling Neigh, Grim Neigh)
             announce(user);
             ability_stat(user, best, knocked_out, false);
+        }
+        // 9.6.0: MAGICIAN takes a held item (given back after the battle).
+        if(ua.kind == ability_kind::MAGICIAN && dealt > 0 && ! user.out() && user.m->item == held_item::NONE)
+        {
+            for(int i = 0; i < hn; ++i)
+            {
+                mon& t = *hit[i]->m;
+                if(c.damages[i] > 0 && t.item != held_item::NONE && abil_against(*user.m, t).kind != ability_kind::STICKY_HOLD &&
+                   ! _thefts.full())
+                {
+                    if(user.own)
+                    {
+                        _thefts.push_back({ user.m, held_item::NONE });
+                    }
+                    if(hit[i]->own)
+                    {
+                        _thefts.push_back({ &t, t.item });
+                    }
+                    announce(user);
+                    bn::string<96> line(label(user));
+                    line.append(" stole ");
+                    line.append(label(*hit[i]));
+                    line.append("'s ");
+                    line.append(game_data::held_items[int(t.item)].name);
+                    line.append("!");
+                    user.m->item = t.item;
+                    t.item = held_item::NONE;
+                    gui().say(line);
+                    break;
+                }
+            }
         }
     }
 
@@ -2320,6 +3541,23 @@ namespace
             text.append(m.name());
             text.append(" broke free!");
             u.say(text);
+            // 9.6.0: BALL FETCH brings the first one back.
+            for(int i = 0; i < _own_count && ! _ball_fetched; ++i)
+            {
+                fighter& f = _own[i];
+                if(! f.out() && f.m->abil().kind == ability_kind::BALL_FETCH && f.m->item == held_item::NONE)
+                {
+                    _ball_fetched = true;
+                    g.add_item(ball, 1);
+                    focus_on(f);
+                    announce(f);
+                    text = f.m->name();
+                    text.append(" fetched the ");
+                    text.append(ball_name);
+                    text.append("!");
+                    u.say(text);
+                }
+            }
             return;
         }
         target.caught = true;
@@ -2485,6 +3723,38 @@ namespace
             text.append(" has fallen...");
             gui().say(text);
         }
+        if(f.counted)
+        {
+            return;
+        }
+        // 9.6.0: SOUL-HEART feeds on every faint; RECEIVER takes a fallen ally's ability.
+        f.counted = true;
+        for(bool own : { true, false })
+        {
+            for(int i = 0; i < count_of(own); ++i)
+            {
+                fighter& o = side_of(own)[i];
+                if(o.out())
+                {
+                    continue;
+                }
+                ability_kind k = o.m->abil().kind;
+                if(k == ability_kind::SOUL_HEART)
+                {
+                    announce(o);
+                    ability_stat(o, battle_stat::SPA, 1, false);
+                }
+                else if(k == ability_kind::RECEIVER && own == f.own && f.m->abil().kind != ability_kind::RECEIVER)
+                {
+                    look_of(*o.m).abil = &f.m->abil();
+                    bn::string<80> line(label(o));
+                    line.append(" received ");
+                    line.append(f.m->abil().name);
+                    line.append("!");
+                    gui().say(line);
+                }
+            }
+        }
     }
 
     void battle::win()
@@ -2587,6 +3857,43 @@ namespace
                 g.mark_owned(m.species_index);
             }
         }
+        // 9.6.0: PICKUP finds an item (better ones at higher levels, 1 in 10); HONEY GATHER some HONEY, which sells.
+        static constexpr item_id finds[] = { item_id::POTION, item_id::ANTIDOTE, item_id::PARLYZHEAL, item_id::SUPERPOTION,
+                                             item_id::GREATBALL, item_id::AWAKENING, item_id::HYPERPOTION, item_id::ULTRABALL,
+                                             item_id::REVIVE, item_id::FULLRESTORE, item_id::RARECANDY };
+        constexpr int finds_count = int(sizeof(finds) / sizeof(finds[0]));
+        for(int i = 0; i < _own_count; ++i)
+        {
+            mon& m = *_own[i].m;
+            ability_kind k = m.abil().kind;
+            if(m.fainted() || m.item != held_item::NONE)
+            {
+                continue;
+            }
+            if(k == ability_kind::PICKUP && rng().get_int(10) == 0)
+            {
+                // Five in a row from a start set by its level (Emerald's tables, by tenths of the level cap of 100).
+                int start = bn::min(m.level / 20, finds_count - 5);
+                int roll = rng().get_int(100);
+                int pick = start + (roll < 40 ? 0 : roll < 70 ? 1 : roll < 88 ? 2 : roll < 97 ? 3 : 4);
+                g.add_item(finds[pick], 1);
+                text = m.name();
+                text.append(" picked up a ");
+                text.append(game_data::items[int(finds[pick])].name);
+                text.append("!");
+                u.say(text);
+            }
+            if(k == ability_kind::HONEY_GATHER && rng().get_int(100) < bn::min(50, 5 + m.level / 2))
+            {
+                int price = 100 + m.level;
+                g.money = bn::min(money_cap, g.money + uint32_t(price));
+                text = m.name();
+                text.append(" gathered some HONEY! It sold for $");
+                text.append(bn::to_string<8>(price));
+                text.append(".");
+                u.say(text);
+            }
+        }
     }
 
     battle_report battle::finish(battle_outcome outcome)
@@ -2596,6 +3903,21 @@ namespace
         gui().set_battle_style(false);
         gui().win().clear_all();
         _report.outcome = outcome;
+        // 9.6.0: NATURAL CURE, and MAGICIAN's held items go back.
+        for(int i = 0; i < _own_count; ++i)
+        {
+            mon& m = *_own[i].m;
+            if(m.abil().kind == ability_kind::NATURAL_CURE && ! m.fainted())
+            {
+                m.st = status::NONE;
+                m.sleep_turns = 0;
+            }
+        }
+        for(int i = _thefts.size() - 1; i >= 0; --i)
+        {
+            _thefts[i].m->item = _thefts[i].item;
+        }
+        clear_looks();
         return _report;
     }
 
@@ -2603,6 +3925,7 @@ namespace
     {
         ui& u = gui();
         game_state& g = state();
+        clear_looks();
         _foe_count = _s.foe_count;
         for(int i = 0; i < _foe_count; ++i)
         {
@@ -2613,6 +3936,29 @@ namespace
             {
                 g.mark_seen(_s.foes[i].species_index);
             }
+        }
+        // 9.6.0: ILLUSION looks like the last of its side (a trainer's: the last of the team).
+        auto disguise = [](fighter* side, int n)
+        {
+            for(int i = 0; i < n; ++i)
+            {
+                if(side[i].m->abil().kind != ability_kind::ILLUSION)
+                {
+                    continue;
+                }
+                for(int k = n - 1; k >= 0; --k)
+                {
+                    if(k != i && ! side[k].m->fainted())
+                    {
+                        side[i].illusion = side[k].m->species_index;
+                        break;
+                    }
+                }
+            }
+        };
+        if(_s.opponent)
+        {
+            disguise(_foes, _foe_count);
         }
         for(int i = 0; i < _s.own_count; ++i)
         {
@@ -2691,6 +4037,7 @@ namespace
             _own[i].own = true;
             _own[i].shown_hp = _s.own[i].hp;
         }
+        disguise(_own, _own_count);
         layout();
         // Your party: every HP box, and the first who can fight on screen.
         for(int i = 0; i < _own_count; ++i)

@@ -19,6 +19,66 @@ namespace
     }
 
     bn::vector<pending_move, 16> pending;
+    bn::vector<battle_look, 12> looks;
+
+    const battle_look* find_look(const mon& m)
+    {
+        for(const battle_look& l : looks)
+        {
+            if(l.m == &m)
+            {
+                return &l;
+            }
+        }
+        return nullptr;
+    }
+}
+
+battle_look& look_of(const mon& m)
+{
+    if(const battle_look* l = find_look(m))
+    {
+        return const_cast<battle_look&>(*l);
+    }
+    if(looks.full())
+    {
+        looks.erase(looks.begin());     // (12 fighters at most: never)
+    }
+    looks.push_back(battle_look());
+    looks.back().m = &m;
+    return looks.back();
+}
+
+void clear_looks()
+{
+    looks.clear();
+}
+
+void look_form(const mon& m, const uint8_t (&base)[5])
+{
+    battle_look& l = look_of(m);
+    for(int i = 0; i < 5; ++i)
+    {
+        l.stats[i] = uint16_t(stat_calc(base[i], false, m.level));
+    }
+}
+
+int battle_stat_of(const mon& m, int stat)
+{
+    const battle_look* l = find_look(m);
+    if(l && l->stats[stat])
+    {
+        return l->stats[stat];
+    }
+    const uint16_t own[] = { m.atk, m.def, m.spa, m.spd, m.spe };
+    return own[stat];
+}
+
+bool blocked_by_ability(const move& mv, const ability& ab)
+{
+    return (ab.kind == ability_kind::FLAG_IMMUNE && (mv.flags & ab.type)) ||
+           (ab.kind == ability_kind::OVERCOAT && (mv.flags & move_flag::POWDER)) ||
+           (ab.kind == ability_kind::WIND_RIDER && (mv.flags & move_flag::WIND));
 }
 
 void add_pending_move(mon* m, int move)
@@ -141,11 +201,17 @@ const char* mon::species_name() const
 
 const ability& mon::abil() const
 {
-    return data().abil;
+    const battle_look* l = find_look(*this);
+    return l && l->abil ? *l->abil : data().abil;
 }
 
 bool mon::has_type(int type) const
 {
+    const battle_look* l = find_look(*this);
+    if(l && l->typed)
+    {
+        return l->type1 == type || l->type2 == type;
+    }
     return data().type1 == type || data().type2 == type;
 }
 
@@ -348,10 +414,12 @@ const char* type_name(int type)
 int effectiveness_x4(int move_type, const mon& target)
 {
     const pr::species& ts = target.data();
-    int eff = 4 * game_data::type_chart[move_type][ts.type1] / 2;
-    if(ts.type2 >= 0)
+    const battle_look* l = find_look(target);
+    int t1 = l && l->typed ? l->type1 : ts.type1, t2 = l && l->typed ? l->type2 : ts.type2;
+    int eff = 4 * game_data::type_chart[move_type][t1] / 2;
+    if(t2 >= 0)
     {
-        eff = eff * game_data::type_chart[move_type][ts.type2] / 2;
+        eff = eff * game_data::type_chart[move_type][t2] / 2;
     }
     return eff;
 }
@@ -391,9 +459,26 @@ int move_effectiveness_x4(const mon& user, const move& mv, const mon& target)
     int eff_x4 = effectiveness_x4(mv.type, target);
     const ability& ta = abil_against(user, target);
     const ability& ua = user.abil();
-    if(ta.kind == ability_kind::IMMUNE && ta.type == mv.type)
+    if((ta.kind == ability_kind::IMMUNE && ta.type == mv.type) || blocked_by_ability(mv, ta))
     {
         eff_x4 = 0;
+    }
+    static const int normal = type_index("NORMAL"), fighting = type_index("FIGHTING"), ghost = type_index("GHOST");
+    if(ua.kind == ability_kind::FOCUS && ua.type == 3 && eff_x4 == 0 && (mv.type == normal || mv.type == fighting) &&
+       target.has_type(ghost))
+    {
+        // SCRAPPY: the Ghost half of the target counts as neutral.
+        const battle_look* l = find_look(target);
+        const pr::species& ts = target.data();
+        int e = 4;
+        for(int t : { l && l->typed ? int(l->type1) : int(ts.type1), l && l->typed ? int(l->type2) : int(ts.type2) })
+        {
+            if(t >= 0 && t != ghost)
+            {
+                e = e * game_data::type_chart[mv.type][t] / 2;
+            }
+        }
+        eff_x4 = (ta.kind == ability_kind::IMMUNE && ta.type == mv.type) || blocked_by_ability(mv, ta) ? 0 : e;
     }
     if(ta.kind == ability_kind::WONDER_GUARD && eff_x4 <= 4 && mv.category != move_category::STATUS)
     {
@@ -432,8 +517,10 @@ int wind_effectiveness_x4(int eff_x4, const move& mv, const mon& target, battle_
 damage_result calc_damage(const mon& user, const move& mv, const mon& target, bn::random& random, const damage_mods& mods)
 {
     bool physical = mv.category == move_category::PHYSICAL;
-    double atk_stat = (physical ? user.atk : user.spa) * stage_x100(mods.atk_stage) / 100.0;
-    double def_stat = bn::max(1, int(physical ? target.def : target.spd)) * stage_x100(mods.def_stage) / 100.0;
+    double atk_stat = battle_stat_of(user, physical ? battle_stat::ATK : battle_stat::SPA) * stage_x100(mods.atk_stage) / 100.0 *
+                      mods.atk_x100 / 100;
+    double def_stat = bn::max(1, battle_stat_of(target, physical ? battle_stat::DEF : battle_stat::SPD)) *
+                      stage_x100(mods.def_stage) / 100.0 * mods.def_x100 / 100;
     const ability& ua = user.abil();
     const ability& ta = abil_against(user, target);
     double stab = user.has_type(mv.type) ? ua.kind == ability_kind::ADAPTABILITY ? 2 : 1.5 : 1;
@@ -473,7 +560,7 @@ damage_result calc_damage(const mon& user, const move& mv, const mon& target, bn
         def_stat *= 1.5;    // a sandstorm raises Rock types' SP. DEF
     }
     double rand = 0.85 + (random.get_int(65536) / 65536.0) * 0.15;
-    double power = mv.power;
+    double power = mv.power * mods.power_x100 / 100.0;
     if(ua.kind == ability_kind::BOOST && ua.type == mv.type && user.hp * 3 <= user.max_hp)
     {
         power *= 1.5;
@@ -486,7 +573,23 @@ damage_result calc_damage(const mon& user, const move& mv, const mon& target, bn
              ua.kind == ability_kind::RECKLESS && mv.drain < 0 ? 1.2 :
              ua.kind == ability_kind::SHEER_FORCE && (mv.secondary != status::NONE || (mv.stat_count && ! mv.stat_self)) ? 1.3 :
              ua.kind == ability_kind::TOUGH_CLAWS && physical ? 1.3 :
-             ua.kind == ability_kind::TYPE_POWER && ua.type == mv.type ? 1.5 : 1;
+             ua.kind == ability_kind::TYPE_POWER && ua.type == mv.type ? 1.5 :
+             ua.kind == ability_kind::FLAG_POWER && (mv.flags & ua.type) ? 1.5 :
+             ua.kind == ability_kind::PUNK_ROCK && (mv.flags & move_flag::SOUND) ? 1.3 :
+             ua.kind == ability_kind::RIVALRY && (target.has_type(user.data().type1) || (user.data().type2 >= 0 && target.has_type(user.data().type2))) ? 1.25 : 1;
+    static const int ground = type_index("GROUND"), steel = type_index("STEEL");
+    if(ua.kind == ability_kind::SAND_FORCE && mods.weather == battle_weather::SAND && (mv.type == rock || mv.type == ground || mv.type == steel))
+    {
+        power *= 1.3;
+    }
+    if(ua.kind == ability_kind::DEFEATIST && user.hp * 2 <= user.max_hp)
+    {
+        atk_stat /= 2;
+    }
+    if(ta.kind == ability_kind::PUNK_ROCK && (mv.flags & move_flag::SOUND))
+    {
+        power *= 0.5;
+    }
     static const int ice = type_index("ICE");
     power *= ta.kind == ability_kind::THICK_FAT && (mv.type == fire || mv.type == ice) ? 0.5 :
              ta.kind == ability_kind::FLUFFY ? (mv.type == fire ? 2 : 1) * (physical ? 0.5 : 1) : 1;
