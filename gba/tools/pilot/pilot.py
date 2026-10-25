@@ -722,10 +722,17 @@ class Pilot:
             return True
         if self.gym_of(mi) is not None:
             # 9.6.0: a puzzle gym (9.4.0): in at the door, then the solver's way to the leader, fighting the juniors.
-            if self.pos()[0] != mi and not self.goto_tile(mi, *self.w.maps[mi]['spawn'], adjacent=False):
-                return False
-            if not self.gym_run(mi):
-                return False
+            # A player walks in healed, and goes back out to heal if the juniors wore the team down.
+            for visit in range(2):
+                hp, mx, _ = self.able()
+                if hp < mx:
+                    self.heal()
+                if self.pos()[0] != mi and not self.goto_tile(mi, *self.w.maps[mi]['spawn'], adjacent=False):
+                    return False
+                if not self.gym_run(mi):
+                    return False
+                if not self.need_heal():
+                    break
         if not self.goto_tile(mi, x, y):
             return False
         before = self.progress_key()
