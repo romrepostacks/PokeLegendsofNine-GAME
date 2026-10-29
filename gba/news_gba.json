@@ -1,7 +1,17 @@
 {
   "_howto": "The game's WHAT'S NEW: the title screen's message of the day (motd) and the changelog, newest first. Player-facing only.",
-  "motd": "Version 9.6.0: every ability does something now, in battle and out.",
+  "motd": "Version 9.6.1: the ARCOLOGY SPIRE is open, and big hits land harder.",
   "changelog": [
+    {
+      "version": "GBA 9.6.1",
+      "date": "2026-10-29",
+      "title": "The Spire opens",
+      "changes": [
+        "The ARCOLOGY SPIRE's entrance from GENOVA CENTRAL now reaches its stairs, so the GENOVA LEAGUE and the regions past it can be reached",
+        "Super effective hits pause for a moment and jolt the target, and a knockout shakes the field",
+        "HP bars slow down as they drain"
+      ]
+    },
     {
       "version": "GBA 9.6.0",
       "date": "2026-10-24",
