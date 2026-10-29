@@ -5,6 +5,8 @@ were one). Prints each map and the ones that crashed; the last frame of each is 
 
 Needs what `make` needs, plus mGBA's library (apt-get install libmgba-dev).
     python3 tools/walktest/walktest.py [OUT] [--frames 8000] [--maps 0-128] [--seed 0]
+With --rom, it skips the build and walks a test ROM made elsewhere (main.cpp patched as build() does, e.g. on
+Windows), using this checkout's generated/ for the map count.
 """
 import argparse, os, random, shutil, struct, subprocess, sys, tempfile
 
@@ -34,11 +36,18 @@ def main():
     ap.add_argument('--frames', type=int, default=8000)
     ap.add_argument('--maps', default='')
     ap.add_argument('--seed', type=int, default=0)
+    ap.add_argument('--rom', default='')
     a = ap.parse_args()
     out = os.path.abspath(a.out)
     os.makedirs(out, exist_ok=True)
     work = tempfile.mkdtemp(prefix='walktest-')
-    rom, harness = build(work)
+    if a.rom:
+        rom, harness = os.path.abspath(a.rom), os.path.join(work, 'harness')
+        subprocess.run(['gcc', '-O2', os.path.join(HERE, 'harness.c'), '-o', harness, '-lmgba'], check=True)
+        os.makedirs(os.path.join(work, 'gba'))
+        os.symlink(os.path.join(GBA, 'generated'), os.path.join(work, 'gba', 'generated'))
+    else:
+        rom, harness = build(work)
     base = os.path.join(out, 'base.sav')
     if os.path.exists(base):
         os.remove(base)
