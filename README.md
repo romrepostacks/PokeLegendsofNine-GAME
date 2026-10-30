@@ -1,5 +1,7 @@
 # Poké Legends: Lands of Nine
 
+[![Downloads](https://img.shields.io/github/downloads/romrepostacks/PokeLegendsofNine-GAME/total)](https://github.com/romrepostacks/PokeLegendsofNine-GAME/releases)
+
 Formerly Party Royale. An original, Pokémon-inspired party-battler/overworld game for the **Game Boy Advance**. It runs in emulators
 (Delta, mGBA) and on real hardware from a flash cart. The ROM is built from `gba/`; see `gba/README.md` for
 what's in it and how to build it.
