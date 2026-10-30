@@ -133,7 +133,8 @@ export.)
 ## Playing
 
 - **Delta (iPhone/iPad):** put `party-royale.gba` in Files, then import it in Delta (+ → Files). Delta
-  detects the SRAM save automatically.
+  detects the SRAM save automatically. For box art, save `data/cover_1152.png` to Photos, then in Delta
+  long-press the game → Change Artwork → Photo Library and pick it.
 - **mGBA:** open the file.
 - **Real hardware:** copy it to a flash cart (EverDrive GBA, EZ-Flash). Set the save type to SRAM if the
   cart asks.
